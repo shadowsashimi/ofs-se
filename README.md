@@ -12,7 +12,7 @@ Built on OpenGL, SDL2, ImGui, libmpv and the other libraries vendored under
 [`lib/`](lib) - see [lib/VENDORED.md](lib/VENDORED.md) for the exact upstream
 revision each one came from.
 
-![OFS-SE Screenshot](./OpenFunscripter.jpg)
+![OFS-SE, with the 3D simulator driven by stroke, roll and pitch](docs/screenshots/simulator-3d.png)
 
 ## What's new
 
@@ -38,6 +38,10 @@ revision each one came from.
   boundary from either side, and rename every chapter from where it falls and
   its tempo.
 
+![Beat fill writing strokes along the beat of an audio file](docs/screenshots/beat-fill.png)
+
+![A chapter measured at 120 BPM, with the tempo grid on the timeline](docs/screenshots/tempo.png)
+
 ### Editing
 
 - **Multi-lane timeline** - every loaded script gets its own lane, with a
@@ -55,6 +59,10 @@ revision each one came from.
   length.
 - **Funscript 2.0 and 1.1** - full read and write support for the latest
   funscript formats.
+
+![The multi-axis generator previewing roll and pitch from a stroke](docs/screenshots/multi-axis.png)
+
+![Script check listing strokes too fast for a device](docs/screenshots/script-check.png)
 - Fixes for points silently lost while dragging, and for Simplify carrying
   one selection's spacing into the next.
 
@@ -63,6 +71,8 @@ revision each one came from.
 - **OSR2 and SR6** over serial, wifi or Bluetooth, driving all six axes from
   their own scripts, with travel limits, a speed cap and an auto-home per axis.
 - **Intiface Central** - plays the script on anything Intiface supports.
+
+![The devices panel sending TCode over wifi, with limits per axis](docs/screenshots/devices.png)
 
 ### 3D simulator
 
