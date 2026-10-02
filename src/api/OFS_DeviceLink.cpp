@@ -467,9 +467,52 @@ void OFS_DeviceLink::drawAxisTable() noexcept
     ImGui::EndTable();
 }
 
+// Shown the first time Connect is pressed. Device playback is new, and a
+// machine doing something unexpected is felt rather than seen, so it asks
+// once, before anything moves, and is not asked again once accepted.
+static constexpr const char* SafetyNoteId = "Before you connect###deviceSafetyNote";
+
+void OFS_DeviceLink::drawSafetyNote() noexcept
+{
+    const auto* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->GetWorkCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    safetyNoteOpen = ImGui::BeginPopupModal(SafetyNoteId, nullptr,
+        ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize);
+    if (!safetyNoteOpen) return;
+
+    const float em = ImGui::GetFontSize();
+    ImGui::PushTextWrapPos(em * 30.f);
+    ImGui::TextUnformatted("Device playback is new, and has not been tested on every device, "
+                           "firmware or connection type. The motion might not always be what "
+                           "you expect.");
+    ImGui::Spacing();
+    ImGui::TextUnformatted("Before using it on yourself:");
+    ImGui::BulletText("Try it first with nobody attached.");
+    ImGui::BulletText("Start with a low speed limit and narrow travel limits.");
+    ImGui::BulletText("Keep the power switch, or Stop the devices, within reach.");
+    ImGui::Spacing();
+    ImGui::TextDisabled("You use it at your own risk. This is only shown once.");
+    ImGui::PopTextWrapPos();
+    ImGui::Spacing();
+
+    if (ImGui::Button("I understand, connect", ImVec2(em * 12.f, 0.f))) {
+        DeviceLinkState::State(stateHandle).safetyNoteAccepted = true;
+        ImGui::CloseCurrentPopup();
+        Connect();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel", ImVec2(em * 8.f, 0.f)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+}
+
 void OFS_DeviceLink::DrawWindow(bool* open) noexcept
 {
-    if (open != nullptr && !*open) return;
+    if (open != nullptr && !*open) {
+        safetyNoteOpen = false;
+        return;
+    }
     OFS_PROFILE(__FUNCTION__);
     auto& state = DeviceLinkState::State(stateHandle);
 
@@ -527,8 +570,10 @@ void OFS_DeviceLink::DrawWindow(bool* open) noexcept
         }
     }
     else if (ImGui::Button("Connect", ImVec2(-1.f, 0.f))) {
-        Connect();
+        if (state.safetyNoteAccepted) Connect();
+        else ImGui::OpenPopup(SafetyNoteId);
     }
+    drawSafetyNote();
 
     if (!currentMessage.empty()) {
         ImGui::Spacing();

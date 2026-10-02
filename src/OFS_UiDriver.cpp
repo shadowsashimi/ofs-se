@@ -911,6 +911,7 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
     add("show_script_check", flag(ofsState.showScriptCheck));
     add("show_devices", flag(ofsState.showDevices));
     add("device_status", std::to_string((int32_t)app->deviceLink->CurrentStatus()));
+    add("device_safety_note", flag(app->deviceLink->SafetyNoteOpen()));
     add("device_count", std::to_string(app->deviceLink->DeviceCount()));
     add("device_moves", std::to_string(app->deviceLink->MovesSent()));
     add("device_channels", app->deviceLink->ChannelsSent());

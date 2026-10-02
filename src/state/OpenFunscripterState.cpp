@@ -6,6 +6,8 @@
 #include "ProjectState.h"
 #include "SpecialFunctionsState.h"
 #include "WebsocketApiState.h"
+#include "DeviceLinkState.h"
+#include "ScriptCheckState.h"
 
 void OpenFunscripterState::RegisterAll() noexcept
 {
@@ -17,6 +19,10 @@ void OpenFunscripterState::RegisterAll() noexcept
 	OFS_REGISTER_STATE(SimulatorDefaultConfigState);
 	OFS_REGISTER_STATE(SpecialFunctionState);
 	OFS_REGISTER_STATE(WebsocketApiState);
+	// A state left out of this list is never written to state.ofs, so its
+	// settings are lost on every restart.
+	OFS_REGISTER_STATE(DeviceLinkState);
+	OFS_REGISTER_STATE(ScriptCheckState);
 
 	// Project state
 	OFS_REGISTER_STATE(TempoOverlayState);

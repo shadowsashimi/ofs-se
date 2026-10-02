@@ -78,6 +78,9 @@ struct DeviceLinkState
     int32_t rangeMin = 0;
     int32_t rangeMax = 100;
     bool followWhilePaused = true;
+    // Whether the note on device playback being new, shown before the first
+    // connect, has been read and accepted. Until it has, Connect asks first.
+    bool safetyNoteAccepted = false;
 
     std::vector<DeviceAxisSettings> axes;
 
@@ -115,5 +118,6 @@ REFL_TYPE(DeviceLinkState)
     REFL_FIELD(rangeMin)
     REFL_FIELD(rangeMax)
     REFL_FIELD(followWhilePaused)
+    REFL_FIELD(safetyNoteAccepted)
     REFL_FIELD(axes)
 REFL_END

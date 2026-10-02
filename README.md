@@ -75,6 +75,9 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 - **OSR2 and SR6** over serial, wifi or Bluetooth, driving all six axes from
   their own scripts, with travel limits, a speed cap and an auto-home per axis.
 - **Intiface Central** - plays the script on anything Intiface supports.
+- Device playback is new and has not been tested on every device, firmware
+  or connection, so the first Connect shows a note on trying it safely
+  before anything moves.
 
 ![The devices panel sending TCode over wifi, with limits per axis](docs/screenshots/devices.png)
 

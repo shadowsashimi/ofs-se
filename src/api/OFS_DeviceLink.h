@@ -92,6 +92,8 @@ private:
     // rather than their being set once with everything else. For the UI test
     // driver, which is how driving more than one axis is checked.
     std::set<std::string> channelsSent;
+    // Whether the note shown before the first connect is up. UI thread only.
+    bool safetyNoteOpen = false;
     std::vector<std::string> serialPorts;
 
     void send(const std::string& json) noexcept;
@@ -101,6 +103,7 @@ private:
     void drawIntifaceSettings() noexcept;
     void drawTCodeSettings() noexcept;
     void drawAxisTable() noexcept;
+    void drawSafetyNote() noexcept;
     void handleMessage(const char* data, size_t length) noexcept;
     void sendMove(int32_t deviceIndex, float position, float durationMs) noexcept;
     float positionFor(float scriptPos) const noexcept;
@@ -143,6 +146,8 @@ public:
     // Where the stroke axis last went, 0 to 999, or -1 when it has not been
     // sent yet. The one axis every project has.
     int32_t StrokeValue() const noexcept;
+    // Whether Connect is waiting on the note about device playback being new.
+    inline bool SafetyNoteOpen() const noexcept { return safetyNoteOpen; }
     inline int32_t MovesSent() const noexcept
     {
         std::lock_guard<std::mutex> lock(mutex);

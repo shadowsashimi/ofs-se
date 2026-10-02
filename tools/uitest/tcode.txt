@@ -76,9 +76,15 @@ wait 5
 shot 01-wifi
 windows 01-wifi
 
-note connecting opens the socket; nothing has to answer for UDP
+note connecting opens the socket; nothing has to answer for UDP. The first
+note connect asks first, with I understand at 645,593 (see devices.txt)
 click 792 551
+wait 10
+expect device_safety_note 1
+expect device_status 0
+click 645 593
 wait 20
+expect device_safety_note 0
 state 02-connected
 shot 02-connected
 expect device_status 2

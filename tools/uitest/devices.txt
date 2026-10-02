@@ -41,8 +41,27 @@ expect device_status 0
 shot 01-panel
 windows 01-panel
 
-note connect: the handshake, then the device list
+note the first connect asks first, and nothing is connected while it does.
+note The note is centred, with I understand at 645,593 and Cancel at 832,593
 click 792 457
+wait 10
+expect device_safety_note 1
+expect device_status 0
+shot 02-safety-note
+
+note cancel leaves it unconnected, and the next connect asks again
+click 832 593
+wait 10
+expect device_safety_note 0
+expect device_status 0
+click 792 457
+wait 10
+expect device_safety_note 1
+
+note connect: the handshake, then the device list
+click 645 593
+wait 5
+expect device_safety_note 0
 waituntil device_status >= 2 300
 state 02-connected
 shot 02-connected
@@ -58,4 +77,15 @@ wait 10
 state 03-played
 waituntil device_moves >= 4 10
 waituntil device_moves <= 12 10
+
+note once accepted it is not asked again: Disconnect is where Connect was,
+note and connecting again goes straight to trying. The stand-in serves one
+note client only, so the second try fails, which is still a try
+click 792 457
+wait 10
+expect device_status 0
+click 792 457
+wait 5
+expect device_safety_note 0
+waituntil device_status >= 2 300
 quit
