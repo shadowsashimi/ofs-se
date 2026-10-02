@@ -75,10 +75,47 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 )
 
 if(WIN32)
+  # Downloads url to dest, trying again when the transfer fails or, given a
+  # SHA256, when the file is not the one expected. A cut off download would
+  # otherwise only show up at build time, as an archive 7zr cannot open. A
+  # file already there with the right hash is kept.
+  function(ofs_download url dest)
+    cmake_parse_arguments(ARG "" "SHA256" "" ${ARGN})
+    if(ARG_SHA256 AND EXISTS "${dest}")
+      file(SHA256 "${dest}" have)
+      if(have STREQUAL ARG_SHA256)
+        return()
+      endif()
+    endif()
+    foreach(attempt RANGE 1 5)
+      file(DOWNLOAD "${url}" "${dest}" SHOW_PROGRESS STATUS status)
+      list(GET status 0 code)
+      list(GET status 1 reason)
+      if(code EQUAL 0)
+        file(SIZE "${dest}" size)
+        if(ARG_SHA256)
+          file(SHA256 "${dest}" have)
+          if(have STREQUAL ARG_SHA256)
+            return()
+          endif()
+          set(reason "got ${size} bytes that do not match the expected SHA256")
+        elseif(size GREATER 0)
+          return()
+        else()
+          set(reason "got an empty file")
+        endif()
+      endif()
+      message(WARNING "Download of ${url} failed (attempt ${attempt} of 5): ${reason}")
+    endforeach()
+    file(REMOVE "${dest}")
+    message(FATAL_ERROR "Could not download ${url}. Check the connection and configure again.")
+  endfunction()
+
   # download mpv binaries
   if (NOT EXISTS "${CMAKE_BINARY_DIR}/mpv-2.dll")
-    file(DOWNLOAD "https://www.7-zip.org/a/7zr.exe" "${CMAKE_BINARY_DIR}/7zr.exe" SHOW_PROGRESS)
-    file(DOWNLOAD "https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-v3-20220925-git-56e24d5.7z/download" "${CMAKE_BINARY_DIR}/mpv-dev.7z" SHOW_PROGRESS)
+    ofs_download("https://www.7-zip.org/a/7zr.exe" "${CMAKE_BINARY_DIR}/7zr.exe")
+    ofs_download("https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-v3-20220925-git-56e24d5.7z/download" "${CMAKE_BINARY_DIR}/mpv-dev.7z"
+      SHA256 b7ec2fca1f70cb4c7f5e9e4ff03127691e65158b088b3e74c948629b62c6036b)
     add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
         COMMAND "${CMAKE_BINARY_DIR}/7zr.exe" "x" "-y" "mpv-dev.7z" "mpv-2.dll" 
         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"

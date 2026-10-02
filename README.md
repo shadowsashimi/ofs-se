@@ -111,7 +111,9 @@ revision each one came from.
 
 ## How to build
 
-Dependencies are vendored, so there is nothing to fetch.
+Dependencies are vendored. On Windows the first configure also downloads
+libmpv and 7-Zip's extractor; the libmpv archive is checked against its
+hash and downloaded again if it arrives cut off.
 
 ```
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_POLICY_VERSION_MINIMUM=3.5
