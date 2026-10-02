@@ -8,6 +8,7 @@
 #include "imgui_internal.h"
 
 #include "OFS_ImGui.h"
+#include "OFS_SashimiTheme.h"
 
 #include "state/ScriptModeState.h"
 
@@ -18,8 +19,11 @@ void ScriptingModeBase::AddEditAction(FunscriptAction action) noexcept
     ctx().AddEditAction(action, app->scripting->LogicalFrameTime());
 }
 
+Funscript* ScriptingModeBase::TargetOverride = nullptr;
+
 inline Funscript& ScriptingModeBase::ctx() noexcept
 {
+    if (TargetOverride != nullptr) return *TargetOverride;
     auto app = OpenFunscripter::ptr;
     return *app->ActiveFunscript().get();
 }
@@ -36,27 +40,87 @@ void ScriptingMode::Init() noexcept
     SetOverlay(ScriptingOverlayModes::FRAME);
 }
 
-inline static const char* ScriptingModeToString(ScriptingModeEnum mode) noexcept
+// What each mode does to a point as you place it, and what the grid under the
+// timeline is measuring. Both are laid out as a row of radio buttons rather
+// than a dropdown: four options and three options respectively, so the one you
+// want is readable without opening anything, and switching is one click rather
+// than two.
+//
+// The tooltips carry the explanation the names cannot. "Dynamic injection" said
+// nothing about placing a peak between two points, and a name alone was never
+// going to.
+struct ScriptingModeEntry
 {
-    switch (mode) {
-        case ScriptingModeEnum::DEFAULT_MODE: return TR(DEFAULT_MODE);
-        case ScriptingModeEnum::ALTERNATING: return TR(ALTERNATING_MODE);
-        case ScriptingModeEnum::DYNAMIC_INJECTION: return TR(DYNAMIC_INJECTION_MODE);
-        case ScriptingModeEnum::RECORDING: return TR(RECORDING_MODE);
+    ScriptingModeEnum mode;
+    Tr label;
+    const char* tip;
+};
+
+static const ScriptingModeEntry ScriptingModeEntries[] = {
+    { ScriptingModeEnum::DEFAULT_MODE, Tr::DEFAULT_MODE,
+        "Places each point exactly where you put it, and changes nothing about it." },
+    { ScriptingModeEnum::ALTERNATING, Tr::ALTERNATING_MODE,
+        "Sends every point to the opposite end from the one before it, so clicking "
+        "repeatedly draws a stroke. Either between a fixed top and bottom, or reading "
+        "the direction off the previous point." },
+    { ScriptingModeEnum::DYNAMIC_INJECTION, Tr::DYNAMIC_INJECTION_MODE,
+        "Adds a peak between your last point and the new one, turning single clicks "
+        "into whole strokes. Target speed caps how far that peak can travel, and the "
+        "offset slides it off centre." },
+    { ScriptingModeEnum::RECORDING, Tr::RECORDING_MODE,
+        "Captures movement live from the mouse or a controller while the video plays, "
+        "instead of placing points one at a time." },
+};
+
+struct OverlayModeEntry
+{
+    ScriptingOverlayModes mode;
+    Tr label;
+    const char* tip;
+};
+
+// Ordered by how much grid there is, none first, rather than by the order the
+// enum happens to declare them in.
+static const OverlayModeEntry OverlayModeEntries[] = {
+    { ScriptingOverlayModes::EMPTY, Tr::EMPTY_OVERLAY,
+        "No grid. Points land wherever you put them." },
+    { ScriptingOverlayModes::FRAME, Tr::FRAME_OVERLAY,
+        "A line per frame of video, and snapping lands points on frame boundaries." },
+    { ScriptingOverlayModes::TEMPO, Tr::TEMPO_OVERLAY,
+        "A musical grid at the tempo of the chapter under the playhead, and snapping "
+        "lands points on the beat." },
+};
+
+
+void ScriptingMode::DrawModeSelector(const char* id) noexcept
+{
+    constexpr int32_t count = (int32_t)IM_ARRAYSIZE(ScriptingModeEntries);
+    const char* labels[count];
+    const char* tips[count];
+    int32_t current = -1;
+    for (int32_t i = 0; i < count; i += 1) {
+        labels[i] = TRD(ScriptingModeEntries[i].label);
+        tips[i] = ScriptingModeEntries[i].tip;
+        if (activeMode == ScriptingModeEntries[i].mode) current = i;
     }
-    return "";
+    const int32_t picked = OFS::SegmentedControl(id, labels, tips, count, current);
+    if (picked >= 0) SetMode(ScriptingModeEntries[picked].mode);
 }
 
-inline static const char* OverlayModeToString(ScriptingOverlayModes mode) noexcept
+void ScriptingMode::DrawOverlaySelector(const char* id) noexcept
 {
-    switch (mode) {
-        case ScriptingOverlayModes::FRAME: return TR(FRAME_OVERLAY);
-        case ScriptingOverlayModes::TEMPO: return TR(TEMPO_OVERLAY);
-        case ScriptingOverlayModes::EMPTY: return TR(EMPTY_OVERLAY);
+    constexpr int32_t count = (int32_t)IM_ARRAYSIZE(OverlayModeEntries);
+    const char* labels[count];
+    const char* tips[count];
+    int32_t current = -1;
+    for (int32_t i = 0; i < count; i += 1) {
+        labels[i] = TRD(OverlayModeEntries[i].label);
+        tips[i] = OverlayModeEntries[i].tip;
+        if (activeOverlay == OverlayModeEntries[i].mode) current = i;
     }
-    return "";
+    const int32_t picked = OFS::SegmentedControl(id, labels, tips, count, current);
+    if (picked >= 0) SetOverlay(OverlayModeEntries[picked].mode);
 }
-
 
 void ScriptingMode::DrawScriptingMode(bool* open) noexcept
 {
@@ -66,49 +130,41 @@ void ScriptingMode::DrawScriptingMode(bool* open) noexcept
     ImGui::Begin(TR_ID(WindowId, Tr::MODE), open);
     ImGui::PushItemWidth(-1);
 
-    if (ImGui::BeginCombo("##Mode", ScriptingModeToString(activeMode), ImGuiComboFlags_None)) {
-        if (ImGui::Selectable(TR_ID("DEFAULT", Tr::DEFAULT_MODE), activeMode == ScriptingModeEnum::DEFAULT_MODE)) {
-            SetMode(ScriptingModeEnum::DEFAULT_MODE);
+    // With the toolbar showing, the mode and grid are already picked there, a
+    // row above, so this panel keeps only the settings that go with each
+    // choice and names the choice it is showing settings for. The bars come
+    // back when the toolbar is hidden.
+    const bool pickedOnToolbar = app->ToolbarVisible();
+
+    if (pickedOnToolbar) {
+        for (auto& entry : ScriptingModeEntries) {
+            if (entry.mode == activeMode) OFS::SeparatorText(TRD(entry.label));
         }
-        if (ImGui::Selectable(TR_ID("ALTERNATING", Tr::ALTERNATING_MODE), activeMode == ScriptingModeEnum::ALTERNATING)) {
-            SetMode(ScriptingModeEnum::ALTERNATING);
-        }
-        if (ImGui::Selectable(TR_ID("DYNAMIC_INJECTION", Tr::DYNAMIC_INJECTION_MODE), activeMode == ScriptingModeEnum::DYNAMIC_INJECTION)) {
-            SetMode(ScriptingModeEnum::DYNAMIC_INJECTION);
-        }
-        if (ImGui::Selectable(TR_ID("RECORDING", Tr::RECORDING_MODE), activeMode == ScriptingModeEnum::RECORDING)) {
-            SetMode(ScriptingModeEnum::RECORDING);
-        }
-        ImGui::EndCombo();
     }
-    OFS::Tooltip(TR(SCRIPTING_MODE));
+    else {
+        DrawModeSelector("##Mode");
+    }
     Mode()->DrawModeSettings();
 
     ImGui::Spacing();
-    ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
-    ImGui::Spacing();
-
-    if (ImGui::BeginCombo("##OverlayMode", OverlayModeToString(activeOverlay), ImGuiComboFlags_None)) {
-        if (ImGui::Selectable(TR_ID("FRAME_OVERLAY", Tr::FRAME_OVERLAY), activeOverlay == ScriptingOverlayModes::FRAME)) {
-            SetOverlay(ScriptingOverlayModes::FRAME);
+    if (pickedOnToolbar) {
+        for (auto& entry : OverlayModeEntries) {
+            if (entry.mode == activeOverlay) OFS::SeparatorText(FMT("%s grid", TRD(entry.label)));
         }
-        if (ImGui::Selectable(TR_ID("TEMPO_OVERLAY", Tr::TEMPO_OVERLAY), activeOverlay == ScriptingOverlayModes::TEMPO)) {
-            SetOverlay(ScriptingOverlayModes::TEMPO);
-        }
-        if (ImGui::Selectable(TR_ID("EMPTY_OVERLAY", Tr::EMPTY_OVERLAY), activeOverlay == ScriptingOverlayModes::EMPTY)) {
-            SetOverlay(ScriptingOverlayModes::EMPTY);
-        }
-        ImGui::EndCombo();
     }
-
-    OFS::Tooltip(TR(SCRIPTING_OVERLAY));
+    else {
+        ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
+        ImGui::Spacing();
+        DrawOverlaySelector("##OverlayMode");
+    }
     DrawOverlaySettings();
     ImGui::PopItemWidth();
 
     ImGui::Spacing();
     ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal);
     ImGui::Spacing();
-    ImGui::DragInt(TR(OFFSET_MS), &state.actionInsertDelayMs);
+    // Typed, with steps either side, and named on a line above it.
+    OFS::StepperInt("Insert offset (ms)", "##InsertOffset", &state.actionInsertDelayMs, 10, -1000, 1000);
     OFS::Tooltip(TR(OFFSET_TOOLTIP));
     ImGui::End();
 }
@@ -218,34 +274,72 @@ void ScriptingMode::Update() noexcept
 void DynamicInjectionMode::DrawModeSettings() noexcept
 {
     OFS_PROFILE(__FUNCTION__);
-    ImGui::SliderFloat("##Target speed (units/s)", &targetSpeed, MinSpeed, MaxSpeed, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+    // Typed, with a step either side: parameters are numbers to set exactly,
+    // where a slider hid the value and made a round one hard to land on.
+    if (OFS::StepperFloat("Target speed (units/s)", "##TargetSpeed", &targetSpeed, 50.f, MinSpeed, MaxSpeed, "%.0f")) {
+        targetSpeed = std::round(targetSpeed);
+    }
     OFS::Tooltip(TR(DI_TARGET_SPEED));
-    targetSpeed = std::round(Util::Clamp(targetSpeed, MinSpeed, MaxSpeed));
 
-    ImGui::SliderFloat("##Up/Down speed bias", &directionBias, -0.9f, 0.9f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
-    OFS::Tooltip(TR(DI_UP_DOWN_BIAS));
+    OFS::StepperFloat("Peak offset", "##PeakOffset", &peakOffset, 0.1f, -0.9f, 0.9f, "%+.2f");
+    OFS::Tooltip(TR(DI_PEAK_OFFSET));
 
-    ImGui::Columns(2, 0, false);
-    if (ImGui::RadioButton(TR(TOP), topBottomDirection == 1)) {
-        topBottomDirection = 1;
-    }
-    ImGui::NextColumn();
-    if (ImGui::RadioButton(TR(BOTTOM), topBottomDirection == -1)) {
-        topBottomDirection = -1;
-    }
-    ImGui::NextColumn();
-    ImGui::Columns(1);
+    const char* directionLabels[2] = { TR(TOP), TR(BOTTOM) };
+    static constexpr const char* directionTips[2] = {
+        "The added point goes to the top, so each click draws a stroke up and back down.",
+        "The added point goes to the bottom, so each click draws a stroke down and back up.",
+    };
+    const int32_t picked = OFS::SegmentedControl("##InjectDirection", directionLabels, directionTips,
+        2, topBottomDirection == 1 ? 0 : 1);
+    if (picked >= 0) topBottomDirection = picked == 0 ? 1 : -1;
 }
 
 // dynamic injection
 void DynamicInjectionMode::AddEditAction(FunscriptAction action) noexcept
 {
     auto previous = ctx().GetPreviousActionBehind(action.atS);
-    if (previous != nullptr) {
-        auto injectAt = previous->atS + ((action.atS - previous->atS) / 2) + (((action.atS - previous->atS) / 2) * directionBias);
-        auto inject_duration = injectAt - previous->atS;
+    if (previous != nullptr && action.atS > previous->atS) {
+        const float gap = action.atS - previous->atS;
+        const float half = gap / 2.f;
+        const float injectAt = previous->atS + half + (half * peakOffset);
+        const float leadDuration = injectAt - previous->atS;
+        const float trailDuration = action.atS - injectAt;
 
-        int32_t injectPos = Util::Clamp<int32_t>(previous->pos + (topBottomDirection * inject_duration * targetSpeed), 0, 100);
+        // targetSpeed governs both halves of the stroke, not just the first.
+        // Deriving the peak from the previous action alone, as this used to,
+        // pinned the lead half to targetSpeed and left the return half to run
+        // at targetSpeed * (1 + offset) / (1 - offset) -- nineteen times over
+        // at the far end of the offset range.
+        //
+        // Each neighbour bounds the peak on both sides instead: it can sit at
+        // most duration * targetSpeed above or below that action. Intersecting
+        // the two windows leaves every position reachable without either half
+        // breaking the limit.
+        const float leadReach = leadDuration * targetSpeed;
+        const float trailReach = trailDuration * targetSpeed;
+        const float lowest = std::max(previous->pos - leadReach, action.pos - trailReach);
+        const float highest = std::min(previous->pos + leadReach, action.pos + trailReach);
+
+        float peak;
+        if (lowest <= highest) {
+            // Take the window's far end, so the peak still travels as far as
+            // the limit permits rather than settling for less.
+            peak = topBottomDirection > 0 ? highest : lowest;
+        }
+        else {
+            // The window is empty: these two actions are already further apart
+            // than targetSpeed covers, and no point between them can obey it.
+            // The straight line is the least bad place to sit, leaving both
+            // halves at exactly the speed the two actions already demanded.
+            // The injection cannot make that right, but it must not make it
+            // worse by adding a detour on top.
+            peak = previous->pos + ((action.pos - previous->pos) * (leadDuration / gap));
+        }
+
+        // Clamping to the position range only ever pulls the peak towards its
+        // neighbours, and both of those already sit inside the range, so it
+        // cannot push either half back over the speed limit.
+        auto injectPos = Util::Clamp<int32_t>(std::round(peak), 0, 100);
         ScriptingModeBase::AddEditAction(FunscriptAction(injectAt, injectPos));
     }
     ScriptingModeBase::AddEditAction(action);
@@ -277,22 +371,9 @@ void AlternatingMode::DrawModeSettings() noexcept
     ImGui::Checkbox(TR(CONTEXT_SENSITIVE), &contextSensitive);
     OFS::Tooltip(TR(CONTEXT_SENSITIVE_TOOLTIP));
     if (fixedRangeEnabled) {
-        bool inputActive = false;
-        auto& style = ImGui::GetStyle();
-        float availdWidth = ImGui::GetContentRegionAvail().x - style.ItemSpacing.x;
-
-        ImGui::SetNextItemWidth(availdWidth / 2.f);
-        ImGui::InputInt("##Fixed bottom", &fixedBottom, 1, 100);
-        inputActive = inputActive || ImGui::IsItemActive();
-
-        ImGui::SameLine();
-
-        ImGui::SetNextItemWidth(availdWidth / 2.f);
-        ImGui::InputInt("##Fixed top", &fixedTop);
-        inputActive = inputActive || ImGui::IsItemActive();
-
-        fixedBottom = Util::Clamp<int>(fixedBottom, 0, 100);
-        fixedTop = Util::Clamp<int>(fixedTop, 0, 100);
+        OFS::StepperInt("Fixed bottom", "##FixedBottom", &fixedBottom, 5, 0, 100);
+        OFS::StepperInt("Fixed top", "##FixedTop", &fixedTop, 5, 0, 100);
+        const bool inputActive = ImGui::IsAnyItemActive();
 
         if (fixedBottom > fixedTop && !inputActive) {
             // correct user error :^)
@@ -439,20 +520,23 @@ void RecordingMode::DrawModeSettings() noexcept
     OFS_PROFILE(__FUNCTION__);
     auto app = OpenFunscripter::ptr;
 
-    if (ImGui::BeginCombo(TR_ID("MODE", Tr::MODE), RecordingModeToString(activeType), ImGuiComboFlags_None)) {
-        if (ImGui::Selectable(TR(MOUSE), activeType == RecordingType::Mouse)) {
-            activeType = RecordingType::Mouse;
-        }
-        if (ImGui::Selectable(TR(CONTROLLER), activeType == RecordingType::Controller)) {
-            activeType = RecordingType::Controller;
-        }
-        ImGui::EndCombo();
+    // Two options, both visible, one click to switch: the same segmented bar
+    // as the modes above it, where this was a dropdown.
+    {
+        const char* labels[2] = { TR(MOUSE), TR(CONTROLLER) };
+        static constexpr const char* tips[2] = {
+            "Records the position from the mouse, moved up and down over the simulator.",
+            "Records the position from a game controller's stick while the video plays.",
+        };
+        const int32_t picked = OFS::SegmentedControl("##RecordingInput", labels, tips, 2,
+            activeType == RecordingType::Mouse ? 0 : 1);
+        if (picked >= 0) activeType = picked == 0 ? RecordingType::Mouse : RecordingType::Controller;
     }
 
     switch (activeType) {
         case RecordingType::Controller: {
-            ImGui::TextUnformatted(TR(CONTROLLER_DEADZONE));
-            ImGui::SliderInt(TR(DEADZONE), &ControllerDeadzone, 0, std::numeric_limits<int16_t>::max());
+            OFS::StepperInt("Deadzone", "##Deadzone", &ControllerDeadzone, 1000, 0, std::numeric_limits<int16_t>::max());
+            OFS::Tooltip(TR(CONTROLLER_DEADZONE));
             ImGui::Checkbox(TR(CENTER), &controllerCenter);
             if (controllerCenter) {
                 currentPosX = Util::Clamp<int32_t>(50.f + (50.f * valueX), 0, 100);
@@ -511,10 +595,10 @@ void RecordingMode::DrawModeSettings() noexcept
             recordingAxisX = nullptr;
             recordingAxisY = nullptr;
             for (auto& script : app->LoadedFunscripts()) {
-                if (Util::ContainsInsensitive(script->Title().c_str(), ".roll")) {
+                if (script->AxisName() == "roll") {
                     recordingAxisX = script;
                 }
-                else if (Util::ContainsInsensitive(script->Title().c_str(), ".pitch")) {
+                else if (script->AxisName() == "pitch") {
                     recordingAxisY = script;
                 }
             }
@@ -535,12 +619,12 @@ void RecordingMode::DrawModeSettings() noexcept
     }
 
     if (recordingActive && playing) {
-        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 255, 0, 255));
+        ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::PinkBright);
         ImGui::TextUnformatted(TR(RECORDING_ACTIVE));
         ImGui::PopStyleColor();
     }
     else {
-        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
+        ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Grey60);
         ImGui::TextUnformatted(TR(RECORDING_PAUSED));
         ImGui::PopStyleColor();
     }

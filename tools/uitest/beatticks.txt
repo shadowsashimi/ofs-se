@@ -1,0 +1,51 @@
+# Beat ticks under the waveform, and the bass only waveform. Run against
+# audio, whose waveform is made as soon as it opens: the test media is a click
+# every half second, so there is a hit to find twice a second.
+# Preferences at 1600x900: Options 327,13 with Preferences at 380,86; the
+# sidebar's Timeline section 460,356; after scrolling to the bottom of it,
+# Bass only 1026,589.
+#! media mp3
+#! covers OFS-lib/UI/OFS_Waveform.* OFS-lib/UI/OFS_ScriptTimeline.*
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note the waveform comes on its own for audio, and the ticks are found from it
+waituntil waveform_shown >= 1 600
+wait 20
+state 01-full
+shot 01-full
+expect waveform_bass 0
+note a click every half second for a minute, so about 120 of them
+waituntil beat_ticks >= 100 20
+
+note switch to the bass only waveform, which reads the audio again
+click 327 13
+wait 5
+click 380 86
+wait 20
+expect preferences_open 1
+click 460 356
+wait 20
+shot 02-timeline-section
+note the waveform settings are at the bottom of the section
+move 880 600
+wheel -10
+wait 10
+shot 03-waveform-settings
+windows 03-waveform-settings
+
+note bass only reads the audio again, and the ticks are found from that instead
+click 1026 589
+wait 10
+expect waveform_bass 1
+waituntil waveform_shown >= 1 900
+wait 30
+state 04-bass
+shot 04-bass
+waituntil beat_ticks >= 50 60
+quit

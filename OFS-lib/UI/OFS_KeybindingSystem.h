@@ -57,12 +57,24 @@ class OFS_KeybindingSystem
     OFS_ActionTrigger editingTrigger;
     std::string editingActionId;
     KeyModalType currentModal = KeyModalType::None;
+    // Set by a click in the table, and acted on by the window around it. The
+    // table scrolls, so it is a child window with an ID scope of its own, and
+    // a popup opened from inside it has a different ID from the one the
+    // window then draws: the key capture never appeared, so a binding could
+    // not be changed or added at all.
+    bool openTriggerModal = false;
 
     bool showMainModal = false;
     std::string actionFilter;
 
     vector_set<OFS_ActionTrigger> orphanTriggers;
-   
+
+    // One string per action id, rewritten on every lookup. The menu hands the
+    // pointer straight to ImGui alongside a label that is itself formatted
+    // into the shared FMT buffer, so the text has to live somewhere else.
+    // Unordered map nodes do not move on rehash, which keeps the pointer valid.
+    std::unordered_map<std::string, std::string> bindingStrings;
+
     void addTrigger(const OFS_ActionTrigger& newTrigger) noexcept;
     void editTrigger(const OFS_ActionTrigger& oldTrigger, const OFS_ActionTrigger& editTrigger) noexcept;
 
@@ -78,6 +90,14 @@ class OFS_KeybindingSystem
 
     void ShowModal() noexcept;
     void RenderKeybindingWindow() noexcept;
+
+    // The shortcut text for an action, as a menu shows it, or null when the
+    // action has no keyboard binding.
+    const char* GetBindingString(const char* actionId) noexcept;
+
+    // Runs an action by id as if its binding had been pressed. False when no
+    // action has that id.
+    bool Invoke(const char* actionId) noexcept;
 
     void RegisterGroup(const char* groupId, TrString groupName) noexcept;
     void RegisterAction(OFS_Action&& action, TrString name, const char* groupId, const std::vector<OFS_ActionTrigger>& defaultTriggers = std::vector<OFS_ActionTrigger>()) noexcept;

@@ -1,0 +1,83 @@
+# Each scripting mode changes what a click does, and each shows its own
+# settings in the Mode panel. Toolbar: Manual 64, Alternating 188, Auto peak
+# 312, Recording 435 (y 43).
+#! covers src/OFS_ScriptingMode.* OFS-lib/UI/ScriptPositionsOverlayMode.*
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note Alternating: three clicks at 20 alternate with their mirror at 80, since mirroring 50 is 50
+click 212 43
+expect scripting_mode 1
+wait 5
+shot 01-alternating
+hold shift
+lanemove 4.0 20
+tap
+lanemove 4.5 20
+tap
+lanemove 5.0 20
+tap
+let shift
+wait 5
+state 02-alternating-placed
+shot 02-alternating-placed
+expect actions 3
+expect positions 20,80,20
+key ctrl+a
+key delete
+wait 5
+expect actions 0
+
+note Auto peak: two clicks, and a peak is placed between them
+click 324 43
+expect scripting_mode 2
+wait 5
+shot 03-auto-peak
+hold shift
+lanemove 4.0 5
+tap
+lanemove 5.0 5
+tap
+let shift
+wait 5
+state 04-auto-peak-placed
+shot 04-auto-peak-placed
+expect actions 3
+note the peak goes to the top, between the two clicks
+expect positions 5,100,5
+key ctrl+a
+key delete
+wait 5
+
+note Recording: its settings only
+click 435 43
+expect scripting_mode 3
+wait 10
+shot 05-recording
+
+note back to Manual
+click 99 43
+expect scripting_mode 0
+
+note simulator 3D and slider with points to show
+hold shift
+lanemove 4.0 5
+tap
+lanemove 5.0 95
+tap
+lanemove 6.0 5
+tap
+let shift
+seek 4.5
+wait 20
+click 1560 43
+wait 10
+shot 06-sim-3d
+click 1489 43
+wait 5
+quit

@@ -1,0 +1,26 @@
+# Panels and menus nothing else opens: the websocket API panel and the
+# Extensions menu. View menu row for Websocket API at y 196.
+#! covers src/api/* src/lua/* src/OpenFunscripter.cpp:ShowMainMenuBar
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+wait 10
+
+note websocket API panel
+click 266 13
+wait 5
+click 300 196
+wait 20
+shot 01-websocket
+windows 01-websocket
+
+note Extensions menu
+click 414 13
+wait 10
+shot 02-extensions-menu
+windows 02-extensions-menu
+key escape
+wait 5
+quit

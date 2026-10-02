@@ -1,6 +1,7 @@
 #include "OFS_KeybindingSystem.h"
 #include "OFS_Util.h"
 #include "OFS_Localization.h"
+#include "OFS_ImGui.h"
 #include "imgui_stdlib.h"
 
 #include <array>
@@ -30,50 +31,64 @@ inline static bool isModifierKey(ImGuiKey key) noexcept
     return std::find(ModifierKeys.begin(), ModifierKeys.end(), key) != ModifierKeys.end();
 }
 
-inline static const char* getTriggerText(const OFS_ActionTrigger& trigger) noexcept
+static std::string triggerText(const OFS_ActionTrigger& trigger) noexcept
 {
-    const char* key = nullptr;
-    std::string mods;
+    std::string text;
+    auto add = [&text](const char* part) noexcept {
+        if(!text.empty()) text += '+';
+        text += part;
+    };
 
     if(trigger.Mod != ImGuiKey_None)
     {
-        auto addMod = [](std::string& str, const char* mod) noexcept { 
-            if(!str.empty()) str += '+';
-            str += mod;
-        };
-        if(trigger.Mod & ImGuiMod_Ctrl)
-        {
-            addMod(mods, TR(KEY_MOD_CTRL));
-        }
-        if(trigger.Mod & ImGuiMod_Alt)
-        {
-            addMod(mods, TR(KEY_MOD_ALT));
-        }
-        if(trigger.Mod & ImGuiMod_Shift)
-        {
-            addMod(mods, TR(KEY_MOD_SHIFT));
-        }
+        if(trigger.Mod & ImGuiMod_Ctrl) add(TR(KEY_MOD_CTRL));
+        if(trigger.Mod & ImGuiMod_Alt) add(TR(KEY_MOD_ALT));
+        if(trigger.Mod & ImGuiMod_Shift) add(TR(KEY_MOD_SHIFT));
     }
 
     if(trigger.Key != ImGuiKey_None)
     {
-        key = ImGui::GetKeyName(trigger.ImKey());
+        add(ImGui::GetKeyName(trigger.ImKey()));
     }
+    return text;
+}
 
-    if(!mods.empty() && key != nullptr)
-    {
-        FMT("%s+%s", mods.c_str(), key);
-    }
-    else if(!mods.empty() && key == nullptr) 
-    {
-        FMT("%s", mods.c_str());
-    }
-    else 
-    {
-        FMT("%s", key);
-    }
-
+inline static const char* getTriggerText(const OFS_ActionTrigger& trigger) noexcept
+{
+    FMT("%s", triggerText(trigger).c_str());
     return Util::FormatBuffer;
+}
+
+bool OFS_KeybindingSystem::Invoke(const char* actionId) noexcept
+{
+    auto it = actions.find(actionId);
+    if(it == actions.end()) return false;
+    it->second.Action();
+    return true;
+}
+
+const char* OFS_KeybindingSystem::GetBindingString(const char* actionId) noexcept
+{
+    auto& state = OFS_KeybindingState::State(stateHandle);
+
+    // A gamepad button makes a poor menu hint next to a key, so a keyboard or
+    // mouse binding wins when an action has both.
+    const OFS_ActionTrigger* found = nullptr;
+    for(auto& trigger : state.Triggers)
+    {
+        if(trigger.MappedActionId != actionId) continue;
+        if(!ImGui::IsGamepadKey(trigger.ImKey()))
+        {
+            found = &trigger;
+            break;
+        }
+        if(found == nullptr) found = &trigger;
+    }
+    if(found == nullptr) return nullptr;
+
+    auto& text = bindingStrings[actionId];
+    text = triggerText(*found);
+    return text.c_str();
 }
 
 OFS_KeybindingSystem::OFS_KeybindingSystem() noexcept
@@ -234,17 +249,53 @@ void OFS_KeybindingSystem::addTrigger(const OFS_ActionTrigger& newTrigger) noexc
     }
 }
 
-void OFS_KeybindingSystem::editTrigger(const OFS_ActionTrigger& oldTrigger, const OFS_ActionTrigger& editTrigger) noexcept
+void OFS_KeybindingSystem::editTrigger(const OFS_ActionTrigger& oldTrigger, const OFS_ActionTrigger& newTrigger) noexcept
 {
+    // The bindings are a set sorted by key, so a binding is moved by taking it
+    // out and putting it back in. Changed where it stood, it was left out of
+    // order, where looking it up by its key could miss it; and nothing checked
+    // whether the new key was already doing something else.
     auto& state = OFS_KeybindingState::State(stateHandle);
-    auto it = state.Triggers.find(oldTrigger);
-    FUN_ASSERT(it != state.Triggers.end(), "Editing trigger not found.");
-
-    if(it != state.Triggers.end())
+    auto oldIt = state.Triggers.find(oldTrigger);
+    if(oldIt == state.Triggers.end())
     {
-        it->Key = editTrigger.Key;
-        it->Mod = editTrigger.Mod;
+        addTrigger(newTrigger);
+        return;
     }
+    if(oldIt->Hash() == newTrigger.Hash()) return;
+
+    const bool repeat = oldIt->ShouldRepeat;
+    auto taken = state.Triggers.find(newTrigger);
+    if(taken == state.Triggers.end())
+    {
+        state.Triggers.erase(oldIt);
+        auto moved = newTrigger;
+        moved.ShouldRepeat = repeat;
+        state.Triggers.emplace(moved);
+        return;
+    }
+    if(taken->MappedActionId == newTrigger.MappedActionId)
+    {
+        // The action already has that key: this one is simply no longer needed.
+        state.Triggers.erase(oldIt);
+        return;
+    }
+
+    std::stringstream ss;
+    ss << '[' << getTriggerText(newTrigger) << ']';
+    ss << '\n' << "Is already in use for {" << taken->MappedActionId << '}';
+    ss << '\n' << "Do you want to use it for {" << newTrigger.MappedActionId << "} instead?";
+    Util::YesNoCancelDialog("Trigger is already in use",
+        ss.str(),
+        [stateHandle = stateHandle, oldTrigger, newTrigger](auto result)
+        {
+            if(result != Util::YesNoCancel::Yes) return;
+            auto& state = OFS_KeybindingState::State(stateHandle);
+            auto oldIt = state.Triggers.find(oldTrigger);
+            if(oldIt != state.Triggers.end()) state.Triggers.erase(oldIt);
+            auto taken = state.Triggers.find(newTrigger);
+            if(taken != state.Triggers.end()) taken->MappedActionId = newTrigger.MappedActionId;
+        });
 }
 
 void OFS_KeybindingSystem::renderNewTriggerModal() noexcept
@@ -320,84 +371,134 @@ void OFS_KeybindingSystem::renderNewTriggerModal() noexcept
     }
 }
 
+// A binding is a small button in the action's row: click it to rebind, right
+// click it for repeat and delete. Every binding an action has is visible at
+// once, where it used to take opening a tree node per action to find out
+// whether it had any at all.
 KeyModalType OFS_KeybindingSystem::renderActionRow(OFS_ActionUI& ui) noexcept
 {
     auto& state = OFS_KeybindingState::State(stateHandle);
+    auto keyModal = KeyModalType::None;
+    const auto& style = ImGui::GetStyle();
 
-    ImGui::Indent(ImGui::GetFontSize());
-    auto keyModal  = KeyModalType::None;
-    bool nodeOpen = ImGui::TreeNodeEx(ui.Name.c_str(), ImGuiTreeNodeFlags_SpanAvailWidth);
-    
-    if(nodeOpen)
-    {
-        int32_t deleteIdx = -1;
-        for(int32_t i=0; i < state.Triggers.size(); i += 1)
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted(ui.Name.c_str());
+
+    ImGui::TableNextColumn();
+    ImGui::PushID(ui.ActionId.c_str());
+
+    // Buttons wrap inside the cell rather than running off its edge.
+    bool first = true;
+    auto placeNext = [&first, &style](const char* label) noexcept {
+        if(!first)
         {
-            auto& trigger = state.Triggers[i];
-            // FIXME: this is obviously bad for perf
-            if(trigger.MappedActionId != ui.ActionId) continue;
-
-            ImGui::Columns(3);
-            ImGui::PushID(i);
-            ImGui::Bullet();
             ImGui::SameLine();
-            if(ImGui::Selectable(getTriggerText(trigger), false, ImGuiSelectableFlags_DontClosePopups))
-            {
-                editingTrigger = trigger;
-                keyModal = KeyModalType::Edit;
-            }
-            ImGui::NextColumn();
+            const float width = ImGui::CalcTextSize(label, nullptr, true).x + (style.FramePadding.x * 2.f);
+            if(ImGui::GetContentRegionAvail().x < width) ImGui::NewLine();
+        }
+        first = false;
+    };
+
+    int32_t deleteIdx = -1;
+    for(int32_t i = 0, size = (int32_t)state.Triggers.size(); i < size; i += 1)
+    {
+        auto& trigger = state.Triggers[i];
+        if(trigger.MappedActionId != ui.ActionId) continue;
+
+        ImGui::PushID(i);
+        const auto text = triggerText(trigger);
+        const char* label = trigger.ShouldRepeat
+            ? FMT("%s " ICON_REFRESH "###binding", text.c_str())
+            : FMT("%s###binding", text.c_str());
+        placeNext(label);
+        if(ImGui::Button(label))
+        {
+            editingTrigger = trigger;
+            keyModal = KeyModalType::Edit;
+        }
+        OFS::Tooltip(trigger.ShouldRepeat
+            ? "Click to rebind, right click for options. Repeats while held."
+            : "Click to rebind, right click for options.");
+
+        if(ImGui::BeginPopupContextItem("##bindingMenu"))
+        {
             ImGui::Checkbox(TR(REPEAT), &trigger.ShouldRepeat);
-            ImGui::NextColumn();
-            if(ImGui::Button(FMT("%s " ICON_TRASH, TR(DELETE)), ImVec2(-1.f, 0.f)))
-            { 
-                deleteIdx = i; 
+            if(ImGui::MenuItem(FMT("%s " ICON_TRASH, TR(DELETE))))
+            {
+                deleteIdx = i;
             }
-            ImGui::PopID();
-            ImGui::NextColumn();
+            ImGui::EndPopup();
         }
-        if(deleteIdx >= 0) 
-        {
-            state.Triggers.erase(state.Triggers.begin() + deleteIdx);
-        }
-
-        if(ImGui::Button("Add +", ImVec2(-1.f, 0.f))) 
-        {
-            keyModal = KeyModalType::New;
-        }
-        ImGui::NextColumn();
-        ImGui::NextColumn();
-        ImGui::Columns(1);
-
-        ImGui::TreePop();
+        ImGui::PopID();
     }
-    ImGui::Indent(-ImGui::GetFontSize());
+
+    const bool unbound = first;
+    const char* addLabel = unbound ? "+ Add###add" : "+###add";
+    placeNext(addLabel);
+    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+    if(ImGui::Button(addLabel))
+    {
+        keyModal = KeyModalType::New;
+    }
+    ImGui::PopStyleColor();
+    OFS::Tooltip(unbound ? "This action has no binding yet." : "Add another binding.");
+
+    ImGui::PopID();
+
+    if(deleteIdx >= 0)
+    {
+        state.Triggers.erase(state.Triggers.begin() + deleteIdx);
+    }
     return keyModal;
 }
 
 void OFS_KeybindingSystem::renderGroup(OFS_KeybindingState& state, OFS_ActionGroup& group) noexcept
 {
-    if(!actionFilter.empty()) 
+    // The filter matches the action's name, its group's name, or the text of
+    // any of its bindings, so typing "Ctrl" lists everything on Ctrl.
+    auto matches = [&](const OFS_ActionUI& ui) noexcept {
+        if(actionFilter.empty()) return true;
+        if(Util::ContainsInsensitive(ui.Name.c_str(), actionFilter.c_str())) return true;
+        if(Util::ContainsInsensitive(group.GroupName.c_str(), actionFilter.c_str())) return true;
+        for(auto& trigger : state.Triggers)
+        {
+            if(trigger.MappedActionId == ui.ActionId
+                && Util::ContainsInsensitive(triggerText(trigger).c_str(), actionFilter.c_str()))
+                return true;
+        }
+        return false;
+    };
+
+    // Filter before drawing the header, so a group with nothing left in it
+    // leaves no empty heading behind.
+    bool anyMatch = false;
+    for(uint32_t idx : group.actionUiIndices)
+    {
+        if(matches(actionUI[idx])) { anyMatch = true; break; }
+    }
+    if(!anyMatch) return;
+
+    ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+    ImGui::TableNextColumn();
+    if(!actionFilter.empty())
         ImGui::SetNextItemOpen(true, ImGuiCond_Always);
-        
-    if(ImGui::CollapsingHeader(group.GroupName.c_str(), ImGuiTreeNodeFlags_NoTreePushOnOpen))
+    const bool open = ImGui::TreeNodeEx(group.Id.c_str(),
+        ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_NoTreePushOnOpen,
+        "%s", group.GroupName.c_str());
+    ImGui::TableNextColumn();
+
+    if(open)
     {
         for(uint32_t idx : group.actionUiIndices)
         {
             auto& ui = actionUI[idx];
-            if(!actionFilter.empty() && !Util::ContainsInsensitive(ui.Name.c_str(), actionFilter.c_str()))
-                continue;
+            if(!matches(ui)) continue;
             auto modal = renderActionRow(ui);
-            if(modal == KeyModalType::New)
+            if(modal != KeyModalType::None)
             {
-                ImGui::OpenPopup(TR_ID("ADD_EDIT_TRIGGER", Tr::ADD_EDIT_TRIGGER));
-                editingActionId = ui.ActionId;
-                tmpTrigger = OFS_ActionTrigger();
-                currentModal = modal;
-            }
-            else if(modal == KeyModalType::Edit)
-            {
-                ImGui::OpenPopup(TR_ID("ADD_EDIT_TRIGGER", Tr::ADD_EDIT_TRIGGER));
+                openTriggerModal = true;
                 editingActionId = ui.ActionId;
                 tmpTrigger = OFS_ActionTrigger();
                 currentModal = modal;
@@ -433,17 +534,35 @@ void OFS_KeybindingSystem::RenderKeybindingWindow() noexcept
     }
 
     bool showWindow = true;
+    const auto* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowSize(ImVec2(viewport->WorkSize.x * 0.45f, viewport->WorkSize.y * 0.7f), ImGuiCond_Appearing);
+    ImGui::SetNextWindowPos(viewport->GetWorkCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     if(ImGui::BeginPopupModal(TR_ID("KEYS", Tr::KEYS), &showWindow, ImGuiWindowFlags_None))
     {
         auto& state = OFS_KeybindingState::State(stateHandle);
-        
+
         ImGui::SetNextItemWidth(-1.f);
-        ImGui::InputTextWithHint(TR(FILTER), TR(FILTER), &actionFilter);
+        if(ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
+        ImGui::InputTextWithHint("##filter", "Filter by action, group or key, e.g. Ctrl", &actionFilter);
         ImGui::Spacing();
 
-        for(auto& group : actionGroups)
+        // The footer holds the validate button and, when it has found some,
+        // the orphaned bindings, so the table leaves room for one row of it.
+        const float footer = ImGui::GetFrameHeightWithSpacing() + ImGui::GetStyle().ItemSpacing.y;
+        const ImGuiTableFlags flags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerV
+            | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
+        if(ImGui::BeginTable("##bindings", 2, flags, ImVec2(0.f, -footer)))
         {
-            renderGroup(state, group);
+            ImGui::TableSetupScrollFreeze(0, 1);
+            ImGui::TableSetupColumn("Action", ImGuiTableColumnFlags_WidthStretch, 1.f);
+            ImGui::TableSetupColumn("Bindings", ImGuiTableColumnFlags_WidthStretch, 1.2f);
+            ImGui::TableHeadersRow();
+
+            for(auto& group : actionGroups)
+            {
+                renderGroup(state, group);
+            }
+            ImGui::EndTable();
         }
 
         ImGui::Spacing();
@@ -481,6 +600,11 @@ void OFS_KeybindingSystem::RenderKeybindingWindow() noexcept
             }
         }
 
+        if(openTriggerModal)
+        {
+            ImGui::OpenPopup(TR_ID("ADD_EDIT_TRIGGER", Tr::ADD_EDIT_TRIGGER));
+            openTriggerModal = false;
+        }
         renderNewTriggerModal();
         if(!showWindow) 
             ImGui::CloseCurrentPopup();

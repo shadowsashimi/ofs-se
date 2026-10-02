@@ -1,0 +1,63 @@
+# A chapter's tempo can be counted half or double time, and keeps that when
+# measured again. The test media is a click every half second for a minute,
+# which detection makes one chapter of at 120 BPM.
+#! covers src/UI/OFS_ChapterManager.* OFS-lib/state/states/ChapterState.* OFS-lib/UI/OFS_Waveform.* src/UI/OFS_ScriptPositionsOverlays.*
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note open chapters from the View menu, and detect
+click 266 13
+wait 5
+click 300 238
+wait 20
+click 800 349
+wait 600
+expect chapter 120,0.0,60.0
+
+note the chapter's menu: Double time (x2) 1147,596, Half time (/2) 1134,620
+click 1067 468
+wait 10
+shot 01-row-menu
+windows 01-row-menu
+
+note half time: 120 becomes 60
+click 1134 620
+wait 10
+state 02-half
+expect chapter 60,0.0,60.0
+
+note measuring again keeps the correction rather than going back to 120
+click 800 349
+wait 60
+state 03-measured-again
+expect chapter 60,0.0,60.0
+
+note the tempo grid's settings in the Mode panel follow the chapter, and double it there
+click 786 43
+wait 10
+shot 04-tempo-settings
+move 1450 200
+wheel -1
+wait 10
+click 1515 98
+wait 10
+state 05-doubled-in-mode-panel
+shot 05-doubled-in-mode-panel
+expect chapter 120,0.0,60.0
+
+note double again from the chapter's menu, and it holds through measuring
+click 1067 468
+wait 10
+click 1147 596
+wait 10
+expect chapter 240,0.0,60.0
+click 800 349
+wait 60
+state 06-240-measured
+expect chapter 240,0.0,60.0
+quit

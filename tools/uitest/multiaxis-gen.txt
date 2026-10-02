@@ -1,0 +1,134 @@
+# Special functions > Multi-axis writes twist, roll and pitch from the
+# selected stroke points, as a preview that is only kept once applied.
+# Special functions window at 1600x900: the tool bar is two rows, Multi-axis
+# 935,260. Once moved up and made taller: presets Sway 642, Corkscrew 747,
+# Grind 852, Orbit 957 at y 240; Amount +5 988,446; Preview 799,696, or while
+# previewing Apply 699,696 and Discard 885,696; the close button 997,110.
+#! covers src/UI/OFS_SpecialFunctions.*
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note a zigzag between 30 and 70 starting at a bottom
+hold shift
+lanemove 3.0 30
+tap
+lanemove 3.5 70
+tap
+lanemove 4.0 30
+tap
+lanemove 4.5 70
+tap
+lanemove 5.0 30
+tap
+lanemove 5.5 70
+tap
+lanemove 6.0 30
+tap
+let shift
+wait 5
+expect actions 7
+
+note open special functions, pick Multi-axis, select everything
+click 266 13
+wait 5
+click 300 190
+wait 15
+click 935 260
+wait 10
+key ctrl+a
+wait 5
+expect selection 7
+shot 01-multiaxis
+
+note move the window up and make it tall enough to show everything
+drag 700 223 700 110 10
+wait 10
+drag 1014 637 1014 880 10
+wait 10
+shot 02-tall
+
+note Sway, previewed: roll leans one way at one bottom and the other way at the next,
+note with bottom focus 30 taking a little off towards the tops
+click 642 240
+wait 5
+click 799 696
+wait 10
+state 03-sway
+shot 03-sway
+expect scripts 2
+expect positions:uitest.roll 70,66,58,50,42,34,30,34,42,50,58,66,70,66,58,50,42,34,30
+expect active_title uitest
+
+note a change to a setting updates the preview, rather than adding to it
+click 988 446
+wait 10
+state 04-amount
+expect positions:uitest.roll 75,69,60,50,40,31,25,31,40,50,60,69,75,69,60,50,40,31,25
+
+note Grind: the preview switches to pitch, and roll goes back to what it had
+click 852 240
+wait 10
+state 05-grind
+shot 05-grind
+expect scripts 3
+expect active_title uitest
+note pitch swings through each bottom (31 to 69) wider than through each top (38 to 62)
+expect positions:uitest.pitch 50,69,67,50,38,41,50,59,62,50,33,31,50,69,67,50,38,41,50,59,62,50,33,31,50,69,67,50,38,41,50,59,62,50,33,31,50
+
+note Apply keeps it
+click 699 696
+wait 10
+state 06-applied
+shot 06-applied
+expect positions:uitest.pitch 50,69,67,50,38,41,50,59,62,50,33,31,50,69,67,50,38,41,50,59,62,50,33,31,50,69,67,50,38,41,50,59,62,50,33,31,50
+
+note with nothing previewing, switching presets leaves the scripts alone
+click 642 240
+wait 10
+state 07-preset-after-apply
+expect positions:uitest.pitch 50,69,67,50,38,41,50,59,62,50,33,31,50,69,67,50,38,41,50,59,62,50,33,31,50,69,67,50,38,41,50,59,62,50,33,31,50
+
+note a preview of roll leaves the applied pitch as it is
+click 799 696
+wait 10
+state 08-roll-preview
+shot 08-roll-preview
+expect positions:uitest.roll 70,66,58,50,42,34,30,34,42,50,58,66,70,66,58,50,42,34,30
+expect positions:uitest.pitch 50,69,67,50,38,41,50,59,62,50,33,31,50,69,67,50,38,41,50,59,62,50,33,31,50,69,67,50,38,41,50,59,62,50,33,31,50
+
+note Discard takes the preview back out, and pitch is still there
+click 885 696
+wait 10
+state 09-discarded
+shot 09-discarded
+expect positions:uitest.pitch 50,69,67,50,38,41,50,59,62,50,33,31,50,69,67,50,38,41,50,59,62,50,33,31,50,69,67,50,38,41,50,59,62,50,33,31,50
+
+note Orbit, previewed and applied: roll in a circle and pitch following, then the 3D view with its guides
+click 957 240
+wait 5
+click 799 696
+wait 10
+click 699 696
+wait 10
+click 997 110
+wait 10
+click 1560 43
+wait 10
+seek 4.25
+wait 30
+shot 10-3d-guides
+
+note Alt and drag turns the camera to three quarters, where pitch can be seen
+hold alt
+drag 595 450 507 450 10
+let alt
+wait 20
+state 11-turned
+shot 11-3d-turned
+expect camera_yaw 35
+quit

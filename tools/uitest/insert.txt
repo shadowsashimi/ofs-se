@@ -1,0 +1,42 @@
+# Partway in, cut away, from the front and then from the side: whether the
+# opening closes onto the rod behind its head.
+#! sweep
+#! covers src/UI/OFS_ScriptSimulator.* src/UI/OFS_VulvaHeightMap.h src/state/SimulatorState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 5
+key keypaddivide
+seek 6
+wait 5
+key keypad0
+seek 5
+wait 10
+click 1560 43
+wait 30
+seek 5.15
+wait 30
+shot 01-85
+seek 5.3
+wait 30
+shot 02-70
+seek 5.5
+wait 30
+shot 03-50
+hold alt
+drag 600 300 375 300 12
+let alt
+wait 10
+seek 5.15
+wait 30
+shot 04-side-85
+seek 5.3
+wait 30
+shot 05-side-70
+seek 5.5
+wait 30
+shot 06-side-50
+quit

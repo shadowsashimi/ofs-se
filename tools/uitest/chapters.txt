@@ -1,0 +1,47 @@
+# Making and naming chapters by hand in the chapters panel. With one chapter
+# at 1600x900 its row is at y 444: name field from x 538 to 912, row menu
+# button at 1067.
+#! covers src/UI/OFS_ChapterManager.* OFS-lib/state/states/ChapterState.*
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note open chapters from the View menu
+click 266 13
+wait 5
+click 300 238
+wait 20
+expect chapters 0
+
+note create a chapter at the playhead with its keybinding's action
+action create_chapter
+wait 10
+state 01-created
+shot 01-created
+expect chapters 1
+note a chapter made by hand has a name to start from
+expect chapter_name Chapter 1
+
+note rename it: click the name, select what is there, type over it
+click 730 444
+wait 5
+key ctrl+a
+wait 3
+type Intro
+wait 5
+key enter
+wait 5
+state 02-renamed
+shot 02-renamed
+expect chapter_name Intro
+
+note the row menu
+click 1067 444
+wait 10
+shot 03-row-menu
+windows 03-row-menu
+quit

@@ -1,4 +1,4 @@
-project(OpenFunscripter)
+project(OFS-SE)
 
 set(OPEN_FUNSCRIPTER_SOURCES
   "main.cpp"
@@ -7,6 +7,7 @@ set(OPEN_FUNSCRIPTER_SOURCES
   "OFS_Project.cpp"
   
   "OFS_UndoSystem.cpp"
+  "OFS_UiDriver.cpp"
 
   "UI/OFS_Preferences.cpp"
   "UI/OFS_ScriptSimulator.cpp"
@@ -15,7 +16,10 @@ set(OPEN_FUNSCRIPTER_SOURCES
   "UI/OFS_DownloadFfmpeg.cpp"
   "UI/OFS_FunscriptMetadataEditor.cpp"
   "UI/OFS_ChapterManager.cpp"
+  "UI/OFS_ScriptCheck.cpp"
 
+  "api/OFS_DeviceLink.cpp"
+  "api/OFS_TCode.cpp"
   "api/OFS_WebsocketApi.cpp"
   "api/OFS_WebsocketApiClient.cpp"
   "api/OFS_WebsocketApiEvents.cpp"
@@ -55,8 +59,10 @@ if(APPLE)
 						COMMAND ${CMAKE_COMMAND} -E copy_directory
 						"${CMAKE_SOURCE_DIR}/data/" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/../Resources/data")
 else()
+	# copy_if_different so an already running OFS-SE does not fail the build by
+	# holding a lock on files that did not actually change.
 	add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
-						COMMAND ${CMAKE_COMMAND} -E copy_directory
+						COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different
 						"${CMAKE_SOURCE_DIR}/data/" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/data")
 endif()
 
@@ -71,8 +77,8 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 if(WIN32)
   # download mpv binaries
   if (NOT EXISTS "${CMAKE_BINARY_DIR}/mpv-2.dll")
-    file(DOWNLOAD "https://www.7-zip.org/a/7zr.exe" "7zr.exe" SHOW_PROGRESS)
-    file(DOWNLOAD "https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-v3-20220925-git-56e24d5.7z/download" "mpv-dev.7z" SHOW_PROGRESS)
+    file(DOWNLOAD "https://www.7-zip.org/a/7zr.exe" "${CMAKE_BINARY_DIR}/7zr.exe" SHOW_PROGRESS)
+    file(DOWNLOAD "https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-v3-20220925-git-56e24d5.7z/download" "${CMAKE_BINARY_DIR}/mpv-dev.7z" SHOW_PROGRESS)
     add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
         COMMAND "${CMAKE_BINARY_DIR}/7zr.exe" "x" "-y" "mpv-dev.7z" "mpv-2.dll" 
         WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
@@ -82,7 +88,7 @@ if(WIN32)
 
 	# copy mpv-2.dll to bin dir
 	add_custom_command(TARGET ${PROJECT_NAME} PRE_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy
+                   COMMAND ${CMAKE_COMMAND} -E copy_if_different
                    "${CMAKE_BINARY_DIR}/mpv-2.dll" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/mpv-2.dll"
 				   DEPENDS "${CMAKE_BINARY_DIR}/mpv-2.dll")
 endif()

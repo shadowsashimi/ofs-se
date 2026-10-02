@@ -1,0 +1,59 @@
+# The uterus distending finish by finish: 3D with the cutaway, the rod
+# bottomed out against the cervix so each finish pumps into the uterus, each
+# asked for at once, with shots after the first, fifth and tenth.
+#! sweep
+#! covers src/UI/OFS_ScriptSimulator.* src/UI/OFS_VulvaHeightMap.h src/state/SimulatorState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 5
+key keypaddivide
+seek 6
+wait 5
+key keypad0
+seek 6
+wait 10
+click 1560 43
+wait 30
+shot 00-empty
+action simulator_finish_now
+waituntil finish_count >= 1 2400
+wait 480
+state after-1
+shot after-1
+action simulator_finish_now
+waituntil finish_count >= 2 2400
+wait 480
+action simulator_finish_now
+waituntil finish_count >= 3 2400
+wait 480
+action simulator_finish_now
+waituntil finish_count >= 4 2400
+wait 480
+action simulator_finish_now
+waituntil finish_count >= 5 2400
+wait 480
+state after-5
+shot after-5
+action simulator_finish_now
+waituntil finish_count >= 6 2400
+wait 480
+action simulator_finish_now
+waituntil finish_count >= 7 2400
+wait 480
+action simulator_finish_now
+waituntil finish_count >= 8 2400
+wait 480
+action simulator_finish_now
+waituntil finish_count >= 9 2400
+wait 480
+action simulator_finish_now
+waituntil finish_count >= 10 2400
+wait 480
+state after-10
+shot after-10
+expect finish_count 10
+quit

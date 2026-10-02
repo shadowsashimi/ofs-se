@@ -9,14 +9,15 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
 # == OPTIONS ==
 # =============
 option(OFS_PROFILE OFF)
-option(OFS_AVX OFF)
 
 if(WIN32)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    if(OFS_AVX) 
-        message("OFS AVX ENABLED")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX")
-    endif()
+    # Generate PDBs for Release too, otherwise a crash trace has no names.
+    # /Zi only adds debug info, it does not change codegen.
+    add_compile_options("$<$<CONFIG:Release>:/Zi>")
+    add_link_options("$<$<CONFIG:Release>:/DEBUG>" "$<$<CONFIG:Release>:/OPT:REF>" "$<$<CONFIG:Release>:/OPT:ICF>")
+    # AVX is enabled by default on Windows (supported by all CPUs since 2011)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /arch:AVX")
 endif()
 
 # ====================

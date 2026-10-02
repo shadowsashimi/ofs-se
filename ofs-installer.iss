@@ -1,27 +1,26 @@
 #define Configuration "Release"
 
 [Setup]
-AppName=OpenFunscripter
-AppVersion=1.0
-AppPublisher=OpenFunscripter
-AppPublisherURL=www.github.com/OpenFunscripter/OFS
-AppId=OpenFunscripter/OFS
+AppName=OFS-SE
+AppVersion=4.0.8-SE
+AppPublisher=OFS-SE
+AppId=OFS-SE/OFS
 ArchitecturesInstallIn64BitMode=x64
-DefaultDirName={pf}\OpenFunscripter
-DefaultGroupName=OpenFunscripter
-UninstallDisplayIcon={app}\OpenFunscripter.exe
+DefaultDirName={pf}\OFS-SE
+DefaultGroupName=OFS-SE
+UninstallDisplayIcon={app}\OFS-SE.exe
 Compression=lzma2
 SolidCompression=yes
-OutputBaseFilename=ofs-installer
+OutputBaseFilename=ofs-se-installer
 OutputDir=.\installer
 
 [Files]
-Source: "bin\{#Configuration}\OpenFunscripter.exe"; DestDir: "{app}"
+Source: "bin\{#Configuration}\OFS-SE.exe"; DestDir: "{app}"
 Source: "bin\{#Configuration}\*.dll"; DestDir: "{app}"
 Source: "data\*"; Flags: recursesubdirs; DestDir: "{app}\data"
 
 [Icons]
-Name: "{commonprograms}\OpenFunscripter"; Filename: "{app}\OpenFunscripter.exe"
+Name: "{commonprograms}\OFS-SE"; Filename: "{app}\OFS-SE.exe"; IconFilename: "{app}\OFS-SE.exe"
 
 [Code]
 // Uninstall on install code taken from https://stackoverflow.com/a/2099805/4040754

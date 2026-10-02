@@ -1,0 +1,71 @@
+# Opens the panels that are closed by default, from the View menu, and
+# records each: the action editor, special functions, chapters and metadata.
+# View menu rows at 1600x900: Toolbar 42, Statistics 64, Undo 86, Simulator
+# 108, Metadata 130, Action editor 152, Special functions 174, Websocket 196,
+# Chapters 218.
+#! covers src/UI/OFS_FunscriptMetadataEditor.* src/OpenFunscripter.cpp:ShowMainMenuBar src/OpenFunscripter.cpp:ShowStatisticsWindow
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note place a few points so the panels have something to act on
+hold shift
+lanemove 4.0 10
+tap
+lanemove 4.5 90
+tap
+lanemove 5.0 10
+tap
+lanemove 5.5 90
+tap
+lanemove 6.0 10
+tap
+lanemove 6.5 90
+tap
+let shift
+wait 5
+expect actions 6
+
+note action editor
+click 266 13
+wait 5
+click 300 166
+wait 15
+expect show_action_editor 1
+shot 01-action-editor
+windows 01-action-editor
+
+note special functions, with nothing selected, then with everything selected
+click 266 13
+wait 5
+click 300 190
+wait 15
+expect show_special_functions 1
+shot 02-special-functions-empty
+windows 02-special-functions
+key ctrl+a
+wait 10
+shot 03-special-functions-selected
+
+note chapters
+click 266 13
+wait 5
+click 300 238
+wait 15
+expect show_chapter_manager 1
+shot 04-chapters
+windows 04-chapters
+
+note metadata
+click 266 13
+wait 5
+click 300 130
+wait 15
+shot 05-metadata
+windows 05-metadata
+state 05-metadata
+quit

@@ -1,0 +1,77 @@
+# The player controls and the timeline's zoom, with the mouse.
+# At 1600x900 everything that drives playback is one row along y 812:
+# previous frame 26, back 3 s 73, play 118, forward 3 s 164, next frame 211,
+# the time, then -10% at 545, the speed field 604, +10% 671, 1x 718, mute
+# 775 and the volume slider from 800 to the edge; the seek bar along y 853
+# from x 12 to 1588.
+#! covers OFS-lib/UI/OFS_VideoplayerControls.* OFS-lib/UI/OFS_Videopreview.* OFS-lib/UI/GradientBar.* OFS-lib/Funscript/FunscriptHeatmap.* OFS-lib/UI/OFS_ScriptTimeline.* OFS-lib/videoplayer/* OFS-lib/OFS_MpvLoader.*
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+expect player_time 5.000
+
+note next frame, then previous frame
+click 211 811
+wait 10
+expect player_time 5.033
+click 26 811
+wait 10
+expect player_time 5.000
+
+note forward three seconds
+click 164 811
+wait 15
+expect player_time 8.000
+
+note speed up by a tenth, then back to normal
+click 671 812
+wait 5
+expect speed 1.10
+click 718 812
+wait 5
+expect speed 1.00
+
+note type a speed into the field and press Enter
+dclick 604 812
+wait 5
+key ctrl+a
+type 0.5
+key enter
+wait 5
+expect speed 0.50
+click 718 812
+wait 5
+expect speed 1.00
+
+note click the middle of the seek bar
+click 800 853
+wait 20
+state 01-seek-bar
+shot 01-seek-bar
+note halfway along the bar, now the whole width, is half the minute
+expect player_time 30.012
+
+note the mouse wheel over the timeline zooms it; aimed at the playhead, which
+note the seek bar click left at about 30 s
+lanemove 30.0 50
+wait 5
+state 02-before-zoom
+wheel 3
+wait 30
+state 03-zoomed-in
+note each notch zooms by a tenth: three in from 5 s
+note the zoom eases in over 150ms, so it is waited for rather than counted in frames
+waituntil visible_time <= 3.55 120
+waituntil visible_time >= 3.45 120
+wheel -6
+wait 30
+state 04-zoomed-out
+note and six out from there
+waituntil visible_time >= 5.55 120
+waituntil visible_time <= 5.65 120
+shot 04-zoomed-out
+quit

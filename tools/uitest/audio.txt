@@ -1,0 +1,62 @@
+# Scripting to an audio file with no picture, once per media named below. It
+# has to load, keep time, step, take points, save and reopen.
+#! covers src/OFS_Project.* OFS-lib/UI/OFS_Waveform.* OFS-lib/videoplayer/* OFS-lib/OFS_MpvLoader.* src/OpenFunscripter.cpp:openFile src/OpenFunscripter.cpp:initProject src/OpenFunscripter.cpp:autoWaveformForAudio src/OpenFunscripter.cpp:VideoLoaded
+#! media mp3 m4a mp3-caps
+size 1600 900
+wait 30
+open $MEDIA
+wait 120
+shot 01-loaded
+windows 01-loaded
+state 01-loaded
+expect project_valid 1
+expect standalone 0
+expect blank 0
+waituntil duration >= 59.9 120
+expect paused 1
+# No picture, so the panel says so, and the waveform comes without asking.
+expect audio_only 1
+waituntil waveform_shown >= 1 600
+shot 01-waveform
+
+# Playing moves the clock, and pausing stops it.
+play
+waituntil player_time >= 1.0 300
+pause
+wait 10
+state 02-played
+
+# Seeking lands where asked, and frame steps move by a small, finite amount.
+seek 30
+wait 10
+expect player_time 30.000
+action next_frame
+wait 10
+state 03-stepped
+shot 03-stepped
+action prev_frame
+wait 10
+action prev_frame
+wait 10
+state 04-stepped-back
+
+# A point placed on the audio's timeline, saved, and read back from disk.
+seek 12
+wait 10
+action action_50
+wait 5
+expect actions 1
+action save_project
+wait 10
+
+open $MEDIA
+wait 120
+state 05-reopened
+expect project_valid 1
+expect standalone 0
+expect actions 1
+waituntil duration >= 59.9 120
+expect audio_only 1
+waituntil waveform_shown >= 1 600
+shot 05-reopened
+quit

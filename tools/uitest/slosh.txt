@@ -1,0 +1,70 @@
+# The pools slosh as the case tips: three finishes bottomed out fill the
+# uterus, then the case is rolled and pitched with no scripts for either,
+# shot as it tips and again once it has settled; then a finish partway in
+# and a roll, for the pool on the tip.
+#! sweep
+#! covers src/UI/OFS_ScriptSimulator.* src/UI/OFS_VulvaHeightMap.h src/state/SimulatorState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 5
+key keypaddivide
+seek 6
+wait 5
+key keypad0
+seek 6
+wait 10
+click 1560 43
+wait 30
+action simulator_finish_now
+waituntil finish_count >= 1 2400
+wait 480
+action simulator_finish_now
+waituntil finish_count >= 2 2400
+wait 480
+action simulator_finish_now
+waituntil finish_count >= 3 2400
+wait 480
+state 01-level
+shot 01-level
+simaxis roll 100
+wait 4
+state 02-roll-tipping
+shot 02-roll-tipping
+wait 90
+state 03-roll-settled
+shot 03-roll-settled
+simaxis roll 0
+wait 4
+shot 04-roll-back-tipping
+wait 90
+state 05-roll-back-settled
+shot 05-roll-back-settled
+simaxis roll -1
+simaxis pitch 100
+wait 4
+shot 06-pitch-tipping
+wait 90
+state 07-pitch-settled
+shot 07-pitch-settled
+simaxis pitch -1
+wait 90
+state 08-level-again
+shot 08-level-again
+seek 5.5
+wait 20
+action simulator_finish_now
+waituntil finish_count >= 4 2400
+wait 480
+shot 09-tip-pool
+simaxis roll 100
+wait 4
+shot 10-tip-pool-tipping
+wait 90
+shot 11-tip-pool-settled
+simaxis roll -1
+expect finish_count 4
+quit

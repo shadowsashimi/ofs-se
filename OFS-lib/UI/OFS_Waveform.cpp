@@ -9,6 +9,9 @@
 
 #include "subprocess.h"
 
+#include <cmath>
+#include <cstring>
+
 bool OFS_Waveform::LoadFlac(const std::string& output) noexcept
 {
 	drflac* flac = drflac_open_file(output.c_str(), NULL);
@@ -57,11 +60,15 @@ bool OFS_Waveform::LoadFlac(const std::string& output) noexcept
 	return true;
 }
 
-bool OFS_Waveform::GenerateAndLoadFlac(const std::string& ffmpegPath, const std::string& videoPath, const std::string& output) noexcept
+bool OFS_Waveform::GenerateAndLoadFlac(const std::string& ffmpegPath, const std::string& videoPath,
+	const std::string& output, bool bassOnly) noexcept
 {
 	generating = true;
 
-	std::array<const char*, 11> args =
+	// Everything below 150 Hz, which in most music is the kick drum and the
+	// bass line: what a stroke usually follows. The rest of the mix - vocals,
+	// hats, synths - crowds the envelope and hides that pulse.
+	std::vector<const char*> args =
 	{
 		ffmpegPath.c_str(),
 		"-y",
@@ -70,9 +77,13 @@ bool OFS_Waveform::GenerateAndLoadFlac(const std::string& ffmpegPath, const std:
 		"-i", videoPath.c_str(),
 		"-vn",
 		"-ac", "1",
-		output.c_str(),
-		nullptr
 	};
+	if (bassOnly) {
+		args.push_back("-af");
+		args.push_back("lowpass=f=150");
+	}
+	args.push_back(output.c_str());
+	args.push_back(nullptr);
 	struct subprocess_s proc;
 	if(subprocess_create(args.data(), subprocess_option_no_window, &proc) != 0) {
 		generating = false; 
@@ -115,86 +126,111 @@ void OFS_WaveformLOD::Init() noexcept
 	WaveShader = std::make_unique<WaveformShader>();
 }
 
+// Flip to 1 to get a live panel of the mapping maths while working on this.
+#define OFS_WAVEFORM_DEBUG 0
+
 void OFS_WaveformLOD::Update(const OverlayDrawingCtx& ctx) noexcept
 {
 	OFS_PROFILE(__FUNCTION__);
+
+	const auto& samples = data.Samples();
+	const int32_t totalSampleCount = (int32_t)samples.size();
+	if(totalSampleCount <= 0 || ctx.totalDuration <= 0.f || ctx.canvasSize.x <= 0.f) {
+		return;
+	}
+
 	const float relStart = ctx.offsetTime / ctx.totalDuration;
 	const float relDuration = ctx.visibleTime / ctx.totalDuration;
-	
-	const auto& samples = data.Samples();
-	const float totalSampleCount = samples.size();
 
-	float startIndexF = relStart * totalSampleCount;
-	float endIndexF = (relStart* totalSampleCount) + (totalSampleCount * relDuration);
+	const float startIndexF = relStart * totalSampleCount;
+	const float endIndexF = startIndexF + (relDuration * totalSampleCount);
+	const float visibleSampleCountF = endIndexF - startIndexF;
 
-	float visibleSampleCountF = endIndexF - startIndexF;
+	const float desiredSamples = ctx.canvasSize.x / 3.f;
+	const int32_t everyNth = Util::Max(1, (int32_t)SDL_ceilf(visibleSampleCountF / desiredSamples));
 
-	const float desiredSamples = ctx.canvasSize.x/3.f;
-	const float everyNth = SDL_ceilf(visibleSampleCountF / desiredSamples);
+	// Texel k always covers samples [k*everyNth, (k+1)*everyNth). Because this
+	// grid is global rather than relative to the current view, texels retained
+	// across a scroll stay exactly correct instead of drifting out of phase.
+	const int32_t firstTexel = (int32_t)SDL_floorf(startIndexF / everyNth);
+	const int32_t lastTexel = (int32_t)SDL_floorf(endIndexF / everyNth);
+	// +1 to include lastTexel, +1 guard texel so GL_LINEAR always has a
+	// neighbour to interpolate towards at the right edge.
+	const int32_t texelCount = (lastTexel - firstTexel) + 2;
 
-	auto& lineBuf = WaveformLineBuffer;		
-	if((int32_t)lastMultiple != (int32_t)(startIndexF / everyNth)) {
-		int32_t scrollBy = (startIndexF/everyNth) - lastMultiple;
+	auto& lineBuf = WaveformLineBuffer;
 
-		if(lastVisibleDuration == ctx.visibleTime
-		&& lastCanvasX == ctx.canvasSize.x
-		&& scrollBy > 0 && scrollBy < lineBuf.size()) {
-			OFS_PROFILE("WaveformScrolling");
-			std::memcpy(lineBuf.data(), lineBuf.data() + scrollBy, sizeof(float) * (lineBuf.size() - scrollBy));
-			lineBuf.resize(lineBuf.size() - scrollBy);
-			
-			int addedCount = 0;
-			float maxSample;
-			for(int32_t i = endIndexF - (everyNth*scrollBy); i <= endIndexF; i += everyNth) {
-				maxSample = 0.f;
-				for(int32_t j=0; j < everyNth; j += 1) {
-					int32_t currentIndex = i + j;
-					if(currentIndex >= 0 && currentIndex < totalSampleCount) {
-						float s = std::abs(samples[currentIndex]);
-						maxSample = Util::Max(maxSample, s);
-					}
-				}
-				lineBuf.emplace_back(maxSample);
-				addedCount += 1; 
-				if(addedCount == scrollBy) break;
-			}
-			assert(addedCount == scrollBy);
-		} else if(scrollBy != 0) {
-			OFS_PROFILE("WaveformUpdate");
-			lineBuf.clear();
-			float maxSample;
-			for(int32_t i = startIndexF; i <= endIndexF; i += everyNth) {
-				maxSample = 0.f;
-				for(int32_t j=0; j < everyNth; j += 1) {
-					int32_t currentIndex = i + j;
-					if(currentIndex >= 0 && currentIndex < totalSampleCount) {
-						float s = std::abs(samples[currentIndex]);
-						maxSample = Util::Max(maxSample, s);
-					}
-				}
-				lineBuf.emplace_back(maxSample);
+	auto bucket = [&](int32_t texel) noexcept -> float
+	{
+		float maxSample = 0.f;
+		const int32_t begin = texel * everyNth;
+		const int32_t end = begin + everyNth;
+		for(int32_t i = begin; i < end; i += 1) {
+			if(i >= 0 && i < totalSampleCount) {
+				maxSample = Util::Max(maxSample, std::abs(samples[i]));
 			}
 		}
+		return maxSample;
+	};
 
-		
-		lastMultiple = SDL_floorf(startIndexF / everyNth);
-		lastCanvasX = ctx.canvasSize.x;
-		lastVisibleDuration = ctx.visibleTime;
+	const bool layoutChanged = everyNth != lastEveryNth
+		|| texelCount != (int32_t)lineBuf.size()
+		|| totalSampleCount != lastSampleCount;
+	const int32_t scrollBy = firstTexel - lastFirstTexel;
+
+	if(layoutChanged) {
+		OFS_PROFILE("WaveformRebuild");
+		lineBuf.resize(texelCount);
+		for(int32_t k = 0; k < texelCount; k += 1) {
+			lineBuf[k] = bucket(firstTexel + k);
+		}
+		Upload();
+	}
+	else if(scrollBy != 0) {
+		OFS_PROFILE("WaveformScrolling");
+		if(scrollBy > 0 && scrollBy < texelCount) {
+			std::memmove(lineBuf.data(), lineBuf.data() + scrollBy,
+				sizeof(float) * (texelCount - scrollBy));
+			for(int32_t k = texelCount - scrollBy; k < texelCount; k += 1) {
+				lineBuf[k] = bucket(firstTexel + k);
+			}
+		}
+		else if(scrollBy < 0 && -scrollBy < texelCount) {
+			const int32_t shift = -scrollBy;
+			std::memmove(lineBuf.data() + shift, lineBuf.data(),
+				sizeof(float) * (texelCount - shift));
+			for(int32_t k = 0; k < shift; k += 1) {
+				lineBuf[k] = bucket(firstTexel + k);
+			}
+		}
+		else {
+			// Jumped further than the buffer is wide, nothing worth keeping.
+			for(int32_t k = 0; k < texelCount; k += 1) {
+				lineBuf[k] = bucket(firstTexel + k);
+			}
+		}
 		Upload();
 	}
 
-	samplingOffset = (1.f / lineBuf.size()) * ((startIndexF/everyNth) - lastMultiple);
+	lastEveryNth = everyNth;
+	lastFirstTexel = firstTexel;
+	lastSampleCount = totalSampleCount;
 
-#if 0
+	// Map the canvas onto the slice of the texture it actually covers. Sampling
+	// at texel centres (the +0.5) lines each bucket up with the audio it came
+	// from instead of half a texel to the left.
+	const float texelCountF = (float)texelCount;
+	samplingScale = visibleSampleCountF / (everyNth * texelCountF);
+	samplingOffset = ((startIndexF / everyNth) - firstTexel + 0.5f) / texelCountF;
+
+#if OFS_WAVEFORM_DEBUG
 	ImGui::Begin("Waveform Debug");
-	ImGui::Text("Audio samples: %lld", lineBuf.size());
-	ImGui::Text("Expected samples: %f", (endIndexF - startIndexF)/everyNth);
-	ImGui::Text("Samples in view: %f", (endIndexF - startIndexF));
-	ImGui::Text("Start: %f", startIndexF);
-	ImGui::Text("End: %f", endIndexF);
-	ImGui::Text("Every nth: %f", everyNth);
-	ImGui::Text("Last multiple: %f", lastMultiple);
-	ImGui::SliderFloat("Offset", &samplingOffset, 0.f, 1.f/lineBuf.size(), "%f");
+	ImGui::Text("everyNth: %d", everyNth);
+	ImGui::Text("texels: %d (first %d, last %d)", texelCount, firstTexel, lastTexel);
+	ImGui::Text("sample range: %.2f .. %.2f (%.2f visible)", startIndexF, endIndexF, visibleSampleCountF);
+	ImGui::Text("scale: %.6f  offset: %.6f", samplingScale, samplingOffset);
+	ImGui::Text("u at left edge:  %.6f", samplingOffset);
+	ImGui::Text("u at right edge: %.6f", samplingScale + samplingOffset);
 	ImGui::End();
 #endif
 }

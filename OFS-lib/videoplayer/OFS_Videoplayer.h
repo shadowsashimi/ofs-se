@@ -25,8 +25,22 @@ class OFS_Videoplayer
 	static constexpr float MinPlaybackSpeed = 0.05f;
 	static constexpr float MaxPlaybackSpeed = 3.0f;
 
+	// A blank timeline shorter than this leaves no room to script and would
+	// divide the position by something close to zero.
+	static constexpr float MinBlankDuration = 1.f;
+	static constexpr float MaxBlankDuration = 24.f * 60.f * 60.f;
+
     bool Init(bool hwAccel) noexcept;
     void OpenVideo(const std::string& path) noexcept;
+
+    // Opens a timeline of a fixed length with nothing behind it, for scripting
+    // without a video. Everything the rest of the app asks the player for -
+    // duration, position, play/pause, speed - is answered from a clock kept
+    // here instead of from mpv, so no caller needs to know the difference.
+    void OpenBlank(float durationSeconds) noexcept;
+    // Changes the length of a blank timeline. Does nothing with media open,
+    // which carries its own length.
+    void SetBlankDuration(float durationSeconds) noexcept;
     void SetSpeed(float speed) noexcept;
 	void AddSpeed(float speed) noexcept;
     void SetVolume(float volume) noexcept;
@@ -63,6 +77,14 @@ class OFS_Videoplayer
     bool IsPaused() const noexcept;
     float Fps() const noexcept;
     bool VideoLoaded() const noexcept;
+    // Whether the open timeline is the blank one rather than a media file.
+    bool IsBlank() const noexcept;
+    // Whether the open file is sound alone, with no picture and no cover art.
+    // Known once the file has loaded, and false until then.
+    bool IsAudioOnly() const noexcept;
+    // Whether there is a picture to draw: false for a blank timeline and for
+    // audio, both of which load and play with nothing on screen.
+    bool HasVisual() const noexcept;
     void NextFrame() noexcept;
     void PreviousFrame() noexcept;
 

@@ -1,0 +1,49 @@
+# The cutaway from several camera heights and a turned view, partway in.
+#! sweep
+#! covers src/UI/OFS_ScriptSimulator.* src/UI/OFS_VulvaHeightMap.h src/state/SimulatorState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 5
+key keypaddivide
+seek 6
+wait 5
+key keypad0
+seek 5.3
+wait 10
+click 1560 43
+wait 30
+shot 01-level
+hold alt
+drag 675 400 675 267 10
+let alt
+wait 10
+shot 02-below-40
+hold alt
+drag 675 267 675 483 10
+let alt
+wait 10
+shot 03-above-25
+hold alt
+drag 675 400 675 200 10
+let alt
+wait 10
+hold alt
+drag 675 300 562 300 10
+let alt
+wait 10
+shot 04-turned-below
+hold alt
+drag 675 450 675 200 10
+let alt
+wait 10
+shot 05-turned-steep
+hold alt
+drag 675 300 787 300 10
+let alt
+wait 10
+shot 06-steep
+quit

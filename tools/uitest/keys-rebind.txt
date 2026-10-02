@@ -1,0 +1,59 @@
+# Adding a point with the number row, and changing a binding in the keys
+# window. Options menu 327,13, Keys its first entry at 360,42.
+#! covers OFS-lib/UI/OFS_KeybindingSystem.* OFS-lib/state/states/KeybindingState.* src/OpenFunscripter.cpp:registerBindings
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note the number row adds points as the keypad does: 5 is 50
+state 00-defaults
+key 5
+wait 10
+expect actions 1
+expect positions 50
+
+note the keys window
+click 327 13
+wait 5
+click 360 42
+wait 20
+type at 10
+wait 10
+shot 01-keys-filtered
+windows 01-keys-filtered
+state 01-keys-filtered
+
+note change a binding: click Action at 10's "1" and press F7
+click 780 306
+wait 10
+shot 02-capturing
+key f7
+wait 10
+state 03-changed
+shot 03-changed
+expect bindings:action_10 F7|Keypad1
+
+note add a binding: Action at 100's "+" and press F8
+click 907 350
+wait 10
+key f8
+wait 10
+state 04-added
+shot 04-added
+expect bindings:action_100 F8|KeypadDivide
+
+note close the keys window, and the new binding adds a point at 10
+click 1146 195
+wait 10
+seek 6
+wait 10
+key f7
+wait 10
+state 05-used
+expect actions 2
+expect positions 50,10
+quit

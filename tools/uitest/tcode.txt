@@ -1,0 +1,127 @@
+# TCode to a machine on wifi, against a stand-in that logs what arrives, so
+# the commands OFS sent are in mock-tcode.log beside the results. A real OSR is
+# the thing to try before trusting it; this shows that OFS says the right
+# words, at the right rate, on the right axes.
+# Devices panel at 1600x900: View 266,13 with Devices at 300,282. Backends
+# Intiface 552,260, Serial 793,260, Wifi 1034,260. On wifi: address 792,363,
+# port 792,419, UDP 613,451, TCP 973,451, send every 792,513, Connect 792,551.
+# Project > Add > Shortcuts: menu 89,13, submenu row 425,178 adds twist; the
+# second lane's header is at 91,739. In the axis table, the stroke row's
+# Highest is at 663,673.
+#! server mock-tcode
+#! covers src/api/OFS_TCode.* src/api/OFS_DeviceLink.* src/state/DeviceLinkState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+note the window shows five seconds around the playhead, so it sits where the
+note strokes are going to be placed
+seek 6.5
+wait 10
+
+note four strokes half a second apart, for the machine to follow
+hold shift
+lanemove 6.0 10
+tap
+lanemove 6.5 90
+tap
+lanemove 7.0 10
+tap
+lanemove 7.5 90
+tap
+let shift
+wait 10
+expect actions 4
+
+note a twist script too, and made active, so more than one axis is driven
+click 89 13
+wait 5
+move 90 90
+wait 15
+move 320 90
+wait 20
+click 425 178
+wait 30
+expect scripts 2
+note its lane header makes it the one points land in
+click 91 739
+wait 10
+expect active_title uitest.twist
+hold shift
+lanemove 6.2 20
+tap
+lanemove 6.8 80
+tap
+let shift
+wait 10
+
+note open the devices panel and pick the wifi machine
+click 266 13
+wait 5
+click 300 282
+wait 20
+expect show_devices 1
+click 1034 260
+wait 10
+expect device_status 0
+
+note point it at the stand-in, which listens on 127.0.0.1:8000
+dclick 792 363
+wait 3
+key ctrl+a
+type 127.0.0.1
+key enter
+wait 5
+shot 01-wifi
+windows 01-wifi
+
+note connecting opens the socket; nothing has to answer for UDP
+click 792 551
+wait 20
+state 02-connected
+shot 02-connected
+expect device_status 2
+
+note playing sends a line about every ten milliseconds, with only what moved
+seek 5.8
+play
+wait 240
+pause
+wait 30
+state 03-played
+waituntil device_moves >= 20 10
+
+note the stroke and the twist both moved, each on its own channel
+state 03-channels
+expect device_channels L0,R0
+
+note past the end of the script nothing drives the axes, so they ease home:
+note two seconds of holding, then the ease itself, and frames are not seconds
+seek 20
+waituntil device_axes_home >= 1 900
+state 04-homed
+shot 04-homed
+expect device_axes L0:500,L1:500,L2:500,R0:500,R1:500,R2:500,A1:500
+
+note the stroke axis limited to half the machine's travel: the script is
+note mapped into what is left, so its 90 arrives as 450 of 999 rather than 899
+dclick 663 673
+wait 3
+key ctrl+a
+type 50
+key enter
+wait 10
+seek 6.5
+wait 60
+state 05-limited
+shot 05-limited
+waituntil device_stroke <= 460 30
+waituntil device_stroke >= 440 30
+
+note disconnecting puts every axis back to its rest position
+click 792 551
+wait 20
+state 04-disconnected
+expect device_status 0
+quit

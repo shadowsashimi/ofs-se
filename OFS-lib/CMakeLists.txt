@@ -13,6 +13,7 @@ set(OFS_LIB_SOURCES
 	"Funscript/FunscriptHeatmap.cpp"
 
 	"UI/GradientBar.cpp"
+	"UI/OFS_SashimiTheme.cpp"
 	"UI/OFS_ImGui.cpp"
 	"UI/OFS_VideoplayerControls.cpp"
 	"UI/OFS_Videopreview.cpp"
@@ -37,6 +38,8 @@ set(OFS_LIB_SOURCES
 
 	"OFS_ControllerInput.cpp"
 
+	"OFS_TempoDetection.cpp"
+	"OFS_CrashHandler.cpp"
 	"OFS_Serialization.cpp"
 	"OFS_Util.cpp"
 	"OFS_FileLogging.cpp"
@@ -85,29 +88,29 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
+# The version in the title bar and about box comes from a header written on
+# every build, so it names the commit actually built. See cmake/GitVersion.cmake.
 find_package(Git)
-execute_process(
-    COMMAND ${GIT_EXECUTABLE} --git-dir=${CMAKE_SOURCE_DIR}/.git describe --abbrev=0 --tags
-    RESULT_VARIABLE result
-    OUTPUT_VARIABLE LATEST_GIT_TAG)
-
-execute_process(
-    COMMAND ${GIT_EXECUTABLE} --git-dir=${CMAKE_SOURCE_DIR}/.git rev-parse --short HEAD
-    RESULT_VARIABLE result
-    OUTPUT_VARIABLE LATEST_GIT_HASH)
-
-
-string(REGEX REPLACE "\n$" "" LATEST_GIT_TAG "${LATEST_GIT_TAG}")
-set(LATEST_GIT_TAG "\"${LATEST_GIT_TAG}\"")
-message("Compiling with git tag: ${LATEST_GIT_TAG}")
-
-string(REGEX REPLACE "\n$" "" LATEST_GIT_HASH "${LATEST_GIT_HASH}")
-set(LATEST_GIT_HASH "\"${LATEST_GIT_HASH}\"")
-message("Compiling with git hash: ${LATEST_GIT_HASH}")
+# Shown when there are no git tags to name the version, which is the usual case.
+set(OFS_SE_VERSION "1.0" CACHE STRING "Version shown when git has no tag to offer")
+set(OFS_GIT_VERSION_DIR "${CMAKE_BINARY_DIR}/generated")
+set(OFS_GIT_VERSION_HEADER "${OFS_GIT_VERSION_DIR}/OFS_GitVersion.h")
+set(OFS_GIT_VERSION_ARGS
+	"-DGIT=${GIT_EXECUTABLE}"
+	"-DSRC=${CMAKE_SOURCE_DIR}"
+	"-DOUT=${OFS_GIT_VERSION_HEADER}"
+	"-DFALLBACK_TAG=${OFS_SE_VERSION}"
+	-P "${CMAKE_CURRENT_SOURCE_DIR}/cmake/GitVersion.cmake")
+# Once now, so the header exists before anything first includes it.
+execute_process(COMMAND ${CMAKE_COMMAND} ${OFS_GIT_VERSION_ARGS})
+add_custom_target(OFS_GitVersion
+	COMMAND ${CMAKE_COMMAND} ${OFS_GIT_VERSION_ARGS}
+	BYPRODUCTS "${OFS_GIT_VERSION_HEADER}"
+	COMMENT "Reading the git commit being built")
+add_dependencies(${PROJECT_NAME} OFS_GitVersion)
+target_include_directories(${PROJECT_NAME} PUBLIC "${OFS_GIT_VERSION_DIR}")
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC 
-	"OFS_LATEST_GIT_TAG=${LATEST_GIT_TAG}"
-	"OFS_LATEST_GIT_HASH=${LATEST_GIT_HASH}"
 	"IMGUI_IMPL_OPENGL_LOADER_GLAD2"
 	"MPV_ENABLE_DEPRECATED=0"
 )

@@ -1,0 +1,58 @@
+# The script check finds strokes a device cannot follow, and slows them down.
+# A beat fill at a 32nd note writes strokes far over any device's speed, which
+# is what the check is then pointed at.
+# Special functions at 1600x900: Beat fill 697,291, the note length list
+# 799,465 with 1/32 its eighth row at 799,663, Fill 799,679.
+# Script check at 1600x900, which opens 540x612 in the middle: presets
+# Gentle 626,249, Typical 799,249, Fast 972,249; Check 799,455; Slow the fast
+# ones down 641,547.
+#! covers src/UI/OFS_ScriptCheck.* src/state/ScriptCheckState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note two pairs a couple of frames apart, 80 units apart: far too fast, and
+note closer together than the gentle preset's 100ms
+hold shift
+lanemove 3.00 10
+tap
+lanemove 3.067 90
+tap
+lanemove 3.30 10
+tap
+lanemove 3.367 90
+tap
+let shift
+wait 10
+expect actions 4
+
+note open the script check from the View menu
+click 266 13
+wait 5
+click 300 260
+wait 20
+expect show_script_check 1
+shot 01-open
+windows 01-open
+
+note check: the pairs are both too close together and too fast
+click 799 455
+wait 20
+state 02-checked
+shot 02-checked
+waituntil check_problems >= 2 10
+
+note slowing them down shortens the strokes and leaves their timing alone
+click 641 547
+wait 20
+state 03-slowed
+shot 03-slowed
+expect actions 4
+expect check_problems 0
+expect first_position 10
+expect last_position 36
+quit

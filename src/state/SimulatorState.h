@@ -10,11 +10,13 @@ struct SimulatorState
     ImVec2 P1 = {600.f, 300.f};
     ImVec2 P2 = {600.f, 700.f};
     ImColor Text = IM_COL32(0xFF, 0xFF, 0xFF, 0xFF);
-    ImColor Front = IM_COL32(0x01, 0xBA, 0xEF, 0xFF);
+    ImColor Front = IM_COL32(0xE8, 0x54, 0x8A, 0xFF);   // Sashimi pink
     ImColor Back = IM_COL32(0x10, 0x10, 0x10, 0xBF);
-    ImColor Border = IM_COL32(0x0B, 0x4F, 0x6C, 0xFF);
-    ImColor ExtraLines = IM_COL32(0x0B, 0x4F, 0x6C, 0xFF);
-    ImColor Indicator = IM_COL32(0xFF, 0x4F, 0x6C, 0xFF);
+    ImColor Border = IM_COL32(0x38, 0x38, 0x38, 0xFF);
+    ImColor ExtraLines = IM_COL32(0x38, 0x38, 0x38, 0xFF);
+    ImColor Indicator = IM_COL32(0xE6, 0xE6, 0xE6, 0xFF);
+    // The rod of the 3D model. A skin tone to begin with.
+    ImColor RodColor = IM_COL32(0xB4, 0x7B, 0x70, 0xFF);
     float Width = 120.f;
     float BorderWidth = 8.f;
     float ExtraLineWidth = 4.f;
@@ -23,10 +25,44 @@ struct SimulatorState
 
     int32_t ExtraLinesCount = 0;
 
+    // Replaces the flat bar with a 3D model of the stroker driven by every
+    // loaded axis at once.
+    bool ShowMultiAxis = false;
+    // Size of that model relative to the configured bar length.
+    float ModelScale = 1.f;
+    // Print the live value of each mapped axis next to the model.
+    bool ShowAxisReadout = false;
+    // Cut away the near half of the case so the sleeve inside is visible.
+    bool CutawayCase = true;
+    // Draw the rod. Hidden, it still strokes and shapes the sleeve, so the
+    // lips and canal can be watched deforming with nothing in the way.
+    bool ShowRod = true;
+    // Outline the opening where it comes round, inside the lips.
+    bool ShowRim = false;
+    // Mark which way the front of the case faces, so twist can be read.
+    bool ShowTwistIndicator = true;
+    // Camera elevation in degrees. Zero looks at the model straight on;
+    // positive raises the viewpoint from below, which is what brings the
+    // orifice in the underside into view.
+    float CameraElevation = 0.f;
+    // Camera turn around the model in degrees. Zero is straight on; turned,
+    // pitch and surge, which move towards and away from a camera in front,
+    // can be seen.
+    float CameraYaw = 0.f;
+
     bool EnableIndicators = true;
     bool EnablePosition = false;
     bool EnableHeightLines = true;
-    bool LockedPosition = false;
+    // Locked to begin with. Unlocked, the bar's ends and middle take clicks
+    // wherever it is drawn, and its default place overlaps the timeline, so a
+    // new user's first attempts at placing a point moved the simulator.
+    bool LockedPosition = true;
+    // Keep the simulator inside the video player, sized to it, following the
+    // player as its window is moved or resized. Which side it sits against,
+    // 0 left, 1 centre, 2 right, and how tall, as a share of the player.
+    bool FitToPlayer = false;
+    int32_t FitAnchor = 2;
+    float FitSize = 0.9f;
 
     inline static SimulatorState& State(uint32_t stateHandle) noexcept
     {
@@ -64,10 +100,23 @@ REFL_TYPE(SimulatorState)
 	REFL_FIELD(Border)
 	REFL_FIELD(ExtraLines)
 	REFL_FIELD(Indicator)
+	REFL_FIELD(RodColor)
+	REFL_FIELD(ShowRod)
+	REFL_FIELD(ShowRim)
+	REFL_FIELD(ShowTwistIndicator)
 	REFL_FIELD(GlobalOpacity)
 	REFL_FIELD(EnableIndicators)
 	REFL_FIELD(EnablePosition)
 	REFL_FIELD(EnableHeightLines)
 	REFL_FIELD(ExtraLinesCount)
 	REFL_FIELD(LockedPosition)
+	REFL_FIELD(FitToPlayer)
+	REFL_FIELD(FitAnchor)
+	REFL_FIELD(FitSize)
+	REFL_FIELD(ShowMultiAxis)
+	REFL_FIELD(ModelScale)
+	REFL_FIELD(ShowAxisReadout)
+	REFL_FIELD(CameraElevation)
+	REFL_FIELD(CameraYaw)
+	REFL_FIELD(CutawayCase)
 REFL_END

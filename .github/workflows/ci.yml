@@ -1,0 +1,17 @@
+name: CI
+
+# Manual only. Builds for Windows, Linux and macOS use up paid Actions minutes
+# on this private repo (macOS counts 10x), so nothing starts one on a push or a
+# pull request. Build locally, or start this from the Actions tab when needed.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      artifact_suffix: -${{ github.sha }}
+      retention_days: 14

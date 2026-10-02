@@ -14,7 +14,7 @@ environment:
 
 apps:
   openfunscripter:
-    command: bin/desktop-launch $SNAP/usr/local/bin/OpenFunscripter
+    command: bin/desktop-launch $SNAP/usr/local/bin/OFS-SE
     plugs:
       - desktop
       - desktop-legacy

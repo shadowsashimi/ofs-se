@@ -1,0 +1,25 @@
+# An audio file with cover art. mpv shows the picture as its video, so it is
+# treated as a video, not as audio alone.
+#! covers OFS-lib/videoplayer/* OFS-lib/OFS_MpvLoader.*
+#! media m4a-cover
+size 1600 900
+wait 30
+open $MEDIA
+wait 120
+waituntil duration >= 59.9 120
+state 01-loaded
+shot 01-loaded
+expect project_valid 1
+expect audio_only 0
+expect waveform_shown 0
+
+# The cover is a still at 1 fps. A frame step still has to be a small one.
+seek 30
+wait 10
+expect player_time 30.000
+action next_frame
+wait 10
+state 02-stepped
+waituntil player_time <= 30.050 30
+waituntil player_time >= 30.020 30
+quit

@@ -1,0 +1,14 @@
+# In a window too narrow for the whole playback row, the time and speed wrap
+# onto a line of their own under the transport buttons and volume.
+#! covers OFS-lib/UI/OFS_VideoplayerControls.*
+size 900 700
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+shot 01-narrow
+windows 01-narrow
+state 01-narrow
+quit

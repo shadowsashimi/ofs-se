@@ -118,6 +118,7 @@ private:
 	int32_t AudioLoc = 0;
 	int32_t AudioScaleLoc = 0;
 	int32_t AudioSamplingOffset = 0;
+	int32_t AudioSamplingScale = 0;
 	int32_t ColorLoc = 0;
 
 	static constexpr const char* vtx_shader = OFS_SHADER_VERSION R"(
@@ -143,6 +144,7 @@ private:
 			uniform sampler2D audio;
 			uniform float scaleAudio;
 			uniform float SamplingOffset;
+			uniform float SamplingScale;
 
 			in vec2 Frag_UV;
 			in vec4 Frag_Color;
@@ -172,7 +174,10 @@ private:
 				const float lowT = (500.f / frequencyBase) * 2.f;
 				const float midT = (2000.f / frequencyBase) * 2.f;
 
-				float unscaledSample = texture(audio, vec2(Frag_UV.x + SamplingOffset, 0)).x;
+				// SamplingScale maps the canvas onto the slice of the grid-aligned
+				// waveform texture that is actually visible; without it the texture
+				// is stretched to the full canvas regardless of what it covers.
+				float unscaledSample = texture(audio, vec2(Frag_UV.x * SamplingScale + SamplingOffset, 0)).x;
 				float scaledSample = unscaledSample * scaleAudio;
 				float padding = (1.f - scaledSample) / 2.f;
 				
@@ -203,6 +208,7 @@ public:
 	void ProjMtx(const float* mat4) noexcept;
 	void AudioData(uint32_t unit) noexcept;
 	void SampleOffset(float offset) noexcept;
+	void SampleScale(float scale) noexcept;
 	void ScaleFactor(float scale) noexcept;
 	void Color(float* vec3) noexcept;
 };

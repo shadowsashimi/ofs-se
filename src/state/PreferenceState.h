@@ -4,8 +4,11 @@
 
 enum class OFS_Theme : int32_t
 {
-	Dark,
-	Light
+	// Sashimi takes slot 0 so existing configs that stored "Dark" land on the
+	// OFS-SE look by default. Light keeps slot 1, stock Dark moves to the end.
+	Sashimi = 0,
+	Light = 1,
+	Dark = 2
 };
 
 struct PreferenceState 
@@ -16,7 +19,7 @@ struct PreferenceState
 	std::string fontOverride;
 
 	int32_t defaultFontSize = 18;
-	int32_t currentTheme = static_cast<int32_t>(OFS_Theme::Dark);
+	int32_t currentTheme = static_cast<int32_t>(OFS_Theme::Sashimi);
 
 	int32_t fastStepAmount = 6;
 
@@ -24,7 +27,12 @@ struct PreferenceState
 	int32_t framerateLimit = 150;
 
 	bool forceHwDecoding = false;
-	bool showMetaOnNew = true;
+	// Off by default. The dialog opened itself over every new project to
+	// collect fields only the author knows -- creator, tags, performers -- and
+	// the one field it could have worked out for itself is now filled in
+	// without asking. Preferences turns it back on for anyone who wants the
+	// prompt, and the Project menu opens it on demand either way.
+	bool showMetaOnNew = false;
 
 	static inline PreferenceState& State(uint32_t stateHandle) noexcept {
 		return OFS_AppState<PreferenceState>(stateHandle).Get();

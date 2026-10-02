@@ -1,0 +1,21 @@
+# Opens the test media and records what the app looks like before and after,
+# with window placement, as a map for writing interaction scripts.
+#! covers src/main.cpp src/OpenFunscripter.h src/state/OpenFunscripterState.* OFS-lib/state/OFS_* src/OFS_UiDriver.* OFS-lib/gl/* src/gl/* OFS-lib/event/* OFS-lib/OFS_Util.* OFS-lib/localization/* src/UI/OFS_DownloadFfmpeg.* src/OFS_Project.* OFS-lib/videoplayer/* OFS-lib/OFS_MpvLoader.* src/OpenFunscripter.cpp:imguiSetup src/OpenFunscripter.cpp:Init src/OpenFunscripter.cpp:newFrame src/OpenFunscripter.cpp:render src/OpenFunscripter.cpp:processEvents src/OpenFunscripter.cpp:Step src/OpenFunscripter.cpp:Run src/OpenFunscripter.cpp:Shutdown src/OpenFunscripter.cpp:update src/OpenFunscripter.cpp:CreateDockspace src/OpenFunscripter.cpp:SetFullscreen src/OpenFunscripter.cpp:openFile src/OpenFunscripter.cpp:initProject src/OpenFunscripter.cpp:exitApp src/OpenFunscripter.cpp:autoBackup
+size 1600 900
+wait 30
+shot 00-empty
+windows 00-empty
+state 00-empty
+
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 30
+shot 01-opened
+windows 01-opened
+state 01-opened
+expect project_valid 1
+expect scripts 1
+expect show_toolbar 1
+quit

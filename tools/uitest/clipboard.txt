@@ -1,0 +1,60 @@
+# Copy, paste and cut points with the default bindings.
+#! covers OFS-lib/Funscript/* src/OpenFunscripter.cpp:cutSelection src/OpenFunscripter.cpp:copySelection src/OpenFunscripter.cpp:pasteSelection src/OpenFunscripter.cpp:pasteSelectionExact src/OpenFunscripter.cpp:TargetedFunscripts
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note three points around the playhead
+hold shift
+lanemove 4.0 20
+tap
+lanemove 4.5 80
+tap
+lanemove 5.0 20
+tap
+let shift
+wait 5
+expect actions 3
+expect positions 20,80,20
+
+note select all and copy
+key ctrl+a
+wait 3
+expect selection 3
+key ctrl+c
+wait 5
+expect copied 3
+
+note seek on and paste: the copied stroke lands at the playhead
+seek 10
+wait 10
+key ctrl+v
+wait 10
+state 01-pasted
+shot 01-pasted
+expect actions 6
+expect positions 20,80,20,20,80,20
+
+note undo takes the paste back
+key ctrl+z
+wait 5
+expect actions 3
+
+note cut removes the selection and keeps it on the clipboard
+key ctrl+a
+wait 3
+key ctrl+x
+wait 5
+state 02-cut
+expect actions 0
+expect copied 3
+
+note paste brings it back
+key ctrl+v
+wait 10
+expect actions 3
+quit

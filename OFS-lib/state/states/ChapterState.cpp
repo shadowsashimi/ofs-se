@@ -1,12 +1,19 @@
 #include "ChapterState.h"
 
+#include <algorithm>
+#include <cmath>
+
 inline static bool checkForOverlapChapters(const std::vector<Chapter>& chapters, float startTime, float endTime, const Chapter* exclude = nullptr) noexcept
 {
     for(int i=0, size=chapters.size(); i < size; i += 1)
     {
         auto& chapter = chapters[i];
         if(exclude == &chapter) continue;
-        if(startTime <= chapter.endTime && chapter.startTime <= endTime)
+        // Half open: a chapter runs from its start up to but not including its
+        // end, so two that meet at an instant do not overlap. That instant
+        // belongs to the later one, which is the same rule the tempo grid uses
+        // when it asks which chapter the playhead is in.
+        if(startTime < chapter.endTime && chapter.startTime < endTime)
         {
             return true;
         }
@@ -76,6 +83,54 @@ bool ChapterState::SetChapterSize(Chapter& chapter, float toTime) noexcept
     return false;
 }
 
+// Moves the boundary between this chapter and the one before it.
+//
+// The boundary is one thing rather than two kept in step by hand: a chapter
+// start that runs into the previous chapter carries that chapter's end along
+// with it. Where the two were not touching to begin with, the gap between them
+// is left as it was.
+bool ChapterState::SetChapterStart(Chapter& chapter, float toTime) noexcept
+{
+    if(toTime >= chapter.endTime) return false;
+
+    auto it = std::find_if(chapters.begin(), chapters.end(),
+        [&](auto& c) noexcept { return &c == &chapter; });
+    if(it == chapters.end()) return false;
+
+    if(it != chapters.begin())
+    {
+        auto previous = it - 1;
+        // The neighbour has to keep some length of its own.
+        if(toTime <= previous->startTime) return false;
+        const bool wereTouching = std::abs(previous->endTime - chapter.startTime) < 0.001f;
+        if(toTime < previous->endTime || wereTouching) previous->endTime = toTime;
+    }
+
+    chapter.startTime = toTime;
+    return true;
+}
+
+// The same, for the boundary with the chapter after this one.
+bool ChapterState::SetChapterEnd(Chapter& chapter, float toTime) noexcept
+{
+    if(toTime <= chapter.startTime) return false;
+
+    auto it = std::find_if(chapters.begin(), chapters.end(),
+        [&](auto& c) noexcept { return &c == &chapter; });
+    if(it == chapters.end()) return false;
+
+    auto next = it + 1;
+    if(next != chapters.end())
+    {
+        if(toTime >= next->endTime) return false;
+        const bool wereTouching = std::abs(next->startTime - chapter.endTime) < 0.001f;
+        if(toTime > next->startTime || wereTouching) next->startTime = toTime;
+    }
+
+    chapter.endTime = toTime;
+    return true;
+}
+
 Chapter* ChapterState::AddChapter(float time, float duration) noexcept
 {
     float startTime = time;
@@ -90,6 +145,11 @@ Chapter* ChapterState::AddChapter(float time, float duration) noexcept
     newChapter.startTime = startTime;
     newChapter.endTime = endTime;
     newChapter.color = Util::RandomColor(0.65f, 0.70f);
+    // A name to start from. A chapter made by hand came out nameless, an
+    // empty field in the chapter panel and an unlabelled sliver on the
+    // timeline, with nothing to say it was the one just made. Detection
+    // names the chapters it creates itself.
+    newChapter.name = "Chapter " + std::to_string(chapters.size() + 1);
 
     if(chapters.empty())
     {

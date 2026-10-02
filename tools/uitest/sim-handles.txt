@@ -1,0 +1,67 @@
+# Moving and resizing the simulator by its frame, in 2D and 3D, and turning
+# the 3D camera with Alt and drag.
+# Simulator panel at 1600x900: Lock 1360,579. Toolbar: 2D 1489, 3D 1560 (y 43).
+#! covers src/UI/OFS_ScriptSimulator.* src/UI/OFS_VulvaHeightMap.h src/state/SimulatorState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+wait 10
+
+note unlock it
+click 1360 579
+wait 10
+expect sim_locked 0
+state 01-2d
+shot 01-2d
+
+note 3D
+click 1560 43
+wait 60
+state 02-3d
+shot 02-3d
+
+note hovering the model shows its frame
+move 595 450
+wait 5
+shot 03-3d-hover
+
+note dragging inside the frame moves it
+drag 595 450 695 450 10
+wait 10
+state 04-3d-moved
+expect sim_p1 695,171
+expect sim_p2 695,531
+
+note the frame is the most the model can take up, so it does not change as it moves
+note the frame takes in the floor and wall around the model as well
+expect sim_frame 496,61,894,689
+
+note dragging the left edge of the frame out grows it, the right edge staying put:
+note scaled by 438/398 about the middle of the frame's right edge at 894,377
+drag 496 377 456 377 10
+wait 20
+state 05-3d-resized
+shot 05-3d-resized
+expect sim_p1 675,150
+expect sim_p2 675,547
+
+note Alt and drag over the model turns the camera, 0.4 degrees a pixel
+hold alt
+drag 675 400 600 400 10
+let alt
+wait 20
+state 06-3d-turned
+shot 06-3d-turned
+expect camera_yaw 30
+expect camera_elevation 0
+expect sim_p1 675,150
+
+note back to 2D: the top end of the bar resizes it
+click 1489 43
+wait 20
+move 675 158
+wait 5
+shot 07-2d-hover-end
+quit

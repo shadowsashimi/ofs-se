@@ -146,9 +146,9 @@ MEDIA,Media,Media
 CHANGE_DEFAULT_LOCATION,Change default location,Change default location
 CHANGE_LOCATION,Change location,Change location
 SCRIPTING_MODE,Scripting mode,Scripting mode
-DEFAULT_MODE,Default,Default
+DEFAULT_MODE,Manual,Manual
 ALTERNATING_MODE,Alternating,Alternating
-DYNAMIC_INJECTION_MODE,Dynamic injection,Dynamic injection
+DYNAMIC_INJECTION_MODE,Auto peak,Auto peak
 RECORDING_MODE,Recording,Recording
 SCRIPTING_OVERLAY,Scripting overlay,Scripting overlay
 FRAME_OVERLAY,Frame,Frame
@@ -163,7 +163,7 @@ OFFSET_TOOLTIP,"Applies an offset to actions inserted while the video is playing
 MIRROR_MODE,Mirror mode,Mirror mode
 MIRROR_MODE_TOOLTIP,Mirrors add/edit/remove action across all loaded scripts.,Mirrors add/edit/remove action across all loaded scripts.
 DI_TARGET_SPEED,Target speed (units/s),Target speed (units/s)
-DI_UP_DOWN_BIAS,Up/Down speed bias,Up/Down speed bias
+DI_PEAK_OFFSET,Peak offset. Negative places the peak earlier in the gap; positive places it later.,Peak offset. Negative places the peak earlier in the gap; positive places it later.
 TOP,Top,Top
 BOTTOM,Bottom,Bottom
 NEXT_POINT,Next point,Next point
@@ -214,6 +214,7 @@ ACTION_ACTION_90,Action at 90,Action at 90
 ACTION_ACTION_100,Action at 100,Action at 100
 ACTION_SAVE_PROJECT,Save project,Save project
 ACTION_QUICK_EXPORT,Quick export,Quick export
+ACTION_QUICK_EXPORT_2_0,Quick export (2.0),Quick export (2.0)
 ACTION_SYNC_TIME_WITH_PLAYER,Sync time with player,Sync time with player
 ACTION_CYCLE_FORWARD_LOADED_SCRIPTS,Cycle forward loaded scripts,Cycle forward loaded scripts
 ACTION_CYCLE_BACKWARD_LOADED_SCRIPTS,Cycle backward loaded scripts,Cycle backward loaded scripts
@@ -303,6 +304,10 @@ SAVE_PROJECT,Save project,Save project
 EXPORT_MENU,Export...,Export...
 QUICK_EXPORT,Quick export,Quick export
 QUICK_EXPORT_TOOLTIP,Exports all scripts as .funscript in their default paths.,Exports all scripts as .funscript in their default paths.
+QUICK_EXPORT_2_0,Quick export (2.0),Quick export (2.0)
+QUICK_EXPORT_2_0_TOOLTIP,Exports combined 2.0 funscript with channels.,Exports combined 2.0 funscript with channels.
+QUICK_EXPORT_1_1,Quick export (1.1),Quick export (1.1)
+QUICK_EXPORT_1_1_TOOLTIP,Exports combined 1.1 funscript with axes.,Exports combined 1.1 funscript with axes.
 EXPORT_ACTIVE_SCRIPT,Export active script,Export active script
 EXPORT_ALL,Export all,Export all
 AUTO_BACKUP_TIMER_FMT,Auto Backup in %d seconds,Auto Backup in %d seconds
@@ -422,6 +427,15 @@ RELOAD,Reload,Reload
 BPM,BPM,BPM
 OFFSET,Offset,Offset
 SNAP,Snap,Snap
+SNAPPING,Snapping,Snapping
+SNAP_TO_GRID,Snap to grid,Snap to grid
+SNAP_POSITION,Snap position,Snap position
+TEMPO_GRID,Grid,Grid
+BREAK,Break,Break
+TEMPO,Tempo,Tempo
+TEMPO_AUTO,Auto tempo from chapters,Auto tempo from chapters
+TEMPO_DOWNBEAT,Downbeat,Downbeat
+TEMPO_SET_DOWNBEAT,Set downbeat at playhead,Set downbeat at playhead
 UNKNOWN_ERROR,unknown error,unknown error
 FFMPEG_WAS_NOT_FOUND_MSG,"ffmpeg.exe was not found.
 Do you want to download it?","ffmpeg.exe was not found.
@@ -527,6 +541,10 @@ REMOVE_BOOKMARK_MSG,Do you want to remove the bookmark?,Do you want to remove th
 ADD_NEW_CHAPTER,Add chapter,Add chapter
 ADD_NEW_BOOKMARK,Add bookmark,Add bookmark
 SET_CHAPTER_SIZE,Set size,Set size
+GO_TO_CHAPTER,Go to chapter,Go to chapter
+NO_MUSIC_HERE,No music here,No music here
+SET_CHAPTER_START,Set chapter start,Set chapter start
+SET_CHAPTER_END,Set chapter end,Set chapter end
 SAVE_HEATMAP_WITH_CHAPTERS,Save heatmap with chapters,Save heatmap with chapters
 CHAPTERS,Chapters,Chapters
 CHAPTER,Chapter,Chapter

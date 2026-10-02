@@ -1,0 +1,53 @@
+# The 3D simulator driven by more than one axis. Twist and roll scripts are
+# added from Project > Add > Shortcuts (submenu rows at x 425: surge 90,
+# sway 112, suck 134, twist 156, roll 178, pitch 200), and each gets a stroke.
+#! covers src/UI/OFS_ScriptSimulator.* src/UI/OFS_VulvaHeightMap.h src/state/SimulatorState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note a stroke on the main script
+hold shift
+lanemove 4.0 10
+tap
+lanemove 5.0 90
+tap
+lanemove 6.0 10
+tap
+let shift
+wait 5
+
+note add twist
+click 89 13
+wait 5
+move 90 90
+wait 15
+move 320 90
+wait 20
+click 425 156
+wait 30
+
+note add roll
+click 89 13
+wait 5
+move 90 90
+wait 15
+move 320 90
+wait 20
+click 425 178
+wait 30
+state 01-three-scripts
+expect scripts 3
+
+note the 3D view, with the playhead in the middle of the stroke
+click 1560 43
+wait 10
+seek 4.6
+wait 20
+shot 02-3d-three-scripts
+windows 02-3d-three-scripts
+quit

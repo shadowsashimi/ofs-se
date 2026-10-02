@@ -1,0 +1,48 @@
+# The case and the vulva at full opacity with the case closed: from the front
+# and turned, at 100% stroke with the rod out and at 0% with it bottomed, then
+# the face head on from below with the rod hidden.
+#! sweep
+#! covers src/UI/OFS_ScriptSimulator.* src/UI/OFS_VulvaHeightMap.h src/state/SimulatorState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 5
+key keypaddivide
+seek 6
+wait 5
+key keypad0
+seek 5
+wait 10
+click 1560 43
+wait 30
+action toggle_simulator_cutaway
+action cycle_simulator_opacity
+wait 10
+shot 01-front-100
+seek 6
+wait 20
+shot 02-front-0
+seek 5
+wait 10
+hold alt
+drag 675 300 535 300 10
+let alt
+wait 10
+shot 03-side-100
+seek 6
+wait 20
+shot 04-side-0
+seek 5
+wait 10
+action toggle_simulator_rod
+hold alt
+drag 675 200 815 200 10
+wait 5
+drag 675 460 675 200 10
+let alt
+wait 10
+shot 05-face
+quit

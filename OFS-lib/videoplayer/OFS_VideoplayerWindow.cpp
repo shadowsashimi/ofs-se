@@ -138,6 +138,11 @@ void OFS_VideoplayerWindow::draw2dVideo(ImDrawList* draw_list) noexcept
 {
 	OFS_PROFILE(__FUNCTION__);
 	ImVec2 videoSize(player->VideoWidth(), player->VideoHeight());
+	if (videoSize.x <= 0.f || videoSize.y <= 0.f) {
+		// Audio, or a video that has not reported its size yet. Scaling by zero
+		// would put a NaN rectangle into the draw list.
+		return;
+	}
 	ImVec2 dst = ImGui::GetContentRegionAvail();
 	baseScaleFactor = std::min(dst.x / videoSize.x, dst.y / videoSize.y);
 	videoSize.x *= baseScaleFactor;
@@ -196,6 +201,48 @@ void OFS_VideoplayerWindow::videoRightClickMenu() noexcept
 	}
 }
 
+// A title and a line of explanation, centred across the panel, with an
+// optional button under them. In the middle of the panel by default; at the
+// bottom when something else is drawn over the middle.
+static void drawCenteredNotice(const char* title, const char* hint,
+	const char* buttonLabel, const std::function<void()>& onButton,
+	bool atBottom = false) noexcept
+{
+	const auto& style = ImGui::GetStyle();
+	const ImVec2 avail = ImGui::GetContentRegionAvail();
+	const float maxWrap = ImGui::GetFontSize() * 28.f;
+	const float wrap = avail.x * 0.8f < maxWrap ? avail.x * 0.8f : maxWrap;
+	const ImVec2 titleSize = ImGui::CalcTextSize(title);
+	const ImVec2 hintSize = ImGui::CalcTextSize(hint, nullptr, false, wrap);
+
+	ImVec2 buttonSize(0.f, 0.f);
+	if (buttonLabel) {
+		buttonSize = ImGui::CalcTextSize(buttonLabel) + (style.FramePadding * 2.f);
+	}
+
+	float blockHeight = titleSize.y + style.ItemSpacing.y + hintSize.y;
+	if (buttonLabel) blockHeight += style.ItemSpacing.y * 2.f + buttonSize.y;
+	const ImVec2 origin = ImGui::GetCursorPos();
+
+	const float top = atBottom
+		? origin.y + avail.y - blockHeight - (style.WindowPadding.y * 2.f)
+		: origin.y + ((avail.y - blockHeight) * 0.5f);
+	ImGui::SetCursorPos(ImVec2(origin.x + ((avail.x - titleSize.x) * 0.5f), top));
+	ImGui::TextUnformatted(title);
+	ImGui::SetCursorPosX(origin.x + ((avail.x - hintSize.x) * 0.5f));
+	ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + wrap);
+	ImGui::TextDisabled("%s", hint);
+	ImGui::PopTextWrapPos();
+
+	if (buttonLabel) {
+		ImGui::Spacing();
+		ImGui::SetCursorPosX(origin.x + ((avail.x - buttonSize.x) * 0.5f));
+		if (ImGui::Button(buttonLabel) && onButton) {
+			onButton();
+		}
+	}
+}
+
 void OFS_VideoplayerWindow::DrawVideoPlayer(bool* open, bool* drawVideo) noexcept
 {
 	OFS_PROFILE(__FUNCTION__);
@@ -204,6 +251,38 @@ void OFS_VideoplayerWindow::DrawVideoPlayer(bool* open, bool* drawVideo) noexcep
 	ImGui::Begin(TR_ID("VIDEOPLAYER", Tr::VIDEOPLAYER), open, ImGuiWindowFlags_None | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar);
 
 	if (!player->VideoLoaded()) {
+		// Nothing open yet. This used to be an empty panel, which is the first
+		// thing a new user sees and says nothing about what to do.
+		drawCenteredNotice("Nothing open",
+			"Open a video or audio file from File > Open, or drop one onto this window.",
+			OnStartBlankProject ? "Script without a video" : nullptr,
+			OnStartBlankProject);
+		ImGui::End();
+		return;
+	}
+
+	if (player->IsBlank()) {
+		// A project with no media at all. There is no picture coming, so say
+		// so rather than leaving the panel blank. At the bottom, because the
+		// simulator sits over the middle of this panel by default and would
+		// cover it.
+		drawCenteredNotice("No video",
+			"This script has no media. Everything else works from the timeline; "
+			"attach a video any time from Project > Pick different media.",
+			nullptr, nullptr, true);
+		ImGui::End();
+		return;
+	}
+
+	if (player->IsAudioOnly()) {
+		// Sound with no picture. mpv plays it without ever drawing a frame, so
+		// this panel would otherwise stay black and look broken. At the bottom
+		// for the same reason as above.
+		auto name = Util::PathFromString(player->VideoPath()).filename().u8string();
+		drawCenteredNotice(name.empty() ? "Audio only" : name.c_str(),
+			"Audio only, so there is no picture to show. Script it from the "
+			"timeline, where the waveform draws the sound.",
+			nullptr, nullptr, true);
 		ImGui::End();
 		return;
 	}
@@ -221,6 +300,9 @@ void OFS_VideoplayerWindow::DrawVideoPlayer(bool* open, bool* drawVideo) noexcep
 		drawList->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
 	
 		videoHovered = ImGui::IsItemHovered() && ImGui::IsWindowHovered();
+		VideoScreenMin = ImGui::GetItemRectMin();
+		VideoScreenMax = ImGui::GetItemRectMax();
+		VideoScreenFrame = ImGui::GetFrameCount();
 		videoDrawSize = ImGui::GetItemRectSize();
 	
 		// cancel drag

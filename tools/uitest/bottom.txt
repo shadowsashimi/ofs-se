@@ -1,0 +1,42 @@
+# Bottoming out at full opacity, closed and then cut away, from the front and
+# from a little below.
+#! sweep
+#! covers src/UI/OFS_ScriptSimulator.* src/UI/OFS_VulvaHeightMap.h src/state/SimulatorState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 5
+key keypaddivide
+seek 6
+wait 5
+key keypad0
+seek 5
+wait 10
+click 1560 43
+wait 30
+action toggle_simulator_cutaway
+action cycle_simulator_opacity
+wait 5
+seek 6
+wait 30
+shot 01-closed
+hold alt
+drag 675 360 675 300 10
+let alt
+wait 10
+shot 02-closed-below
+action toggle_simulator_cutaway
+wait 10
+shot 03-cut-below
+hold alt
+drag 675 240 675 300 10
+let alt
+wait 10
+shot 04-cut
+action toggle_simulator_rod
+wait 10
+shot 05-cut-norod
+quit

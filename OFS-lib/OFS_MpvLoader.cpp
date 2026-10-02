@@ -19,6 +19,7 @@ mpv_render_context_create_FUNC OFS_MpvLoader::mpv_render_context_create_REAL = N
 mpv_initialize_FUNC OFS_MpvLoader::mpv_initialize_REAL = NULL;
 mpv_set_wakeup_callback_FUNC OFS_MpvLoader::mpv_set_wakeup_callback_REAL = NULL;
 mpv_render_context_set_update_callback_FUNC OFS_MpvLoader::mpv_render_context_set_update_callback_REAL = NULL;
+mpv_get_property_async_FUNC OFS_MpvLoader::mpv_get_property_async_REAL = NULL;
 mpv_set_property_async_FUNC OFS_MpvLoader::mpv_set_property_async_REAL = NULL;
 mpv_render_context_free_FUNC OFS_MpvLoader::mpv_render_context_free_REAL = NULL;
 mpv_destroy_FUNC OFS_MpvLoader::mpv_destroy_REAL = NULL;
@@ -66,6 +67,7 @@ bool OFS_MpvLoader::Load() noexcept
     LOAD_FUNCTION(mpv_initialize);
     LOAD_FUNCTION(mpv_set_wakeup_callback);
     LOAD_FUNCTION(mpv_render_context_set_update_callback);
+    LOAD_FUNCTION(mpv_get_property_async);
     LOAD_FUNCTION(mpv_set_property_async);
     LOAD_FUNCTION(mpv_render_context_free);
     LOAD_FUNCTION(mpv_destroy);
@@ -95,6 +97,7 @@ void OFS_MpvLoader::Unload() noexcept
     SET_NULL(mpv_initialize);
     SET_NULL(mpv_set_wakeup_callback);
     SET_NULL(mpv_render_context_set_update_callback);
+    SET_NULL(mpv_get_property_async);
     SET_NULL(mpv_set_property_async);
     SET_NULL(mpv_render_context_free);
     SET_NULL(mpv_destroy);

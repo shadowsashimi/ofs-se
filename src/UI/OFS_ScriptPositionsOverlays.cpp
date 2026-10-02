@@ -1,7 +1,9 @@
 #include "OFS_ScriptPositionsOverlays.h"
 #include "OpenFunscripter.h"
 
+#include "OFS_ImGui.h"
 #include "state/ProjectState.h"
+#include "state/states/ChapterState.h"
 
 void FrameOverlay::DrawScriptPositionContent(const OverlayDrawingCtx& ctx) noexcept
 {
@@ -48,7 +50,6 @@ void FrameOverlay::DrawScriptPositionContent(const OverlayDrawingCtx& ctx) noexc
     BaseOverlay::DrawActionLines(ctx);
     BaseOverlay::DrawActionPoints(ctx);
     BaseOverlay::DrawSecondsLabel(ctx);
-    BaseOverlay::DrawScriptLabel(ctx);
  
     // out of sync line
     auto& state = BaseOverlay::State();
@@ -100,6 +101,15 @@ float FrameOverlay::logicalFrameTime(float realFrameTime) noexcept
     return enableFpsOverride ? (1.f / fpsOverride) : realFrameTime;
 }
 
+float FrameOverlay::SnapTime(float time) noexcept
+{
+    // Frames are counted from zero, so there is no phase to carry here the way
+    // the tempo grid has to.
+    const float frameTime = logicalFrameTime(OpenFunscripter::ptr->scripting->LogicalFrameTime());
+    if(frameTime <= 0.f) return time;
+    return std::round(time / frameTime) * frameTime;
+}
+
 void FrameOverlay::DrawSettings() noexcept
 {
     if(ImGui::Checkbox(TR_ID("FPS_OVERRIDE_ENABLE", Tr::FPS_OVERRIDE), &enableFpsOverride))
@@ -107,7 +117,7 @@ void FrameOverlay::DrawSettings() noexcept
         fpsOverride = OpenFunscripter::ptr->player->Fps();
     }
     if(enableFpsOverride) {
-        if(ImGui::InputFloat(TR_ID("FPS_OVERRIDE", Tr::FPS_OVERRIDE), &fpsOverride, 1.f, 10.f))
+        if(OFS::StepperFloat("Frame rate (fps)", "##FpsOverride", &fpsOverride, 1.f, 1.f, 150.f, "%.3f"))
         {
             fpsOverride = Util::Clamp(fpsOverride, 1.f, 150.f);
             // snap to new framerate
@@ -123,41 +133,222 @@ TempoOverlay::TempoOverlay(ScriptTimeline* timeline) noexcept
     : BaseOverlay(timeline)
 {
     stateHandle = OFS_ProjectState<TempoOverlayState>::Register(TempoOverlayState::StateName);
+    chapterStateHandle = OFS_ProjectState<ChapterState>::Register(ChapterState::StateName);
+}
+
+// Chapters carry the tempo they were measured at, so following the playhead is
+// just a lookup. Run every frame rather than on a chapter change event: seeking
+// and scrubbing both move the playhead without any state change to listen for,
+// and a linear scan over a handful of chapters costs nothing next to the draw.
+Chapter* TempoOverlay::chapterUnderPlayhead() noexcept
+{
+    const float currentTime = OpenFunscripter::ptr->player->CurrentTime();
+    auto& chapters = ChapterState::State(chapterStateHandle).chapters;
+    for(auto& chapter : chapters) {
+        // Half open, the same rule the overlap test uses: an instant shared by
+        // two chapters belongs to the later one.
+        if(currentTime < chapter.startTime || currentTime >= chapter.endTime) continue;
+        return &chapter;
+    }
+    return nullptr;
+}
+
+Chapter* TempoOverlay::tempoDriver(const TempoOverlayState& tempo) noexcept
+{
+    if(!tempo.autoTempo) return nullptr;
+    auto* chapter = chapterUnderPlayhead();
+    // A break, a chapter with no tempo recorded, and the gaps between chapters
+    // all leave the grid where it is rather than resetting it, so it holds the
+    // last tempo it was given instead of flickering through the parts with no
+    // music to follow.
+    if(chapter == nullptr || chapter->isBreak || chapter->bpm <= 0.f) return nullptr;
+    return chapter;
+}
+
+void TempoOverlay::followChapterTempo(TempoOverlayState& tempo) noexcept
+{
+    if(auto* chapter = tempoDriver(tempo)) {
+        tempo.SetFromTempo(chapter->bpm, chapter->measureOffsetSeconds);
+    }
+}
+
+void TempoOverlay::writePhaseToChapter(const TempoOverlayState& tempo) noexcept
+{
+    if(auto* chapter = tempoDriver(tempo)) {
+        chapter->measureOffsetSeconds = tempo.beatOffsetSeconds;
+    }
 }
 
 void TempoOverlay::DrawSettings() noexcept
 {
     BaseOverlay::DrawSettings();
     auto& tempo = TempoOverlayState::State(stateHandle);
-    if (ImGui::InputFloat(TR(BPM), &tempo.bpm, 1.f, 100.f)) {
-        tempo.bpm = std::max(1.f, tempo.bpm);
+
+    ImGui::Checkbox(TR(TEMPO_AUTO), &tempo.autoTempo);
+    OFS::Tooltip("Follows the chapter under the playhead, using the tempo recorded on it "
+                 "by detection. Without this the grid holds one tempo for the whole media "
+                 "and has to be reapplied at every track.");
+
+    // The BPM is an output only while a chapter is actually supplying it.
+    // Greying it out on the strength of the checkbox alone left a project with
+    // no chapters yet -- or a playhead sitting in a gap, or in a break -- with
+    // no way to set a tempo at all, which is the state every project starts in.
+    auto* driver = tempoDriver(tempo);
+
+    // Every number here is typed, with steps either side, and named on a line
+    // above it, so none reads as an unnamed number.
+    // Editable while a chapter drives the grid too: a tempo typed then is set on
+    // that chapter by hand, where it is kept, rather than refused.
+    if(OFS::StepperFloat("Tempo (BPM)", "##TempoBpm", &tempo.bpm, 1.f, 1.f, 1000.f, "%.1f") && driver != nullptr) {
+        driver->SetTempoByHand(tempo.bpm);
+        EV::Enqueue<ChapterStateChanged>();
     }
 
-    ImGui::DragFloat(TR(OFFSET), &tempo.beatOffsetSeconds, 0.001f, -10.f, 10.f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+    if(driver != nullptr) {
+        // Says where the number came from, which is the thing a disabled field
+        // otherwise leaves the user to guess at.
+        ImGui::TextDisabled(driver->bpmManual ? "following \"%s\", set by hand" : "following \"%s\"",
+            driver->name.c_str());
+        OFS::Tooltip("The BPM is this chapter's. Typing one above sets it on the chapter by hand, "
+                     "which measuring all chapters leaves alone; or count it half or double "
+                     "time below.");
+    }
 
-    if (ImGui::BeginCombo(TR(SNAP), TRD(beatMultiplesStrings[tempo.measureIndex]), ImGuiComboFlags_PopupAlignLeft)) {
-        for (int i = 0; i < beatMultiples.size(); i++) {
-            if (ImGui::Selectable(TRD(beatMultiplesStrings[i]))) {
-                tempo.measureIndex = i;
+    // Half or double time, for a tempo read off the wrong pulse: music is often
+    // felt in a beat twice as fast as the one its kick marks, or half as fast.
+    // While a chapter drives the grid it is the chapter's tempo that changes,
+    // so the correction is kept there and survives measuring it again.
+    {
+        const float spacing = ImGui::GetStyle().ItemSpacing.x;
+        const float buttonWidth = (ImGui::GetContentRegionAvail().x - spacing) / 2.f;
+        auto scale = [&](float factor) noexcept {
+            if(driver != nullptr) {
+                driver->ScaleTempo(factor);
+                tempo.SetFromTempo(driver->bpm, driver->measureOffsetSeconds);
+                EV::Enqueue<ChapterStateChanged>();
             }
-            else if (ImGui::IsItemHovered()) {
+            else {
+                tempo.SetFromTempo(Util::Clamp(tempo.bpm * factor, 1.f, 1000.f), tempo.beatOffsetSeconds);
+            }
+        };
+        if(ImGui::Button("Half time /2", ImVec2(buttonWidth, 0.f))) scale(0.5f);
+        OFS::Tooltip(driver != nullptr
+            ? "Halves this chapter's tempo, for one read off a pulse twice as fast as the beat. "
+              "Kept when the chapter is measured again."
+            : "Halves the tempo.");
+        ImGui::SameLine();
+        if(ImGui::Button("Double time x2", ImVec2(buttonWidth, 0.f))) scale(2.f);
+        OFS::Tooltip(driver != nullptr
+            ? "Doubles this chapter's tempo, for one read off a pulse half as fast as the beat. "
+              "Kept when the chapter is measured again."
+            : "Doubles the tempo.");
+    }
+
+    // Detection picks the downbeat from onset energy alone, which cannot tell
+    // the four beats of a bar apart when they are equally loud -- four on the
+    // floor being the obvious case. Correcting it by ear is one click.
+    //
+    // All three of these say where the bar line goes, at three granularities,
+    // so they sit together on one row instead of being spread down the panel
+    // with the grid controls in between.
+    // A heading over a row of three equal buttons. As small buttons on the
+    // heading's own line the third ran out of the panel and was cut off.
+    ImGui::TextDisabled("%s", TR(TEMPO_DOWNBEAT));
+    {
+        const float spacing = ImGui::GetStyle().ItemSpacing.x;
+        const float buttonWidth = (ImGui::GetContentRegionAvail().x - (spacing * 2.f)) / 3.f;
+        if(ImGui::Button("-1 beat", ImVec2(buttonWidth, 0.f))) { tempo.NudgeDownbeat(-1); writePhaseToChapter(tempo); }
+        OFS::Tooltip("Rotates the grid back by one beat, for when the bar lines are landing "
+                     "on the wrong beat of the bar.");
+        ImGui::SameLine();
+        if(ImGui::Button("+1 beat", ImVec2(buttonWidth, 0.f))) { tempo.NudgeDownbeat(1); writePhaseToChapter(tempo); }
+        OFS::Tooltip("Rotates the grid on by one beat, for when the bar lines are landing "
+                     "on the wrong beat of the bar.");
+        ImGui::SameLine();
+        if(ImGui::Button("At playhead", ImVec2(buttonWidth, 0.f))) {
+            tempo.SetDownbeatAt(OpenFunscripter::ptr->player->CurrentTime());
+            writePhaseToChapter(tempo);
+        }
+        OFS::Tooltip("Puts a bar line exactly on the playhead. Park it on a beat you can "
+                     "hear and the whole grid lines up from there, which is quicker than "
+                     "arguing with the offset when detection has the wrong beat.");
+    }
+
+    // Stays editable while a chapter is driving, unlike the BPM, because the
+    // other two phase controls do too and all three write the correction back
+    // onto the chapter. Phase is the part that gets fixed by ear.
+    if(OFS::StepperFloat("Offset (s)", "##TempoOffset", &tempo.beatOffsetSeconds, 0.01f, -10.f, 10.f, "%.3f")) {
+        writePhaseToChapter(tempo);
+    }
+    OFS::Tooltip("Fine adjustment of the same bar line, for when it is out by less than "
+                 "a beat.");
+
+    ImGui::TextDisabled("Note spacing");
+    ImGui::SetNextItemWidth(-1.f);
+    DrawNoteDivisionSelector("##TempoGrid", true);
+}
+
+void TempoOverlay::DrawNoteDivisionSelector(const char* id, bool enabled) noexcept
+{
+    // Short names in the order of beatMultiples. The long ones say "measures"
+    // and do not fit a toolbar; they are kept alongside in the list.
+    static constexpr const char* ShortNames[] = {
+        "1/1", "1/2", "1/4", "1/8", "1/12", "1/16", "1/24", "1/32", "1/48", "1/64"
+    };
+    auto& tempo = TempoOverlayState::State(
+        OFS_ProjectState<TempoOverlayState>::Register(TempoOverlayState::StateName));
+    const uint32_t current = tempo.measureIndex < beatMultiples.size() ? tempo.measureIndex : 2;
+
+    ImGui::BeginDisabled(!enabled);
+    if (ImGui::BeginCombo(id, ShortNames[current], ImGuiComboFlags_HeightLarge)) {
+        for (uint32_t i = 0; i < beatMultiples.size(); i += 1) {
+            if (ImGui::Selectable(ShortNames[i], i == current)) {
                 tempo.measureIndex = i;
             }
         }
         ImGui::EndCombo();
     }
+    ImGui::EndDisabled();
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayNormal)) {
+        if (enabled && tempo.bpm > 0.f) {
+            ImGui::SetTooltip("Spacing of the tempo grid's lines: 1/4 is a line every quarter note, "
+                "1/8 every eighth note, and so on. At this tempo, a line every %.0f ms.",
+                ((60.f * 1000.f) / tempo.bpm) * beatMultiples[current]);
+        }
+        else {
+            ImGui::SetTooltip("%s", "Only used by the Tempo grid. Pick Tempo to set the note spacing.");
+        }
+    }
+}
 
-    ImGui::Text("%s: %.2fms", TR(INTERVAL), static_cast<float>(((60.f * 1000.f) / tempo.bpm) * beatMultiples[tempo.measureIndex]));
+void DrawPositionRoundingSelector(const char* id) noexcept
+{
+    // A parameter, so a dropdown: how finely to round, named for what it does.
+    static constexpr const char* Names[] = { "Off", "Nearest 5", "Nearest 10", "Nearest 25" };
+    static constexpr int32_t Steps[] = { 0, 5, 10, 25 };
+    auto& overlayState = BaseOverlay::State();
+    int32_t current = 0;
+    for (int32_t i = 0; i < 4; i += 1) {
+        if (overlayState.SnapPositionStep == Steps[i]) current = i;
+    }
+    if (ImGui::BeginCombo(id, Names[current])) {
+        for (int32_t i = 0; i < 4; i += 1) {
+            if (ImGui::Selectable(Names[i], i == current)) overlayState.SnapPositionStep = Steps[i];
+        }
+        ImGui::EndCombo();
+    }
+    OFS::Tooltip("Rounds the position, up and down, of points placed or dragged with the mouse: "
+                 "off, or to the nearest 5, 10 or 25.");
 }
 
 void TempoOverlay::DrawScriptPositionContent(const OverlayDrawingCtx& ctx) noexcept
 {
     auto app = OpenFunscripter::ptr;
     auto& tempo = TempoOverlayState::State(stateHandle);
+    followChapterTempo(tempo);
     BaseOverlay::DrawHeightLines(ctx);
     timeline->DrawAudioWaveform(ctx);
     BaseOverlay::DrawSecondsLabel(ctx);
-    BaseOverlay::DrawScriptLabel(ctx);
 
     float beatTime = (60.f / tempo.bpm) * beatMultiples[tempo.measureIndex];
     int32_t visibleBeats = ctx.visibleTime / beatTime;
@@ -265,6 +456,25 @@ float TempoOverlay::steppingIntervalForward(float realFrameTime, float fromTime)
     auto& tempo = TempoOverlayState::State(stateHandle);
     float beatTime = (60.f / tempo.bpm) * beatMultiples[tempo.measureIndex];
     return GetNextPosition(beatTime, fromTime, tempo.beatOffsetSeconds) - fromTime;
+}
+
+// The same grid the lines are drawn on: n * beatTime + beatOffset. Rounding
+// rather than stepping means a point lands on whichever line it is nearest,
+// which is what dragging wants, where the stepping functions deliberately
+// always move on.
+float TempoOverlay::SnapTime(float time) noexcept
+{
+    auto& tempo = TempoOverlayState::State(stateHandle);
+    if(tempo.bpm <= 0.f) return time;
+    const float beatTime = (60.f / tempo.bpm) * beatMultiples[tempo.measureIndex];
+    if(beatTime <= 0.f) return time;
+    const float idx = std::round((time - tempo.beatOffsetSeconds) / beatTime);
+    return (idx * beatTime) + tempo.beatOffsetSeconds;
+}
+
+const char* TempoOverlay::SnapGridLabel() const noexcept
+{
+    return TRD(beatMultiplesStrings[TempoOverlayState::State(stateHandle).measureIndex]);
 }
 
 float TempoOverlay::steppingIntervalBackward(float realFrameTime, float fromTime) noexcept

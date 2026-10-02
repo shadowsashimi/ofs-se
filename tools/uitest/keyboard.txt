@@ -1,0 +1,77 @@
+# Scripting from the keyboard with the default bindings: the keypad places a
+# point at the playhead, the arrows step frames and jump between points,
+# shift and the arrows nudge, I inverts, ctrl+z undoes, space plays.
+#! covers OFS-lib/UI/OFS_KeybindingSystem.* OFS-lib/state/states/KeybindingState.* src/OFS_UndoSystem.* src/OpenFunscripter.cpp:registerBindings src/OpenFunscripter.cpp:addEditAction src/OpenFunscripter.cpp:removeAction src/OpenFunscripter.cpp:invertSelection src/OpenFunscripter.cpp:isolateAction src/OpenFunscripter.cpp:Undo src/OpenFunscripter.cpp:Redo
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note keypad5 places a point at 50 under the playhead
+key keypad5
+wait 5
+expect actions 1
+expect positions 50
+state 01-keypad5
+
+note ctrl+right steps several frames on, keypad9 places a point at 90 there
+note a point placed within one frame of another edits that one instead of adding
+note a second, so a single right arrow step here would move the first point
+key ctrl+right
+wait 10
+state 02-stepped
+key keypad9
+wait 5
+expect actions 2
+expect positions 50,90
+
+note down arrow jumps back to the previous point
+key down
+wait 10
+state 03-previous-point
+expect player_time 5.000
+
+note keypaddivide is 100, placed over the point already at the playhead
+key keypaddivide
+wait 5
+expect actions 2
+expect positions 100,90
+
+note select everything, invert with I, and undo it with ctrl+z
+key ctrl+a
+wait 3
+state 05-after-select-all
+expect selection 2
+note a plain key only fires when no modifier is still held
+expect key_mods 0
+key i
+wait 5
+state 06-after-invert
+expect positions 0,10
+note the same action run by id, to tell a key that did not fire from an action that did nothing
+action invert_actions
+wait 5
+state 07-after-invert-by-id
+action invert_actions
+wait 5
+key ctrl+z
+wait 5
+expect positions 100,90
+
+note shift+up nudges the selected points up by one
+key shift+up
+wait 5
+state 04-nudged
+shot 04-nudged
+
+note space plays, space again pauses
+key space
+wait 30
+expect paused 0
+key space
+wait 10
+expect paused 1
+quit

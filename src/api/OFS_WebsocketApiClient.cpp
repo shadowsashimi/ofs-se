@@ -1,4 +1,5 @@
 #include "OFS_WebsocketApiClient.h"
+#include "OFS_GitVersion.h"
 #include "OFS_WebsocketApiEvents.h"
 
 #include "OFS_EventSystem.h"
@@ -100,7 +101,7 @@ void OFS_WebsocketClient::InitializeConnection(mg_connection* conn) noexcept
     if(this->conn) return;
     this->conn = conn;
     /* Send "hello" message. */
-	const char* hello = "{\"connected\":\"OFS " OFS_LATEST_GIT_TAG "@" OFS_LATEST_GIT_HASH "\"}";
+	const char* hello = "{\"connected\":\"OFS-SE " OFS_LATEST_GIT_TAG "@" OFS_LATEST_GIT_HASH "\"}";
 	mg_websocket_write(conn, MG_WEBSOCKET_OPCODE_TEXT, hello, strlen(hello));
     UpdateAll();
 }

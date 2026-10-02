@@ -8,6 +8,7 @@
 #include "OFS_VideoplayerEvents.h"
 #include "OFS_Localization.h"
 #include "OFS_DynamicFontAtlas.h"
+#include "OFS_SashimiTheme.h"
 
 #include "state/states/ChapterState.h"
 
@@ -20,6 +21,12 @@ void OFS_VideoplayerControls::VideoLoaded(const VideoLoadedEvent* ev) noexcept
 {
     OFS_PROFILE(__FUNCTION__);
     if(ev->playerType != VideoplayerType::Main) return;
+    if(ev->videoPath.empty()) {
+        // A project with no media. There is no file to pull thumbnails out of,
+        // and handing mpv an empty path would only make it complain.
+        videoPreview->CloseVideo();
+        return;
+    }
     videoPreview->PreviewVideo(ev->videoPath, 0.f);
 }
 
@@ -70,7 +77,13 @@ bool OFS_VideoplayerControls::DrawTimelineWidget(const char* label, float* posit
     const float h = frameBB.GetHeight();
 
     ImGui::ItemSize(frameBB, style.FramePadding.y);
-    if (!ImGui::ItemAdd(frameBB, id, &frameBB))
+    // The progress strip and the playhead line are drawn shifted down from
+    // the frame, by up to a third of its height, so the item has to reach
+    // that far too. With the frame alone as the item, the pink progress strip
+    // under the heatmap, the part that most looks like a seek bar, took no
+    // clicks at all, and a scripted click on it seeked nowhere.
+    const ImRect hitBB(frameBB.Min, ImVec2(frameBB.Max.x, frameBB.Max.y + (h / 3.f)));
+    if (!ImGui::ItemAdd(hitBB, id, &frameBB))
         return false;
 
 
@@ -89,7 +102,7 @@ bool OFS_VideoplayerControls::DrawTimelineWidget(const char* label, float* posit
     ImVec2 p1(currentPosX, frameBB.Min.y);
     ImVec2 p2(currentPosX, frameBB.Max.y);
     constexpr float timelinePosCursorW = 2.f;
-    drawList->AddLine(p1 + ImVec2(0.f, h / 3.f), p2 + ImVec2(0.f, h / 3.f), IM_COL32(255, 0, 0, 255), timelinePosCursorW);
+    drawList->AddLine(p1 + ImVec2(0.f, h / 3.f), p2 + ImVec2(0.f, h / 3.f), OFS_Sashimi::Pink, timelinePosCursorW);
 
     Heatmap->DrawHeatmap(drawList, frameBB.Min, frameBB.Max);
 
@@ -114,7 +127,10 @@ bool OFS_VideoplayerControls::DrawTimelineWidget(const char* label, float* posit
 
         if(ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
         {
-            if (SDL_GetTicks() - lastPreviewUpdate >= PreviewUpdateMs) {
+            // Without a picture behind the timeline the tooltip is the time
+            // alone, rather than a frame of whatever was last open.
+            const bool hasThumbnail = player->HasVisual();
+            if (hasThumbnail && SDL_GetTicks() - lastPreviewUpdate >= PreviewUpdateMs) {
                 videoPreview->Play();
                 videoPreview->SetPosition(relTimelinePos);
                 lastPreviewUpdate = SDL_GetTicks();
@@ -122,7 +138,7 @@ bool OFS_VideoplayerControls::DrawTimelineWidget(const char* label, float* posit
             ImGui::BeginTooltipEx(ImGuiWindowFlags_None, ImGuiTooltipFlags_None);
             {
                 const ImVec2 ImageDim = ImVec2(ImGui::GetFontSize()*7.f * (16.f / 9.f), ImGui::GetFontSize() * 7.f);
-                ImGui::Image((void*)(intptr_t)videoPreview->FrameTex(), ImageDim);
+                if (hasThumbnail) ImGui::Image((void*)(intptr_t)videoPreview->FrameTex(), ImageDim);
                 float timeSeconds = player->Duration() * relTimelinePos;
                 float timeDelta = timeSeconds - player->CurrentTime();
 
@@ -293,14 +309,50 @@ bool OFS_VideoplayerControls::DrawChapter(ImDrawList* drawList, const ImRect& fr
         
         ImGui::Separator();
 
-        if(ImGui::MenuItem(TR(SET_CHAPTER_SIZE))) 
+        // Which edge to move is stated rather than guessed. Choosing whichever
+        // is nearer means the far one cannot be reached at all without first
+        // deleting the chapter, which is the wrong way to move a boundary.
         {
             auto& chapterState = ChapterState::State(chapterStateHandle);
-            if(chapterState.SetChapterSize(chapter, currentTime))
+            if(ImGui::MenuItem(TR(SET_CHAPTER_START)))
             {
-                EV::Enqueue<ChapterStateChanged>();
+                if(chapterState.SetChapterStart(chapter, currentTime))
+                {
+                    EV::Enqueue<ChapterStateChanged>();
+                }
             }
+            OFS::Tooltip("Moves this chapter's start to the playhead, carrying the end of "
+                         "the chapter before it along when the two meet.");
+
+            if(ImGui::MenuItem(TR(SET_CHAPTER_END)))
+            {
+                if(chapterState.SetChapterEnd(chapter, currentTime))
+                {
+                    EV::Enqueue<ChapterStateChanged>();
+                }
+            }
+            OFS::Tooltip("Moves this chapter's end to the playhead, carrying the start of "
+                         "the chapter after it along when the two meet.");
         }
+
+        // Here as well as in the chapter table, because this is where the ear
+        // is: the moment you hear the music stop is the moment you are hovering
+        // the bar, and having to go to another window to say so meant the mark
+        // usually never got made. Measuring still lives in the chapter panel,
+        // which is the window that has the waveform.
+        if(ImGui::MenuItem(TR(NO_MUSIC_HERE), nullptr, chapter.isBreak))
+        {
+            chapter.isBreak = !chapter.isBreak;
+            if(chapter.isBreak)
+            {
+                chapter.bpm = 0.f;
+                chapter.measureOffsetSeconds = 0.f;
+                chapter.bpmConfidence = 0.f;
+            }
+            chapterChange = true;
+        }
+        OFS::Tooltip("An intro, an outro, or a break between songs. Detection skips it "
+                     "and the tempo grid holds the tempo it already had.");
 
         if(ImGui::MenuItem(TR(ADD_NEW_BOOKMARK)))
         {
@@ -361,7 +413,7 @@ bool OFS_VideoplayerControls::DrawBookmark(ImDrawList* drawList, const ImRect& f
         auto bookmarkRect = ImRect(p1 - ImVec2(bookmarkSize, bookmarkSize), p1 + ImVec2(bookmarkSize, bookmarkSize));
         if(bookmarkRect.Contains(mousePos))
         {
-            bookmarkColor = IM_COL32(0, 255, 255, 255);
+            bookmarkColor = OFS_Sashimi::PinkBright;
             bookmarkHover = true;
         }
     }
@@ -530,50 +582,116 @@ void OFS_VideoplayerControls::DrawTimeline() noexcept
         }
     }
 
-    ImGui::Columns(5, 0, false);
+    // One row for everything that drives playback: the transport buttons, the
+    // time, the speed, and the volume, which takes whatever width is left. The
+    // speed is a number to type with a step either side and a reset: a slider
+    // as wide as the panel spent a line of its own on a value that is nearly
+    // always 1x, and made the row wrap in any window short of very wide.
+    const auto& style = ImGui::GetStyle();
+    const float em = ImGui::GetFontSize();
+    constexpr float seekTime = 3.f;
+    const float transportButton = ImGui::GetFrameHeight() * 1.6f;
+    const float groupGap = style.ItemSpacing.x * 3.f;
+    const float tight = style.ItemInnerSpacing.x;
+
+    if (ImGui::Button(ICON_STEP_BACKWARD "###prevFrame", ImVec2(transportButton, 0))) {
+        if (player->IsPaused()) {
+            player->PreviousFrame();
+        }
+    }
+    OFS::Tooltip("Previous frame. Only while paused.");
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_BACKWARD "###seekBack", ImVec2(transportButton, 0))) {
+        player->SeekRelative(-seekTime);
+    }
+    OFS::Tooltip("Back 3 seconds.");
+    ImGui::SameLine();
+    if (ImGui::Button((player->IsPaused()) ? ICON_PLAY "###playPause" : ICON_PAUSE "###playPause", ImVec2(transportButton, 0))) {
+        player->TogglePlay();
+    }
+    OFS::Tooltip(player->IsPaused() ? "Play." : "Pause.");
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_FORWARD "###seekForward", ImVec2(transportButton, 0))) {
+        player->SeekRelative(seekTime);
+    }
+    OFS::Tooltip("Forward 3 seconds.");
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_STEP_FORWARD "###nextFrame", ImVec2(transportButton, 0))) {
+        if (player->IsPaused()) {
+            player->NextFrame();
+        }
+    }
+    OFS::Tooltip("Next frame. Only while paused.");
+
     {
         char timeBuf1[16];
         char timeBuf2[16];
-
-        float time = player->CurrentTime();
-        Util::FormatTime(timeBuf1, sizeof(timeBuf1), time, true);
-        Util::FormatTime(timeBuf2, sizeof(timeBuf2), player->Duration(), true);
-
-        ImGui::Text(" %s / %s (x%.03f)", timeBuf1, timeBuf2, actualPlaybackSpeed);
-        ImGui::NextColumn();
+        // With nothing open the player's length is a placeholder, not a time
+        // worth showing.
+        const bool loaded = player->VideoLoaded();
+        Util::FormatTime(timeBuf1, sizeof(timeBuf1), loaded ? player->CurrentTime() : 0.f, true);
+        Util::FormatTime(timeBuf2, sizeof(timeBuf2), loaded ? player->Duration() : 0.f, true);
+        ImGui::SameLine(0.f, groupGap);
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("%s / %s", timeBuf1, timeBuf2);
+    }
+    // The measured speed, only while it is not keeping up with the set one:
+    // otherwise it repeats the speed field beside it.
+    if (!player->IsPaused() && std::abs(actualPlaybackSpeed - player->CurrentSpeed()) > 0.05f) {
+        ImGui::SameLine();
+        ImGui::TextDisabled("x%.2f", actualPlaybackSpeed);
+        OFS::Tooltip("Measured playback speed. It falls below the set speed when the video "
+                     "cannot be decoded fast enough to keep up.");
     }
 
-    auto& style = ImGui::GetStyle();
-    ImGui::SetColumnWidth(0, ImGui::GetItemRectSize().x + style.ItemSpacing.x);
-
-    if (ImGui::Button("1x", ImVec2(0, 0))) {
-        player->SetSpeed(1.f);
-    }
-    ImGui::SetColumnWidth(1, ImGui::GetItemRectSize().x + style.ItemSpacing.x);
-    ImGui::NextColumn();
-
-    if (ImGui::Button("-10%", ImVec2(0, 0))) {
+    ImGui::SameLine(0.f, groupGap);
+    if (ImGui::Button("-10%")) {
         player->AddSpeed(-0.10f);
     }
-    ImGui::SetColumnWidth(2, ImGui::GetItemRectSize().x + style.ItemSpacing.x);
-    ImGui::NextColumn();
-
-    if (ImGui::Button("+10%", ImVec2(0, 0))) {
+    OFS::Tooltip("Slower by a tenth.");
+    ImGui::SameLine(0.f, tight);
+    {
+        float currentSpeed = player->CurrentSpeed();
+        ImGui::SetNextItemWidth(ImGui::CalcTextSize("0.00x").x + (style.FramePadding.x * 2.f) + (em * 0.5f));
+        if (ImGui::InputFloat("##Speed", &currentSpeed, 0.f, 0.f, "%.2fx", ImGuiInputTextFlags_EnterReturnsTrue)) {
+            player->SetSpeed(Util::Clamp(currentSpeed, OFS_Videoplayer::MinPlaybackSpeed, OFS_Videoplayer::MaxPlaybackSpeed));
+        }
+        OFS::Tooltip("Playback speed. Type one and press Enter.");
+    }
+    ImGui::SameLine(0.f, tight);
+    if (ImGui::Button("+10%")) {
         player->AddSpeed(0.10f);
     }
-    ImGui::SetColumnWidth(3, ImGui::GetItemRectSize().x + style.ItemSpacing.x);
-    ImGui::NextColumn();
-
-    ImGui::SetNextItemWidth(-1.f);
-    float currentSpeed = player->CurrentSpeed();
-    if (ImGui::SliderFloat("##Speed", &currentSpeed, 
-        OFS_Videoplayer::MinPlaybackSpeed, OFS_Videoplayer::MaxPlaybackSpeed,
-        "%.3f", ImGuiSliderFlags_AlwaysClamp)) {
-        player->SetSpeed(currentSpeed);
+    OFS::Tooltip("Faster by a tenth.");
+    ImGui::SameLine(0.f, tight);
+    if (ImGui::Button("1x")) {
+        player->SetSpeed(1.f);
     }
-    OFS::Tooltip(TR(SPEED));
+    OFS::Tooltip("Back to normal speed.");
 
-    ImGui::Columns(1, 0, false);
+    // Volume last, taking the rest of the row: mute as a toggle that stays lit
+    // while muted, then the slider.
+    ImGui::SameLine(0.f, groupGap);
+    if (OFS::ToggleButton(mute ? ICON_VOLUME_OFF "###mute" : ICON_VOLUME_UP "###mute", mute)) {
+        mute = !mute;
+        if (mute) {
+            player->Mute();
+        }
+        else {
+            player->Unmute();
+        }
+    }
+    OFS::Tooltip(mute ? "Unmute." : "Mute.");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(-1.f);
+    float volume = player->Volume();
+    if (ImGui::SliderFloat("##Volume", &volume, 0.0f, 1.0f, "Volume  %.2f")) {
+        volume = Util::Clamp(volume, 0.0f, 1.f);
+        player->SetVolume(volume);
+        if (volume > 0.0f) {
+            mute = false;
+        }
+    }
 
     float position = player->CurrentPercentPosition();
     if (DrawTimelineWidget(TR_ID("TIMELINE", Tr::TIMELINE), &position)) {
@@ -595,67 +713,6 @@ void OFS_VideoplayerControls::DrawTimeline() noexcept
     ImGui::End();
 }
 
-void OFS_VideoplayerControls::DrawControls() noexcept
-{
-    OFS_PROFILE(__FUNCTION__);
-    FUN_ASSERT(player != nullptr, "nullptr");
-
-    ImGui::Begin(TR_ID(ControlId, Tr::CONTROLS));
-
-    constexpr float seekTime = 3.f;
-    // Playback controls
-    ImGui::Columns(5, 0, false);
-    if (ImGui::Button(ICON_STEP_BACKWARD /*"<"*/, ImVec2(-1, 0))) {
-        if (player->IsPaused()) {
-            player->PreviousFrame();
-        }
-    }
-    ImGui::NextColumn();
-    if (ImGui::Button(ICON_BACKWARD /*"<<"*/, ImVec2(-1, 0))) {
-        player->SeekRelative(-seekTime);
-    }
-    ImGui::NextColumn();
-
-    if (ImGui::Button((player->IsPaused()) ? ICON_PLAY : ICON_PAUSE, ImVec2(-1, 0))) {
-        player->TogglePlay();
-    }
-    ImGui::NextColumn();
-
-    if (ImGui::Button(ICON_FORWARD /*">>"*/, ImVec2(-1, 0))) {
-        player->SeekRelative(seekTime);
-    }
-    ImGui::NextColumn();
-
-    if (ImGui::Button(ICON_STEP_FORWARD /*">"*/, ImVec2(-1, 0))) {
-        if (player->IsPaused()) {
-            player->NextFrame();
-        }
-    }
-    ImGui::NextColumn();
-
-    ImGui::Columns(2, 0, false);
-    if (ImGui::Checkbox(mute ? ICON_VOLUME_OFF : ICON_VOLUME_UP, &mute)) {
-        if (mute) {
-            player->Mute();
-        }
-        else {
-            player->Unmute();
-        }
-    }
-    ImGui::SetColumnWidth(0, ImGui::GetItemRectSize().x + 10);
-    ImGui::NextColumn();
-    ImGui::SetNextItemWidth(-1);
-    float volume = player->Volume();
-    if (ImGui::SliderFloat("##Volume", &volume, 0.0f, 1.0f)) {
-        volume = Util::Clamp(volume, 0.0f, 1.f);
-        player->SetVolume(volume);
-        if (volume > 0.0f) {
-            mute = false;
-        }
-    }
-    ImGui::NextColumn();
-    ImGui::End();
-}
 
 #include "OFS_Shader.h"
 #include "imgui_impl/imgui_impl_opengl3.h"

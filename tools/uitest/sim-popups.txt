@@ -1,0 +1,47 @@
+# The simulator stays on screen while a popup is open, and popups are drawn
+# over it. Simulator panel at 1600x900: Lock 1360,579. Toolbar 3D 1560,43.
+#! covers src/UI/OFS_ScriptSimulator.* src/UI/OFS_VulvaHeightMap.h src/state/SimulatorState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+wait 10
+
+note the timeline's right click menu, with the 2D simulator still showing
+click 800 720 right
+wait 10
+state 01-context-2d
+shot 01-context-2d
+expect open_popups 1
+expect sim_drawn 1
+key escape
+wait 10
+expect open_popups 0
+
+note and with the 3D view
+click 1560 43
+wait 20
+click 800 720 right
+wait 10
+state 02-context-3d
+shot 02-context-3d
+expect open_popups 1
+expect sim_drawn 1
+key escape
+wait 10
+
+note a menu opened over the simulator is drawn on top of it
+click 1360 579
+wait 10
+drag 595 400 145 400 10
+wait 10
+click 28 13
+wait 10
+state 03-menu-over
+shot 03-menu-over
+expect open_popups 1
+expect sim_drawn 1
+key escape
+wait 10
+quit

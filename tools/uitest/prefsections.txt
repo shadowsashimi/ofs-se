@@ -1,0 +1,37 @@
+# Every section of Preferences, one screenshot each. Sidebar rows at 1600x900:
+# Application 276, Player 298, Scripting 320, Timeline 342, Simulator 364,
+# at x 460.
+#! sweep
+#! covers src/UI/OFS_Preferences.* src/state/PreferenceState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+wait 10
+
+note Options > Preferences
+click 327 13
+wait 5
+click 380 86
+wait 20
+expect preferences_open 1
+shot 01-application
+
+click 460 298
+wait 10
+shot 02-player
+
+click 460 320
+wait 10
+shot 03-scripting
+
+click 460 342
+wait 10
+shot 04-timeline
+windows 04-timeline
+
+click 460 364
+wait 10
+shot 05-simulator
+quit

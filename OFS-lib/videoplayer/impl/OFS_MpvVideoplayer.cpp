@@ -10,6 +10,7 @@
 #include "OFS_Localization.h"
 #include "OFS_GL.h"
 
+#include <cmath>
 #include <sstream>
 
 #include "SDL_timer.h"
@@ -46,6 +47,16 @@ struct MpvDataCache {
     float currentVolume = .5f;
 
     bool videoLoaded = false;
+    // No media is open and the position below is advanced by OFS_Videoplayer
+    // itself. See OpenBlank.
+    bool blank = false;
+    // The file loaded has sound and nothing to look at. A song with cover art
+    // is not this: mpv shows the picture as its video. See handleTrackReply.
+    bool audioOnly = false;
+    // The picture is a still, most often a song's cover art. Its frame rate
+    // says nothing about the sound and is usually 1, which would make a frame
+    // step a whole second, so a fixed one is used instead.
+    bool stillPicture = false;
     std::string filePath = "";
 };
 
@@ -64,6 +75,8 @@ struct MpvPlayerContext
     float* logicalPosition = nullptr;
 
     uint64_t smoothTimer = 0;
+    // Counts files opened and closed, to tell replies about an old file apart.
+    uint64_t loadGeneration = 1;
     VideoplayerType playerType;
 };
 
@@ -138,6 +151,24 @@ inline static void updateRenderTexture(MpvPlayerContext* ctx) noexcept
 		glBindTexture(GL_TEXTURE_2D, *ctx->frameTexture);
 		glTexImage2D(GL_TEXTURE_2D, 0, OFS_InternalTexFormat, ctx->data.videoWidth, ctx->data.videoHeight, 0, OFS_TexFormat, GL_UNSIGNED_BYTE, 0);
 	}
+}
+
+// Moves a blank timeline's position forward by however long it has been
+// playing since this last ran, and restarts that clock. The mpv path gets the
+// same thing from percent-pos events; here nothing reports it, so every read
+// or change of the position has to settle up first.
+inline static void advanceBlankClock(MpvPlayerContext* ctx, float* logicalPosition) noexcept
+{
+    uint64_t now = SDL_GetTicks64();
+    if (!ctx->data.paused) {
+        float elapsed = (now - ctx->smoothTimer) / 1000.f;
+        *logicalPosition += (float)((elapsed * ctx->data.currentSpeed) / ctx->data.duration);
+        // Matches mpv's loop-file=inf, which is what a video does at the end.
+        if (*logicalPosition >= 1.f) *logicalPosition -= std::floor(*logicalPosition);
+        else if (*logicalPosition < 0.f) *logicalPosition = 0.f;
+        ctx->data.percentPos = *logicalPosition;
+    }
+    ctx->smoothTimer = now;
 }
 
 inline static void showText(MpvPlayerContext* ctx, const char* text) noexcept
@@ -249,6 +280,63 @@ bool OFS_Videoplayer::Init(bool hwAccel) noexcept
     return true;
 }
 
+// The frame rate used when the file has no moving picture to take one from.
+static constexpr double NoMotionFps = 30.0;
+
+// What is asked about the video track. Packed with the load generation into a
+// reply's userdata, which is the only thing a reply carries back.
+enum class TrackQuery : uint64_t
+{
+    Present = 0,
+    Still = 1,
+};
+
+inline static uint64_t trackQueryTag(MpvPlayerContext* ctx, TrackQuery query) noexcept
+{
+    return (ctx->loadGeneration << 1) | (uint64_t)query;
+}
+
+// Tracks are chosen by the time a file has loaded, so this is asked then. It
+// has to be asked asynchronously: a blocking get waits on mpv, which for a file
+// with a picture is itself waiting on this thread to set up rendering, and the
+// app hangs. Replies are tagged with the load they were asked for, so one that
+// comes back after another file was opened is ignored.
+inline static void queryVideoTrack(MpvPlayerContext* ctx) noexcept
+{
+    mpv_get_property_async(ctx->mpv, trackQueryTag(ctx, TrackQuery::Present),
+        "current-tracks/video/id", MPV_FORMAT_INT64);
+    mpv_get_property_async(ctx->mpv, trackQueryTag(ctx, TrackQuery::Still),
+        "current-tracks/video/image", MPV_FORMAT_FLAG);
+}
+
+inline static void useFixedFrameRate(MpvPlayerContext* ctx) noexcept
+{
+    ctx->data.fps = NoMotionFps;
+    ctx->data.averageFrameTime = 1.0 / NoMotionFps;
+    ctx->data.totalNumFrames = (int64_t)(ctx->data.duration * NoMotionFps);
+}
+
+inline static void handleTrackReply(MpvPlayerContext* ctx, mpv_event* ev) noexcept
+{
+    if ((ev->reply_userdata >> 1) != ctx->loadGeneration || ctx->data.blank) return;
+    const auto query = (TrackQuery)(ev->reply_userdata & 1);
+
+    if (query == TrackQuery::Present) {
+        // No selected video track is reported as the property being
+        // unavailable. Any other failure is taken to mean there is a picture,
+        // which is how every file was treated before this was asked.
+        ctx->data.audioOnly = ev->error == MPV_ERROR_PROPERTY_UNAVAILABLE;
+        if (ctx->data.audioOnly) useFixedFrameRate(ctx);
+        return;
+    }
+
+    if (ev->error < 0) return;
+    auto prop = (mpv_event_property*)ev->data;
+    if (prop == nullptr || prop->format != MPV_FORMAT_FLAG || prop->data == nullptr) return;
+    ctx->data.stillPicture = *(int*)prop->data != 0;
+    if (ctx->data.stillPicture) useFixedFrameRate(ctx);
+}
+
 inline static void ProcessEvents(MpvPlayerContext* ctx) noexcept
 {
     for(;;) {
@@ -274,13 +362,25 @@ inline static void ProcessEvents(MpvPlayerContext* ctx) noexcept
             }
             case MPV_EVENT_FILE_LOADED:
             {
+                if (ctx->data.blank) continue;
                 ctx->data.videoLoaded = true; 	
+                queryVideoTrack(ctx);
+                continue;
+            }
+            case MPV_EVENT_GET_PROPERTY_REPLY:
+            {
+                // Only the video track is ever asked about this way.
+                handleTrackReply(ctx, mp_event);
                 continue;
             }
             case MPV_EVENT_PROPERTY_CHANGE:
             {
                 mpv_event_property* prop = (mpv_event_property*)mp_event->data;
                 if (prop->data == nullptr) break;
+                // On a blank timeline mpv is stopped and the cache below is
+                // ours, not its. Its properties are leftovers from the last
+                // file and would undo what the blank clock just set.
+                if (ctx->data.blank) break;
                 switch (mp_event->reply_userdata) {
                     case MpvHwDecoder:
                     {
@@ -306,14 +406,17 @@ inline static void ProcessEvents(MpvPlayerContext* ctx) noexcept
                         break;
                     }
                     case MpvFramesPerSecond:
+                        if (ctx->data.stillPicture || ctx->data.audioOnly) break;
                         ctx->data.fps = *(double*)prop->data;
                         ctx->data.averageFrameTime = (1.0 / ctx->data.fps);
                         break;
                     case MpvDuration:
                         ctx->data.duration = *(double*)prop->data;
+                        if (ctx->data.stillPicture || ctx->data.audioOnly) useFixedFrameRate(ctx);
                         notifyDuration(ctx);
                         break;
                     case MpvTotalFrames:
+                        if (ctx->data.stillPicture || ctx->data.audioOnly) break;
                         ctx->data.totalNumFrames = *(int64_t*)prop->data;
                         break;
                     case MpvPosition:
@@ -334,7 +437,11 @@ inline static void ProcessEvents(MpvPlayerContext* ctx) noexcept
                     case MpvPauseState:
                     {
                         bool paused = *(int64_t*)prop->data;
-                        if (paused) {
+                        // Only time that actually played is banked. mpv reports
+                        // its pause at startup too, with nothing loaded and the
+                        // cache still saying it plays, which used to push the
+                        // idle position a fraction of the way along.
+                        if (paused && !ctx->data.paused && ctx->data.videoLoaded) {
                             float timeSinceLastUpdate = (SDL_GetTicks64() - CTX->smoothTimer) / 1000.f;
                             float positionOffset = (timeSinceLastUpdate * CTX->data.currentSpeed) / CTX->data.duration;
                             *ctx->logicalPosition += positionOffset;
@@ -387,11 +494,67 @@ void OFS_Videoplayer::Update(float delta) noexcept
         }
         SDL_AtomicDecRef(&CTX->renderUpdate);
     }
+
+    if (CTX->data.blank && !CTX->data.paused) {
+        advanceBlankClock(CTX, &logicalPosition);
+        notifyTime(CTX);
+    }
+}
+
+void OFS_Videoplayer::OpenBlank(float durationSeconds) noexcept
+{
+    LOGF_INFO("Opening blank timeline of %.1f seconds", durationSeconds);
+    CloseVideo();
+
+    MpvDataCache newCache;
+    newCache.currentSpeed = CTX->data.currentSpeed;
+    newCache.currentVolume = CTX->data.currentVolume;
+    newCache.blank = true;
+    newCache.videoLoaded = true;
+    newCache.paused = true;
+    newCache.duration = Util::Clamp(durationSeconds, MinBlankDuration, MaxBlankDuration);
+    // Nothing decides the frame rate here, so it is picked: fine enough that a
+    // frame step is a small step, and a round number so the frame and the
+    // timeline's millisecond grid line up.
+    newCache.fps = 60.0;
+    newCache.averageFrameTime = 1.0 / newCache.fps;
+    newCache.totalNumFrames = (int64_t)(newCache.duration * newCache.fps);
+    CTX->data = newCache;
+
+    logicalPosition = 0.f;
+    CTX->smoothTimer = SDL_GetTicks64();
+
+    notifyDuration(CTX);
+    // With an empty path, which is what tells everything listening that there
+    // is no file here to read a waveform or a thumbnail out of.
+    notifyVideoLoaded(CTX);
+    notifyPaused(CTX);
+    notifyTime(CTX);
+}
+
+void OFS_Videoplayer::SetBlankDuration(float durationSeconds) noexcept
+{
+    if (!CTX->data.blank) return;
+    durationSeconds = Util::Clamp(durationSeconds, MinBlankDuration, MaxBlankDuration);
+    if (CTX->data.duration == durationSeconds) return;
+
+    advanceBlankClock(CTX, &logicalPosition);
+    // The playhead is held where it is in seconds rather than as a fraction, so
+    // changing the length does not drag it along with it.
+    double timeSeconds = logicalPosition * CTX->data.duration;
+    CTX->data.duration = durationSeconds;
+    logicalPosition = Util::Clamp((float)(timeSeconds / durationSeconds), 0.f, 1.f);
+    CTX->data.percentPos = logicalPosition;
+    CTX->data.totalNumFrames = (int64_t)(CTX->data.duration * CTX->data.fps);
+
+    notifyDuration(CTX);
+    notifyTime(CTX);
 }
 
 void OFS_Videoplayer::SetVolume(float volume) noexcept
 {
     CTX->data.currentVolume = volume;
+    if (CTX->data.blank) return;
     stbsp_snprintf(CTX->tmpBuf.data(), CTX->tmpBuf.size(), "%.2f", (float)(volume*100.f));
     const char* cmd[]{"set", "volume", CTX->tmpBuf.data(), NULL};
     mpv_command_async(CTX->mpv, 0, cmd);
@@ -441,6 +604,14 @@ void OFS_Videoplayer::OpenVideo(const std::string& path) noexcept
 void OFS_Videoplayer::SetSpeed(float speed) noexcept
 {
     speed = Util::Clamp<float>(speed, MinPlaybackSpeed, MaxPlaybackSpeed);
+    if (CTX->data.blank) {
+        if (CTX->data.currentSpeed == speed) return;
+        // Whatever has played so far played at the old speed.
+        advanceBlankClock(CTX, &logicalPosition);
+        CTX->data.currentSpeed = speed;
+        notifyPlaybackSpeed(CTX);
+        return;
+    }
     if (CurrentSpeed() != speed) {
         stbsp_snprintf(CTX->tmpBuf.data(), CTX->tmpBuf.size(), "%.3f", speed);
         const char* cmd[]{ "set", "speed", CTX->tmpBuf.data(), NULL };
@@ -457,6 +628,15 @@ void OFS_Videoplayer::AddSpeed(float speed) noexcept
 
 void OFS_Videoplayer::SetPositionPercent(float percentPos, bool pausesVideo) noexcept
 {
+    if (CTX->data.blank) {
+        if (pausesVideo) SetPaused(true);
+        percentPos = Util::Clamp(percentPos, 0.f, 1.f);
+        logicalPosition = percentPos;
+        CTX->data.percentPos = percentPos;
+        CTX->smoothTimer = SDL_GetTicks64();
+        notifyTime(CTX);
+        return;
+    }
     logicalPosition = percentPos;
     CTX->data.percentPos = percentPos;
     stbsp_snprintf(CTX->tmpBuf.data(), CTX->tmpBuf.size(), "%.08f", (float)(percentPos * 100.0f));
@@ -497,12 +677,20 @@ void OFS_Videoplayer::SeekFrames(int32_t offset) noexcept
 void OFS_Videoplayer::SetPaused(bool paused) noexcept
 {
     if ((bool)CTX->data.paused == paused) return;
+    if (CTX->data.blank) {
+        // Bank the time played before the pause takes effect.
+        advanceBlankClock(CTX, &logicalPosition);
+        CTX->data.paused = paused;
+        notifyPaused(CTX);
+        return;
+    }
     int64_t setPaused = paused;
     mpv_set_property_async(CTX->mpv, 0, "pause", MPV_FORMAT_FLAG, &setPaused);
 }
 
 void OFS_Videoplayer::CycleSubtitles() noexcept
 {
+    if (CTX->data.blank) return;
     const char* cmd[]{ "cycle", "sub", NULL};
     mpv_command_async(CTX->mpv, 0, cmd);
 }
@@ -510,6 +698,10 @@ void OFS_Videoplayer::CycleSubtitles() noexcept
 void OFS_Videoplayer::CloseVideo() noexcept
 {
     CTX->data.videoLoaded = false;
+    CTX->data.blank = false;
+    CTX->data.audioOnly = false;
+    CTX->data.stillPicture = false;
+    CTX->loadGeneration++;
     const char* cmd[] = { "stop", NULL };
     mpv_command_async(CTX->mpv, 0, cmd);
     SetPaused(true);
@@ -522,6 +714,7 @@ void OFS_Videoplayer::NotifySwap() noexcept
 
 void OFS_Videoplayer::SaveFrameToImage(const std::string& directory) noexcept
 {
+    if (CTX->data.blank) return;
     std::stringstream ss;
     auto currentFile = Util::PathFromString(VideoPath());
     std::string filename = currentFile.filename().replace_extension("").string();
@@ -585,6 +778,21 @@ float OFS_Videoplayer::Fps() const noexcept
 bool OFS_Videoplayer::VideoLoaded() const noexcept
 {
     return CTX->data.videoLoaded;
+}
+
+bool OFS_Videoplayer::IsBlank() const noexcept
+{
+    return CTX->data.blank;
+}
+
+bool OFS_Videoplayer::IsAudioOnly() const noexcept
+{
+    return CTX->data.videoLoaded && !CTX->data.blank && CTX->data.audioOnly;
+}
+
+bool OFS_Videoplayer::HasVisual() const noexcept
+{
+    return CTX->data.videoWidth > 0 && CTX->data.videoHeight > 0;
 }
 
 float OFS_Videoplayer::CurrentPercentPosition() const noexcept

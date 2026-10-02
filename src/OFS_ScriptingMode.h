@@ -22,6 +22,10 @@ enum ScriptingModeEnum : int32_t {
 class ScriptingModeBase {
 protected:
     Funscript& ctx() noexcept;
+public:
+    // While set, the modes edit this script instead of the active one, so an
+    // edit aimed at several targeted lanes runs the mode once per lane.
+    static Funscript* TargetOverride;
 
 public:
     ScriptingModeBase() noexcept {}
@@ -46,7 +50,9 @@ protected:
     static constexpr float MaxSpeed = 500.f;
     static constexpr float MinSpeed = 50.f;
     float targetSpeed = 300;
-    float directionBias = 0.f;
+    // Where the injected peak sits within the gap, as a fraction either side of
+    // the midpoint. 0 centres it, positive moves it later, negative earlier.
+    float peakOffset = 0.f;
     int topBottomDirection = 1; // 1 for top and -1 for bottom injection
 public:
     virtual void DrawModeSettings() noexcept override;
@@ -123,6 +129,7 @@ private:
 
 public:
     inline ScriptingModeEnum ActiveMode() const noexcept { return activeMode; }
+    inline ScriptingOverlayModes ActiveOverlay() const noexcept { return activeOverlay; }
     inline std::unique_ptr<BaseOverlay>& Overlay() noexcept { return overlayImpl; }
     inline std::unique_ptr<ScriptingModeBase>& Mode() noexcept
     {
@@ -134,6 +141,12 @@ public:
     void Init() noexcept;
     void DrawScriptingMode(bool* open) noexcept;
     void DrawOverlaySettings() noexcept;
+
+    // The segmented bars that pick the mode and the grid, drawn to fill the
+    // width they are given. Shared by the Mode panel and the toolbar, so both
+    // always offer the same options with the same explanations.
+    void DrawModeSelector(const char* id) noexcept;
+    void DrawOverlaySelector(const char* id) noexcept;
 
     void SetMode(ScriptingModeEnum mode) noexcept;
     void SetOverlay(ScriptingOverlayModes mode) noexcept;

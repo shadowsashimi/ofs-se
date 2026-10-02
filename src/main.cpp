@@ -1,4 +1,5 @@
 #include "OpenFunscripter.h"
+#include "OFS_CrashHandler.h"
 #include "SDL_main.h"
 
 #include "state/OpenFunscripterState.h"
@@ -6,6 +7,7 @@
 
 int main(int argc, char* argv[])
 {
+    OFS_CrashHandler::Install();
     OFS_LibState::RegisterAll();
     OpenFunscripterState::RegisterAll();
 

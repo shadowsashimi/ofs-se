@@ -1,0 +1,54 @@
+# Clicking an entry in the undo history undoes back to before it, and
+# clicking a redo entry brings it back. History rows are at the default
+# layout's 1600x900 positions; screenshots record where they really were.
+#! covers src/OFS_UndoSystem.* OFS-lib/Funscript/FunscriptUndoSystem.* src/OpenFunscripter.cpp:Undo src/OpenFunscripter.cpp:Redo
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 20
+
+note an empty history says so
+shot 00-empty-history
+
+note three points, then move one
+hold shift
+lanemove 4.0 10
+tap
+lanemove 5.0 90
+tap
+lanemove 6.0 10
+tap
+let shift
+wait 5
+pointmove 1
+hold shift
+press left
+wait 2
+pointmove 1 30 0
+wait 2
+release left
+let shift
+wait 5
+shot 01-history
+windows 01-history
+expect actions 3
+
+note click the oldest entry, three placed points, to take everything back
+note rows in the default layout: Undo stack label 294, Actions moved 316, Add action 338
+click 1400 338
+wait 10
+shot 02-undone
+state 02-undone
+expect actions 0
+expect redo_empty 0
+
+note the redo list is now on top; its first row redoes everything
+click 1400 316
+wait 10
+shot 03-redone
+state 03-redone
+expect actions 3
+quit

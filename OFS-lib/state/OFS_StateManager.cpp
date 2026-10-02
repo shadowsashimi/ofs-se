@@ -1,5 +1,7 @@
 #include "OFS_StateManager.h"
 
+#include <algorithm>
+
 #include "SDL_timer.h"
 
 OFS_StateManager* OFS_StateManager::instance = nullptr;
@@ -46,6 +48,22 @@ inline static nlohmann::json SerializeStateCollection(const std::vector<OFS_Stat
 
 inline static bool DeserializeStateCollection(const nlohmann::json& state, std::vector<OFS_State>& stateCollection, OFS_StateManager::StateHandleMap& handleMap, bool enableBinary) noexcept
 {
+    // Handles handed out by registerState are authoritative: callers are already
+    // holding on to them. Size the collection to cover every reserved handle
+    // before placing anything, otherwise a state that appears in the json
+    // before it has been registered is appended at stateCollection.size() and
+    // can land on a handle reserved for a state not yet placed. Both then map
+    // to the same slot, and whichever loses ends up pointing at the wrong type
+    // -- which surfaces much later as a bad_any_cast thrown through one of the
+    // noexcept state accessors, killing the process with no message.
+    uint32_t reservedCount = 0;
+    for(auto& entry : handleMap) {
+        reservedCount = std::max(reservedCount, entry.second.second + 1);
+    }
+    if(stateCollection.size() < reservedCount) {
+        stateCollection.resize(reservedCount);
+    }
+
     for(auto& stateItem : state.items()) {
         auto& stateValue = stateItem.value();
         if(!stateValue.contains("TypeName") || !stateValue["TypeName"].is_string()) {

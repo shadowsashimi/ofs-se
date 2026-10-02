@@ -8,6 +8,7 @@
 #include "OFS_Localization.h"
 #include "OFS_VideoplayerEvents.h"
 
+#include <functional>
 #include <string>
 #include "SDL_events.h"
 
@@ -16,6 +17,12 @@ class OFS_VideoplayerWindow
 public:
 	~OFS_VideoplayerWindow() noexcept;
 	uint32_t StateHandle() const noexcept { return stateHandle; }
+	// Where the picture itself was last drawn, on screen, and on which frame.
+	// Inside a letterboxed or zoomed player it is not the window's rectangle,
+	// and things fitted to the video should fit the picture.
+	ImVec2 VideoScreenMin;
+	ImVec2 VideoScreenMax;
+	int32_t VideoScreenFrame = -1;
 private:
 	class OFS_Videoplayer* player = nullptr;
 	std::unique_ptr<VrShader> vrShader;
@@ -44,4 +51,9 @@ public:
 	void DrawVideoPlayer(bool* open, bool* drawVideo) noexcept;
 
 	void ResetTranslationAndZoom() noexcept;
+
+	// Offered on the empty panel, which is the first thing anyone sees. The
+	// library has no idea what a project is, so the app hands it the one
+	// action that belongs there. Left unset, no button is drawn.
+	std::function<void()> OnStartBlankProject;
 };

@@ -1,0 +1,61 @@
+# Driving a device from the script, against a stand-in for Intiface Central:
+# it answers the handshake, offers one device that can be told a position, and
+# logs every message, so what OFS sent is in intiface.log beside the results.
+# Real hardware is the thing to try before trusting it; this only shows that
+# OFS says the right words in the right order.
+# Devices panel at 1600x900: View 266,13 with Devices at 300,282. The backend
+# bar is at y 260, Intiface 552; Connect is at 792,457.
+#! server mock-intiface
+#! covers src/api/OFS_DeviceLink.* src/state/DeviceLinkState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+note the window shows five seconds around the playhead, so it sits where the
+note strokes are going to be placed
+seek 6.5
+wait 10
+
+note four strokes half a second apart, for it to follow
+hold shift
+lanemove 6.0 10
+tap
+lanemove 6.5 90
+tap
+lanemove 7.0 10
+tap
+lanemove 7.5 90
+tap
+let shift
+wait 10
+expect actions 4
+
+note open the devices panel
+click 266 13
+wait 5
+click 300 282
+wait 20
+expect show_devices 1
+expect device_status 0
+shot 01-panel
+windows 01-panel
+
+note connect: the handshake, then the device list
+click 792 457
+waituntil device_status >= 2 300
+state 02-connected
+shot 02-connected
+expect device_status 2
+expect device_count 1
+
+note playing sends one move per stroke, not one per frame
+seek 5.5
+play
+wait 180
+pause
+wait 10
+state 03-played
+waituntil device_moves >= 4 10
+waituntil device_moves <= 12 10
+quit

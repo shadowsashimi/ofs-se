@@ -163,7 +163,7 @@ OFFSET_TOOLTIP,"Applies an offset to actions inserted while the video is playing
 MIRROR_MODE,Mirror mode,Spiegelmodus (Mirror Modus)
 MIRROR_MODE_TOOLTIP,Mirrors add/edit/remove action across all loaded scripts.,Füge ein/editiere/entferne Spiegelungs-Aktionen (Mirros) bei allen geladenen Scripts.
 DI_TARGET_SPEED,Target speed (units/s),Ziel Geschwindigkeit (Einheiten/s)
-DI_UP_DOWN_BIAS,Up/Down speed bias,Erhöhe/Verringe Geschwindigkeits-Bias
+DI_PEAK_OFFSET,Peak offset. Negative places the peak earlier in the gap; positive places it later.,Peak-Versatz. Negativ setzt den Scheitelpunkt früher; positiv später.
 TOP,Top,Oben
 BOTTOM,Bottom,Unten
 NEXT_POINT,Next point,Nächster Punkt
@@ -426,6 +426,15 @@ RELOAD,Reload,Lade neu
 BPM,BPM,BPM
 OFFSET,Offset,Versetzung (Offset)
 SNAP,Snap,Snap
+SNAPPING,Snapping,Einrasten
+SNAP_TO_GRID,Snap to grid,Am Raster einrasten
+SNAP_POSITION,Snap position,Position einrasten
+TEMPO_GRID,Grid,Raster
+BREAK,Break,Pause
+TEMPO,Tempo,Tempo
+TEMPO_AUTO,Auto tempo from chapters,Automatisches Tempo aus Kapiteln
+TEMPO_DOWNBEAT,Downbeat,Auftakt
+TEMPO_SET_DOWNBEAT,Set downbeat at playhead,Auftakt auf Abspielposition setzen
 UNKNOWN_ERROR,unknown error,Unbekannter Fehler
 FFMPEG_WAS_NOT_FOUND_MSG,"ffmpeg.exe was not found.
 Do you want to download it?","ffmpeg.exe wurde nicht gefunden.
@@ -502,3 +511,5 @@ MEMORY_USAGE,Memory usage,Speichergebrauch
 UPDATE,Update,Update
 SLOWEST,slowest,langsamste
 LANGUAGE,Language,Sprache
+SET_CHAPTER_START,Set chapter start,Kapitelanfang setzen
+SET_CHAPTER_END,Set chapter end,Kapitelende setzen

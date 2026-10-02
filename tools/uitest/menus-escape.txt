@@ -1,0 +1,64 @@
+# Escape closes an open menu, and the next click on another menu opens it.
+# Before the fix Escape did nothing to a menu, since ImGui only handles it with
+# keyboard navigation on, and the click on the second menu closed the first.
+#! covers src/OpenFunscripter.cpp:ShowMainMenuBar
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+note the right click tests aim at 5 s on the timeline, so it has to be on screen
+seek 5
+wait 10
+
+note open File
+click 28 13
+wait 10
+state 00-file-open
+expect open_popups 1
+
+note Escape closes it
+key escape
+wait 10
+state 01-after-escape
+expect open_popups 0
+
+note a single click on Project opens it
+click 89 13
+wait 10
+state 02-project-clicked
+shot 02-project-clicked
+expect open_popups 1
+
+note A: Escape the menu, then right click the timeline straight away
+key escape
+wait 5
+lanemove 5.0 50
+wait 5
+state 03a-before-right-click
+tap right
+wait 10
+state 03a-after-right-click
+shot 03a-after-right-click
+expect open_popups 1
+key escape
+wait 10
+expect open_popups 0
+
+note B: open a menu, Escape it, left click the video, then right click the timeline
+click 89 13
+wait 10
+key escape
+wait 5
+click 700 300
+wait 5
+lanemove 5.0 50
+wait 5
+tap right
+wait 10
+state 03b-after-right-click
+expect open_popups 1
+key escape
+wait 10
+expect open_popups 0
+quit

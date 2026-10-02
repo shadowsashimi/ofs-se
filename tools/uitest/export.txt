@@ -1,0 +1,34 @@
+# Save and quick export write what was scripted. Run against a copy of the
+# test media in a folder of its own (-Media), because both write beside the
+# media, and a project saved beside the shared media would be opened by
+# every other test after it. The written funscript is checked afterwards.
+#! covers src/OFS_Project.* OFS-lib/Funscript/* src/OpenFunscripter.cpp:saveProject src/OpenFunscripter.cpp:quickExport src/OpenFunscripter.cpp:saveActiveScriptAs
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note a known stroke
+hold shift
+lanemove 4.0 10
+tap
+lanemove 4.5 90
+tap
+lanemove 5.0 10
+tap
+let shift
+wait 5
+expect positions 10,90,10
+
+note ctrl+s saves the project, ctrl+shift+s quick exports the funscript
+key ctrl+s
+wait 30
+state 01-saved
+key ctrl+shift+s
+wait 30
+state 02-exported
+shot 02-exported
+quit

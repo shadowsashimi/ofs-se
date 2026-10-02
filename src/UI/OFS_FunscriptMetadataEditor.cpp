@@ -19,6 +19,14 @@ bool OFS_FunscriptMetadataEditor::ShowMetadataEditor(bool* open, Funscript::Meta
     OFS_PROFILE(__FUNCTION__);
     bool metaDataChanged = false;
 
+    // A usable size the first time. Sized to its contents it opened a column
+    // too narrow for its own labels, which were cut to "Titl", "Dura", "Crea".
+    {
+        const auto* viewport = ImGui::GetMainViewport();
+        const float em = ImGui::GetFontSize();
+        ImGui::SetNextWindowSize(ImVec2(em * 32.f, em * 30.f), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowPos(viewport->GetWorkCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    }
     if (ImGui::BeginPopupModal(TR_ID("METADATA_EDITOR", Tr::METADATA_EDITOR), open, ImGuiWindowFlags_NoDocking)) {
         metaDataChanged |= ImGui::InputText(TR(TITLE), &metadata.title);
         Util::FormatTime(Util::FormatBuffer, sizeof(Util::FormatBuffer), (float)metadata.duration, false);

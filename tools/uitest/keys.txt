@@ -1,0 +1,22 @@
+# The keys window opens from the Options menu, lists bindings as a table,
+# and the filter narrows it by key text.
+#! covers OFS-lib/UI/OFS_KeybindingSystem.* OFS-lib/state/states/KeybindingState.*
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+wait 10
+
+click 327 13
+wait 5
+note first entry, Keys
+click 360 42
+wait 20
+shot 01-keys
+windows 01-keys
+state 01-keys
+type ctrl
+wait 10
+shot 02-keys-filtered
+quit

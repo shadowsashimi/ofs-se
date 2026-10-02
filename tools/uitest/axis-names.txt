@@ -1,0 +1,41 @@
+# A video whose name has dots of its own, as downloads often do. The axis of a
+# script is the last dot separated part of its name only when that part is an
+# axis, so the main script stays the stroke rather than an axis called
+# "COM - clip", and the scripts added beside it are still roll and pitch.
+#! covers OFS-lib/Funscript/Funscript.* src/UI/OFS_ScriptSimulator.* src/api/OFS_DeviceLink.* src/UI/OFS_SpecialFunctions.*
+#! media dotted
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+expect script_axes stroke
+
+note add roll
+click 89 13
+wait 5
+move 90 90
+wait 15
+move 320 90
+wait 20
+click 425 200
+wait 30
+
+note add pitch
+click 89 13
+wait 5
+move 90 90
+wait 15
+move 320 90
+wait 20
+click 425 222
+wait 30
+state 01-scripts
+expect scripts 3
+expect script_axes stroke,roll,pitch
+
+note the 3D view counts all three as driven
+click 1560 43
+wait 20
+shot 02-3d
+quit

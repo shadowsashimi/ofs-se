@@ -1,0 +1,22 @@
+# Preferences opens from the Options menu, and each sidebar section shows.
+# Section rows are found from the first screenshot's window dump.
+#! covers src/UI/OFS_Preferences.* src/state/PreferenceState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+wait 10
+
+click 327 13
+wait 5
+shot 00-options-menu
+windows 00-options-menu
+note third entry, Preferences
+click 380 86
+wait 20
+shot 01-preferences
+windows 01-preferences
+state 01-preferences
+expect preferences_open 1
+quit

@@ -78,11 +78,23 @@ public:
 	virtual float steppingIntervalBackward(float realFrameTime, float fromTime) noexcept = 0;
 	virtual float logicalFrameTime(float realFrameTime) noexcept;
 
+	// Nearest point on whatever grid this overlay draws. Snapping follows the
+	// mode rather than a setting of its own, so the tempo grid snaps to its
+	// current division and the frame grid snaps to frames with nothing to keep
+	// in sync by hand. Overlays without a grid leave the time alone.
+	virtual float SnapTime(float time) noexcept { return time; }
+
+	// Whether SnapTime would do anything, so the indicator can say "no grid"
+	// rather than claiming a snap that will not happen.
+	virtual bool HasSnapGrid() const noexcept { return false; }
+
+	// Short label for the division being snapped to, for the indicator.
+	virtual const char* SnapGridLabel() const noexcept { return ""; }
+
 	static void DrawActionLines(const OverlayDrawingCtx& ctx) noexcept;
 	static void DrawActionPoints(const OverlayDrawingCtx& ctx) noexcept;
 	static void DrawSecondsLabel(const OverlayDrawingCtx& ctx) noexcept;
 	static void DrawHeightLines(const OverlayDrawingCtx& ctx) noexcept;
-	static void DrawScriptLabel(const OverlayDrawingCtx& ctx) noexcept;
 
 	static ImVec2 GetPointForAction(const OverlayDrawingCtx& ctx, FunscriptAction action) noexcept;
 };

@@ -4,6 +4,12 @@
 #include "OFS_Videopreview.h"
 #include "FunscriptHeatmap.h"
 
+// Both are structs in ChapterState.h. MSVC mangles an elaborated
+// "class Chapter" differently from "struct Chapter", so declaring them one
+// way here and the other way where they are defined costs a link error.
+struct Chapter;
+struct Bookmark;
+
 class OFS_VideoplayerControls
 {
 private:
@@ -21,14 +27,13 @@ private:
 	uint32_t lastPreviewUpdate = 0;
 	class OFS_Videoplayer* player = nullptr;
 
-	bool DrawChapter(ImDrawList* drawList, const ImRect& frameBB, class Chapter& chapter, ImDrawFlags drawFlags, float currentTime) noexcept;
-	bool DrawBookmark(ImDrawList* drawList, const ImRect& frameBB, class Bookmark& bookmark) noexcept;
+	bool DrawChapter(ImDrawList* drawList, const ImRect& frameBB, Chapter& chapter, ImDrawFlags drawFlags, float currentTime) noexcept;
+	bool DrawBookmark(ImDrawList* drawList, const ImRect& frameBB, Bookmark& bookmark) noexcept;
 	void DrawChapterWidget(ImDrawList* drawList, float currentTime) noexcept;
 
 	void VideoLoaded(const class VideoLoadedEvent* ev) noexcept;
 	bool DrawTimelineWidget(const char* label, float* position) noexcept;
 public:
-	static constexpr const char* ControlId = "###CONTROLS";
 	static constexpr const char* TimeId = "###TIME";
 
 	std::unique_ptr<VideoPreview> videoPreview;
@@ -42,7 +47,6 @@ public:
 	}
 
 	void DrawTimeline() noexcept;
-	void DrawControls() noexcept;
 
 	std::vector<uint8_t> RenderHeatmapToBitmapWithChapters(int16_t width, int16_t height, int16_t chapterHeight) noexcept;
 };

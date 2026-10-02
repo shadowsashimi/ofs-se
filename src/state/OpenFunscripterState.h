@@ -30,6 +30,11 @@ struct OpenFunscripterState
 		std::string defaultPath = "./";
 	} heatmapSettings;
 
+    // The length offered next time a script is started without a video. Kept
+    // because someone scripting for a fixed length toy pattern uses the same
+    // one over and over.
+    int32_t newScriptDurationSeconds = 10 * 60;
+
     bool showDebugLog = false;
     bool showVideo = true;
 
@@ -41,6 +46,9 @@ struct OpenFunscripterState
     bool showSpecialFunctions = false;
     bool showWsApi = false;
     bool showChapterManager = false;
+    bool showScriptCheck = false;
+    bool showDevices = false;
+    bool showToolbar = true;
 
     inline static OpenFunscripterState& State(uint32_t stateHandle) noexcept
     {
@@ -61,6 +69,7 @@ REFL_END
 REFL_TYPE(OpenFunscripterState)
     REFL_FIELD(recentFiles)
     REFL_FIELD(lastPath)
+    REFL_FIELD(newScriptDurationSeconds)
     REFL_FIELD(showDebugLog)
     REFL_FIELD(showVideo)
     REFL_FIELD(alwaysShowBookmarkLabels)
@@ -69,4 +78,7 @@ REFL_TYPE(OpenFunscripterState)
     REFL_FIELD(showSpecialFunctions)
     REFL_FIELD(showWsApi)
     REFL_FIELD(showChapterManager)
+    REFL_FIELD(showScriptCheck)
+    REFL_FIELD(showDevices)
+    REFL_FIELD(showToolbar)
 REFL_END

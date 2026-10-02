@@ -1,0 +1,103 @@
+# Ticking a lane's target box makes points from the keyboard, drag selections
+# and the clipboard act on it together with the active lane, so a passage can
+# be copied from several channels and pasted back into all of them at once.
+#! covers OFS-lib/UI/OFS_ScriptTimeline.* src/OpenFunscripter.cpp:cutSelection src/OpenFunscripter.cpp:copySelection src/OpenFunscripter.cpp:pasteSelection src/OpenFunscripter.cpp:pasteSelectionExact src/OpenFunscripter.cpp:TargetedFunscripts src/OpenFunscripter.cpp:removeAction src/OpenFunscripter.cpp:addEditAction
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note Project > Add... > Shortcuts, for a second lane
+click 89 13
+wait 5
+move 90 90
+wait 15
+move 320 90
+wait 20
+click 425 178
+wait 30
+expect scripts 2
+expect active_index 0
+
+note tick the second lane's target box
+click 32 739
+wait 10
+state 01-targeted
+shot 01-targeted
+
+note three points from the keyboard land in both lanes
+seek 4
+wait 5
+action action_0
+seek 4.5
+wait 5
+action action_100
+seek 5
+wait 5
+action action_0
+wait 5
+expect actions 3
+expect positions 0,100,0
+click 91 739
+wait 10
+expect active_index 1
+expect actions 3
+expect positions 0,100,0
+
+note one undo takes the last point out of both lanes
+key ctrl+z
+wait 5
+expect actions 2
+click 91 670
+wait 10
+expect active_index 0
+expect actions 2
+key ctrl+y
+wait 5
+expect actions 3
+
+note with the second lane targeted, a drag across the active lane selects both
+lanemove 3.5 50
+press left
+wait 3
+lanemove 5.5 50
+wait 3
+release left
+wait 5
+expect selection 3
+key ctrl+c
+wait 5
+expect copied 3
+
+note paste at 10 seconds fills both lanes
+seek 10
+wait 10
+key ctrl+v
+wait 10
+state 02-pasted
+shot 02-pasted
+expect actions 6
+click 91 739
+wait 10
+expect active_index 1
+expect actions 6
+
+note one undo takes the paste out of both lanes
+key ctrl+z
+wait 5
+expect actions 3
+click 91 670
+wait 10
+expect actions 3
+
+note delete clears the selection from both lanes
+key delete
+wait 5
+expect actions 0
+click 91 739
+wait 10
+expect actions 0
+quit

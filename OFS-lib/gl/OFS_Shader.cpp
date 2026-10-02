@@ -148,6 +148,7 @@ void WaveformShader::initUniformLocations() noexcept
 	AudioLoc = glGetUniformLocation(program, "audio");
 	AudioScaleLoc = glGetUniformLocation(program, "scaleAudio");
 	AudioSamplingOffset = glGetUniformLocation(program, "SamplingOffset");
+	AudioSamplingScale = glGetUniformLocation(program, "SamplingScale");
 	ColorLoc = glGetUniformLocation(program, "Color");
 }
 
@@ -164,6 +165,11 @@ void WaveformShader::AudioData(uint32_t unit) noexcept
 void WaveformShader::SampleOffset(float offset) noexcept
 {
 	glUniform1f(AudioSamplingOffset, offset);
+}
+
+void WaveformShader::SampleScale(float scale) noexcept
+{
+	glUniform1f(AudioSamplingScale, scale);
 }
 
 void WaveformShader::ScaleFactor(float scale) noexcept

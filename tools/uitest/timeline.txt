@@ -1,0 +1,82 @@
+# Placing, selecting, dragging, undoing and deleting points on the timeline,
+# with the mouse, the way a user would.
+#! covers OFS-lib/UI/OFS_ScriptTimeline.* OFS-lib/UI/ScriptPositionsOverlayMode.* src/UI/OFS_ScriptPositionsOverlays.* OFS-lib/Funscript/* src/OFS_ScriptingMode.* src/OpenFunscripter.cpp:ScriptTimelineActionClicked src/OpenFunscripter.cpp:ScriptTimelineActionCreated src/OpenFunscripter.cpp:ScriptTimelineActionMoved src/OpenFunscripter.cpp:ScriptTimelineDoubleClick src/OpenFunscripter.cpp:ScriptTimelineSelectTime src/OpenFunscripter.cpp:addEditAction src/OpenFunscripter.cpp:removeAction
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 20
+
+note place four points with shift+click
+hold shift
+lanemove 4.0 10
+tap
+lanemove 4.5 90
+tap
+lanemove 5.5 10
+tap
+lanemove 6.0 90
+tap
+let shift
+wait 5
+state 01-placed
+shot 01-placed
+expect actions 4
+expect undo_empty 0
+
+note box select the middle two by dragging across empty timeline
+lanemove 4.3 50
+press left
+lanemove 4.6 50
+lanemove 5.2 50
+lanemove 5.7 50
+release left
+wait 5
+state 02-box
+shot 02-box
+expect selection 2
+
+note shift drag one selected point, which should carry both
+pointmove 1
+hold shift
+press left
+wait 2
+pointmove 1 40 0
+wait 2
+pointmove 1 20 30
+wait 2
+release left
+let shift
+wait 5
+state 03-group-drag
+shot 03-group-drag
+expect selection 2
+expect actions 4
+
+note right click the lane for the point menu
+lanemove 5.0 50
+tap right
+wait 5
+shot 04-context-menu
+windows 04-context-menu
+key escape
+wait 5
+
+note undo the drag
+key ctrl+z
+wait 5
+state 05-undo
+expect actions 4
+
+note select all and delete
+key ctrl+a
+wait 3
+expect selection 4
+key delete
+wait 5
+state 06-deleted
+shot 06-deleted
+expect actions 0
+quit

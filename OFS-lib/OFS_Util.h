@@ -20,9 +20,15 @@
 #include "OFS_Profiling.h"
 #include "OFS_FileLogging.h"
 
-#include "emmintrin.h" // for _mm_pause
-
-#define OFS_PAUSE_INTRIN _mm_pause
+// CPU pause/yield hint for spin-waiting
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
+    #include "emmintrin.h"
+    #define OFS_PAUSE_INTRIN _mm_pause
+#elif defined(__aarch64__) || defined(_M_ARM64)
+    #define OFS_PAUSE_INTRIN() __asm__ __volatile__("yield")
+#else
+    #define OFS_PAUSE_INTRIN() ((void)0)
+#endif
 
 // helper for FontAwesome. Version 4.7.0 2016 ttf
 #define ICON_FOLDER_OPEN "\xef\x81\xbc"
@@ -420,8 +426,19 @@ public:
 
     static std::string Prefpath(const std::string& path = std::string()) noexcept
     {
-        static const char* cachedPref = SDL_GetPrefPath("OFS", "OFS3_data");
-        static std::filesystem::path prefPath = Util::PathFromString(cachedPref);
+        // OFS_PREF_PATH points everything OFS saves somewhere else: state,
+        // layout, logs, backups. tools\ui-test.ps1 uses it so a scripted run
+        // starts from a blank profile and never touches the real one.
+        static const std::filesystem::path prefPath = []() noexcept {
+            const char* overridePath = SDL_getenv("OFS_PREF_PATH");
+            if (overridePath != nullptr && overridePath[0] != '\0') {
+                auto overridden = Util::PathFromString(overridePath);
+                overridden /= "";
+                return overridden;
+            }
+            const char* sdlPref = SDL_GetPrefPath("OFS", "OFS3_data");
+            return Util::PathFromString(sdlPref);
+        }();
         if (!path.empty()) {
             std::filesystem::path rel = Util::PathFromString(path);
             rel.make_preferred();

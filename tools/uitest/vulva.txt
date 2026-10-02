@@ -1,0 +1,50 @@
+# The vulva of the sleeve, seen obliquely from below at full opacity: 3D,
+# case closed, then Alt and drag to turn the camera and raise it, with the
+# rod out and then in.
+#! sweep
+#! covers src/UI/OFS_ScriptSimulator.* src/UI/OFS_VulvaHeightMap.h src/state/SimulatorState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+hold shift
+lanemove 4.0 100
+tap
+lanemove 6.0 100
+tap
+let shift
+wait 5
+click 1360 579
+wait 10
+click 1560 43
+wait 30
+action toggle_simulator_cutaway
+action cycle_simulator_opacity
+wait 5
+hold alt
+drag 675 300 535 300 10
+wait 5
+drag 675 300 675 160 10
+let alt
+wait 10
+state 01-from-below
+shot 01-from-below
+lanemove 5.0 50
+wait 5
+key keypad0
+wait 10
+shot 02-rod-in
+seek 5.5
+wait 30
+shot 03-settling
+action toggle_simulator_rod
+seek 5.0
+wait 10
+shot 04-lips-around-rod
+seek 5.9
+wait 4
+shot 05-lips-settling
+quit

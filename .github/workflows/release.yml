@@ -1,0 +1,167 @@
+name: Release
+
+# Manual only, for the same reason as ci.yml: pushing a tag no longer starts a
+# paid build. To release, push the tag, then run this from the Actions tab with
+# that tag picked under "Use workflow from", so github.ref_name is the tag.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+    with:
+      artifact_suffix: -release
+      retention_days: 1
+
+  package-windows:
+    needs: build
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-windows-release
+          path: bin/Release
+
+      - name: Create Zip
+        run: Compress-Archive -Path "bin\Release\*" -DestinationPath "OFS-${{ github.ref_name }}-win64.zip"
+
+      - name: Install Inno Setup
+        run: choco install -y -r --no-progress InnoSetup
+
+      - name: Build Installer
+        run: iscc "ofs-installer.iss"
+
+      - name: Rename Installer
+        run: Move-Item "installer\ofs-installer.exe" "OFS-${{ github.ref_name }}-win64-setup.exe"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: |
+            OFS-${{ github.ref_name }}-win64.zip
+            OFS-${{ github.ref_name }}-win64-setup.exe
+          retention-days: 1
+
+  package-linux:
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget patchelf libgtk-3-dev librsvg2-dev libfuse2
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-linux-release
+          path: bin
+
+      - name: Create AppImage
+        working-directory: bin
+        run: |
+          chmod +x OFS-SE
+          
+          # Download tools with retry
+          wget -q --retry-connrefused --waitretry=1 --tries=5 "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage"
+          wget -q --retry-connrefused --waitretry=1 --tries=5 "https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage"
+          wget -q --retry-connrefused --waitretry=1 --tries=5 "https://github.com/AppImage/type2-runtime/releases/download/continuous/runtime-x86_64"
+          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-appimage-x86_64.AppImage
+
+          # Setup AppDir structure
+          cp -r "${{ github.workspace }}/AppImage" AppDir
+          chmod +x AppDir/AppRun
+          mkdir -p AppDir/usr/bin
+          cp -R "${{ github.workspace }}/data" AppDir/usr/bin/
+          
+          # Deploy dependencies and build AppImage
+          export DISABLE_COPYRIGHT_FILES_DEPLOYMENT=1
+          export LDAI_OUTPUT="OFS-${{ github.ref_name }}-linux-x86_64.AppImage"
+          export LDAI_RUNTIME_FILE="$(pwd)/runtime-x86_64"
+          ./linuxdeploy-x86_64.AppImage \
+            --executable=OFS-SE \
+            --appdir=AppDir \
+            --desktop-file=AppDir/openfunscripter.desktop \
+            --icon-file=AppDir/logo256.png \
+            --output=appimage
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-linux
+          path: bin/OFS-${{ github.ref_name }}-linux-x86_64.AppImage
+          retention-days: 1
+
+  package-macos:
+    needs: build
+    runs-on: macos-14
+    steps:
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: build-macos-release
+          path: bin/OFS-SE.app
+
+      - name: Create Zip
+        working-directory: bin
+        run: zip -r "OFS-${{ github.ref_name }}-macos.zip" OFS-SE.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: bin/OFS-${{ github.ref_name }}-macos.zip
+          retention-days: 1
+
+  publish:
+    needs: [package-windows, package-linux, package-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: release-*
+          merge-multiple: true
+
+      - name: Generate Changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -n "$PREV_TAG" ]; then
+            echo "Generating changelog from $PREV_TAG to ${{ github.ref_name }}"
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" "$PREV_TAG".."${{ github.ref_name }}")
+          else
+            echo "No previous tag found, using recent commits"
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" -50)
+          fi
+          
+          echo "$CHANGELOG" > changelog.txt
+          
+          {
+            echo "changelog<<EOF"
+            echo "$CHANGELOG"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: OFS-SE ${{ github.ref_name }}
+          body: |
+            ## What's Changed
+            ${{ steps.changelog.outputs.changelog }}
+          files: artifacts/*
+          draft: false
+          prerelease: false

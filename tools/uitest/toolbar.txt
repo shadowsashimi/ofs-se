@@ -1,0 +1,106 @@
+# Every toolbar control changes what it says it changes, and each top menu
+# opens. Coordinates are for the default layout at 1600x900, toolbar row y 43:
+# Mode  Manual 99, Alternating 212, Auto peak 324, Recording 435
+# Grid  None 584, Frame 685, Tempo 786
+# Note  dropdown 910
+# Snap  Grid toggle 1020, Round position dropdown 1260
+# Simulator  2D 1489, 3D 1560
+#! covers OFS-lib/UI/OFS_ImGui.* src/OFS_ScriptingMode.* src/OpenFunscripter.cpp:ShowToolbar src/OpenFunscripter.cpp:ToolbarVisible
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+wait 10
+
+note scripting mode
+click 324 43
+expect scripting_mode 2
+click 212 43
+expect scripting_mode 1
+click 99 43
+expect scripting_mode 0
+
+note grid
+click 786 43
+state 01-tempo
+shot 01-tempo
+expect overlay_mode 1
+click 584 43
+expect overlay_mode 2
+click 685 43
+expect overlay_mode 0
+
+note the note dropdown only does anything with the tempo grid
+click 910 43
+wait 5
+expect open_popups 0
+click 786 43
+wait 5
+click 910 43
+wait 10
+shot 02-note-dropdown
+windows 02-note-dropdown
+expect open_popups 1
+note fourth row is 1/8
+click 930 150
+wait 10
+state 03-eighths
+shot 03-eighths
+expect tempo_division 3
+click 685 43
+
+note snap
+click 1020 43
+expect snap_grid 1
+note round position dropdown: Off 72, Nearest 5 94, Nearest 10 116, Nearest 25 138
+click 1260 43
+wait 10
+shot 05-round-position
+expect open_popups 1
+click 1220 138
+wait 5
+expect snap_position_step 25
+click 1260 43
+wait 10
+click 1220 72
+wait 5
+expect snap_position_step 0
+click 1020 43
+expect snap_grid 0
+
+note simulator: 2D and 3D only
+click 1560 43
+expect simulator_mode 1
+wait 5
+shot 04-sim-3d
+click 1489 43
+expect simulator_mode 0
+
+note menus
+click 28 13
+wait 3
+shot 10-menu-file
+key escape
+click 89 13
+wait 3
+shot 11-menu-project
+key escape
+click 151 13
+wait 3
+shot 12-menu-edit
+key escape
+click 208 13
+wait 3
+shot 13-menu-select
+key escape
+click 266 13
+wait 3
+shot 14-menu-view
+key escape
+click 327 13
+wait 3
+shot 15-menu-options
+windows 15-menu-options
+key escape
+quit

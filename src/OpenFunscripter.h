@@ -17,11 +17,15 @@
 #include "OFS_Localization.h"
 #include "OFS_StateManager.h"
 #include "OFS_FunscriptMetadataEditor.h"
+#include "FunscriptGroupMove.h"
+#include "OFS_UiDriver.h"
 
 #include "OFS_Videoplayer.h"
 #include "OFS_VideoplayerWindow.h"
 #include "OFS_WebsocketApi.h"
 #include "OFS_ChapterManager.h"
+#include "UI/OFS_ScriptCheck.h"
+#include "api/OFS_DeviceLink.h"
 
 #include <memory>
 #include <chrono>
@@ -36,6 +40,10 @@ enum OFS_Status : uint8_t {
 };
 
 class OpenFunscripter {
+    // Scripted UI testing reaches into the app to open files, read state and
+    // capture the window. See OFS_UiDriver.h.
+    friend class OFS_UiDriver;
+    std::unique_ptr<class OFS_UiDriver> uiDriver;
 private:
     SDL_Window* window;
     SDL_GLContext glContext;
@@ -43,6 +51,7 @@ private:
     uint32_t stateHandle = 0xFFFF'FFFF;
     bool ShowMetadataEditor = false;
     bool ShowProjectEditor = false;
+    bool ShowNewScriptDialog = false;
 #ifndef NDEBUG
     bool DebugDemo = false;
 #endif
@@ -50,6 +59,10 @@ private:
     bool ShowAbout = false;
     bool IdleMode = false;
     uint32_t IdleTimer = 0;
+    // The audio file a waveform was last made for without being asked. Once
+    // per opening, so hiding the waveform afterwards sticks until it closes.
+    std::string autoWaveformMedia;
+    void autoWaveformForAudio() noexcept;
 
     FunscriptArray CopiedSelection;
     std::chrono::steady_clock::time_point lastBackup;
@@ -80,6 +93,12 @@ private:
 
     void ControllerAxisPlaybackSpeed(const OFS_SDL_Event* ev) noexcept;
 
+    // Where a mouse drag of points began: the point under the cursor, and the
+    // selection it is carrying, both as they were before the first move.
+    // Every move is placed relative to these, see FunscriptGroupMove.h.
+    FunscriptAction dragGrabbed;
+    FunscriptArray dragGroup;
+
     void ScriptTimelineActionCreated(const FunscriptActionShouldCreateEvent* ev) noexcept;
     void ScriptTimelineActionMoved(const FunscriptActionShouldMoveEvent* ev) noexcept;
     void ScriptTimelineActionClicked(const FunscriptActionClickedEvent* ev) noexcept;
@@ -102,9 +121,13 @@ private:
 
     void saveProject() noexcept;
     void quickExport() noexcept;
+    void quickExport2() noexcept;
     void pickDifferentMedia() noexcept;
 
     void saveHeatmap(const char* path, int width, int height, bool withChapters);
+    // Writes a copy of every script with the script check's limits applied,
+    // leaving the project as it is.
+    void exportForDevice() noexcept;
     void updateTitle() noexcept;
 
     void removeAction(FunscriptAction action) noexcept;
@@ -114,6 +137,10 @@ private:
     void saveActiveScriptAs();
 
     void openFile(const std::string& file) noexcept;
+    // Asks where to put a script with no video behind it, and starts one there.
+    void createStandaloneProject(float durationSeconds) noexcept;
+    // The same once the location is known, without asking for one.
+    void startStandaloneProject(const std::string& file, float durationSeconds) noexcept;
     void initProject() noexcept;
     bool closeProject(bool closeWithUnsavedChanges) noexcept;
 
@@ -128,7 +155,9 @@ private:
     void ShowAboutWindow(bool* open) noexcept;
     void ShowStatisticsWindow(bool* open) noexcept;
     void ShowMainMenuBar() noexcept;
+    void ShowToolbar() noexcept;
     bool ShowMetadataEditorWindow(bool* open) noexcept;
+    void ShowNewScriptWindow(bool* open) noexcept;
 
 public:
     static OpenFunscripter* ptr;
@@ -153,8 +182,14 @@ public:
     std::unique_ptr<OFS_FunscriptMetadataEditor> metadataEditor;
     std::unique_ptr<OFS_WebsocketApi> webApi;
     std::unique_ptr<OFS_ChapterManager> chapterMgr;
+    std::unique_ptr<OFS_ScriptCheck> scriptCheck;
+    std::unique_ptr<OFS_DeviceLink> deviceLink;
 
     std::unique_ptr<OFS_Project> LoadedProject;
+
+    // Whether the toolbar is showing, for panels that leave out what it
+    // already offers.
+    bool ToolbarVisible() noexcept;
 
     bool Init(int argc, char* argv[]);
     int Run() noexcept;
@@ -173,7 +208,21 @@ public:
 
     void UpdateNewActiveScript(uint32_t activeIndex) noexcept;
 
+    // The scripts an edit acts on: the active one first, then every other
+    // showing lane whose header is ticked.
+    std::vector<std::shared_ptr<Funscript>> TargetedFunscripts() noexcept;
+
     inline const FunscriptArray& FunscriptClipboard() const { return CopiedSelection; }
+    // What was copied from each targeted script, so a segment lifted from
+    // several lanes at once goes back down into the same lanes with one
+    // paste. CopiedSelection stays the active script's part of it for the
+    // Lua API and anything else that only knows about one clipboard.
+    struct CopiedTrack
+    {
+        std::weak_ptr<Funscript> script;
+        FunscriptArray actions;
+    };
+    std::vector<CopiedTrack> CopiedTracks;
 
     inline void LoadOverrideFont(const std::string& font) noexcept
     {

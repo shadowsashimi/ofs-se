@@ -1,0 +1,55 @@
+# The simulator can be grabbed wherever its frame is, not only over the
+# video, and can be fitted to the video player.
+# Simulator panel at 1600x900: Lock 1360,591, Fit to video checkbox 1334,622.
+# Toolbar: 2D 1489, 3D 1560 (y 43).
+#! covers src/UI/OFS_ScriptSimulator.* src/UI/OFS_VulvaHeightMap.h src/state/SimulatorState.h OFS-lib/videoplayer/OFS_VideoplayerWindow.*
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+wait 10
+
+note unlock it
+click 1360 591
+wait 10
+expect sim_locked 0
+
+note move the bar down until its middle is over the timeline
+drag 595 350 595 650 10
+wait 10
+state 01-over-timeline
+shot 01-over-timeline
+expect sim_p1 595,471
+
+note grab it over the timeline, where it could not be grabbed before, and bring it back
+drag 595 700 595 400 10
+wait 10
+state 02-back
+expect sim_p1 595,171
+
+note fit to video, against the right side
+click 1334 622
+wait 10
+expect sim_fit 1
+state 03-fit-2d
+shot 03-fit-2d
+note against the right edge of the picture, x 1161, not of the player's window
+expect sim_p1 1072,122
+expect sim_p2 1072,580
+
+note 3D is fitted too, floor and wall included, to the player's window rather
+note than the picture: it is a scene of its own, not laid over the video
+click 1560 43
+wait 30
+state 04-fit-3d
+shot 04-fit-3d
+expect sim_frame 990,123,1278,577
+
+note moving it by hand, from the middle of its frame, turns fitting off
+drag 1132 350 1032 350 10
+wait 10
+state 05-by-hand
+expect sim_fit 0
+expect sim_p1 1034,201
+quit

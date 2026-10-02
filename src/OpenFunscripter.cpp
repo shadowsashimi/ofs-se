@@ -1,4 +1,6 @@
-﻿#include "OpenFunscripter.h"
+#include "OpenFunscripter.h"
+#include "OFS_GitVersion.h"
+#include "OFS_CrashHandler.h"
 #include "OFS_Util.h"
 #include "OFS_Profiling.h"
 #include "OFS_ImGui.h"
@@ -13,6 +15,7 @@
 #include "state/states/VideoplayerWindowState.h"
 #include "state/states/BaseOverlayState.h"
 #include "state/states/ChapterState.h"
+#include "state/SimulatorState.h"
 
 #include <filesystem>
 
@@ -30,7 +33,6 @@
 // TODO: extend "range extender" functionality ( only extend bottom/top, range reducer )
 // TODO: render simulator relative to video position & zoom
 // TODO: make speed coloring configurable
-// TODO: OFS_ScriptTimeline selections cause alot of unnecessary overdraw
 
 OpenFunscripter* OpenFunscripter::ptr = nullptr;
 static constexpr const char* GlslVersion = "#version 330 core";
@@ -57,6 +59,11 @@ bool OpenFunscripter::imguiSetup() noexcept
     // io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable; // Enable Docking
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Enable Multi-Viewport / Platform Windows
+    if (OFS_UiDriver::Enabled()) {
+        // Everything in the one window, so a screenshot of it shows everything
+        // and script coordinates are relative to it.
+        io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
+    }
     io.ConfigWindowsMoveFromTitleBarOnly = true;
     io.ConfigViewportsNoDecoration = false;
     io.ConfigViewportsNoAutoMerge = false;
@@ -176,7 +183,7 @@ bool OpenFunscripter::Init(int argc, char* argv[])
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
     window = SDL_CreateWindow(
-        "OpenFunscripter " OFS_LATEST_GIT_TAG "@" OFS_LATEST_GIT_HASH,
+        "OFS-SE " OFS_LATEST_GIT_TAG "@" OFS_LATEST_GIT_HASH,
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         DefaultWidth, DefaultHeight,
         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_HIDDEN);
@@ -184,7 +191,10 @@ bool OpenFunscripter::Init(int argc, char* argv[])
     SDL_Rect display;
     int windowDisplay = SDL_GetWindowDisplayIndex(window);
     SDL_GetDisplayBounds(windowDisplay, &display);
-    if (DefaultWidth >= display.w || DefaultHeight >= display.h) {
+    // Maximizing shows the window, which a scripted run does not want: it sets
+    // its own size and stays off the screen.
+    if ((DefaultWidth >= display.w || DefaultHeight >= display.h)
+        && (!OFS_UiDriver::Enabled() || OFS_UiDriver::ShowsWindow())) {
         SDL_MaximizeWindow(window);
     }
 
@@ -219,11 +229,57 @@ bool OpenFunscripter::Init(int argc, char* argv[])
         LOG_ERROR("Failed to init videoplayer window");
         return false;
     }
+    // The empty player panel is what someone sees on a first run, so the way
+    // to start without a video is offered there as well as in the File menu.
+    playerWindow->OnStartBlankProject = [this]() noexcept { ShowNewScriptDialog = true; };
 
     playerControls.Init(player.get(), prefState.forceHwDecoding);
     undoSystem = std::make_unique<UndoSystem>();
 
     keys = std::make_unique<OFS_KeybindingSystem>();
+
+    // Edits on the selection, offered on the timeline where the points are.
+    // Each entry runs the same command as its keybinding and menu item, so it
+    // shares their undo and shows their shortcut.
+    scriptTimeline.OnOpenSettings = [this]() noexcept { preferences->OpenTimelineSection(); };
+    scriptTimeline.DrawPointActionsMenu = [this]() noexcept {
+        auto script = ActiveFunscript();
+        const bool hasSelection = script->HasSelection();
+        if (hasSelection) {
+            ImGui::TextDisabled("%u selected in %s", script->SelectionSize(), script->Title().c_str());
+        }
+        else {
+            ImGui::TextDisabled("Nothing selected in %s", script->Title().c_str());
+        }
+
+        if (ImGui::MenuItem(TR(CUT), keys->GetBindingString("cut"), false, hasSelection)) cutSelection();
+        if (ImGui::MenuItem(TR(COPY), keys->GetBindingString("copy"), false, hasSelection)) copySelection();
+        if (ImGui::MenuItem(TR(PASTE), keys->GetBindingString("paste"), false, !CopiedSelection.empty())) pasteSelection();
+        if (ImGui::MenuItem(TR(DELETE), keys->GetBindingString("remove_action"), false, hasSelection)) removeAction();
+        ImGui::Separator();
+
+        if (ImGui::MenuItem(TR(INVERT), keys->GetBindingString("invert_actions"), false, hasSelection)) invertSelection();
+        if (ImGui::MenuItem(TR(EQUALIZE), keys->GetBindingString("equalize_actions"), false, script->SelectionSize() >= 3)) equalizeSelection();
+        // Unlike the rest, isolate works on the point nearest the playhead
+        // rather than on the selection, so the label has to say so.
+        if (ImGui::MenuItem("Isolate point at playhead", keys->GetBindingString("isolate_action"))) isolateAction();
+        // Simplify needs its epsilon slider, so this opens it on the selection
+        // rather than simplifying by a guessed amount.
+        if (ImGui::MenuItem("Simplify...", nullptr, false, script->SelectionSize() > 4)) {
+            specialFunctions->SetFunction(SpecialFunctionType::RamerDouglasPeucker);
+            OpenFunscripterState::State(stateHandle).showSpecialFunctions = true;
+        }
+        ImGui::Separator();
+
+        // Enabled from three points, which is what they need to tell a top from
+        // a bottom. Enabled for any selection, they sat there looking usable
+        // with one or two points selected and did nothing when chosen.
+        const bool enoughForStroke = script->SelectionSize() >= 3;
+        if (ImGui::MenuItem(TR(TOP_POINTS_ONLY), keys->GetBindingString("select_top_points"), false, enoughForStroke)) selectTopPoints();
+        if (ImGui::MenuItem(TR(MID_POINTS_ONLY), keys->GetBindingString("select_middle_points"), false, enoughForStroke)) selectMiddlePoints();
+        if (ImGui::MenuItem(TR(BOTTOM_POINTS_ONLY), keys->GetBindingString("select_bottom_points"), false, enoughForStroke)) selectBottomPoints();
+        ImGui::Separator();
+    };
     registerBindings();
 
     scriptTimeline.Init();
@@ -272,6 +328,8 @@ bool OpenFunscripter::Init(int argc, char* argv[])
     webApi->Init();
 
     chapterMgr = std::make_unique<OFS_ChapterManager>();
+    scriptCheck = std::make_unique<OFS_ScriptCheck>();
+    deviceLink = std::make_unique<OFS_DeviceLink>();
 #ifdef WIN32
     OFS_DownloadFfmpeg::FfmpegMissing = !Util::FileExists(Util::FfmpegPath().u8string());
 #endif
@@ -293,7 +351,13 @@ bool OpenFunscripter::Init(int argc, char* argv[])
         OFS_DynFontAtlas::AddText(recentFile.name.c_str());
     }
 
-    SDL_ShowWindow(window);
+    // A scripted run draws the same frames whether or not anyone can see them,
+    // and a window appearing takes the mouse and the keyboard from whatever
+    // the user is doing. Several runs at once did it several times over, so a
+    // test run stays off the screen entirely unless OFS_UITEST_SHOW is set.
+    if (!OFS_UiDriver::Enabled() || OFS_UiDriver::ShowsWindow()) {
+        SDL_ShowWindow(window);
+    }
     return true;
 }
 
@@ -321,28 +385,37 @@ void OpenFunscripter::setupDefaultLayout(bool force) noexcept
         auto dock_time_bottom_id = ImGui::DockBuilderSplitNode(MainDockspaceID, ImGuiDir_Down, 0.1f, NULL, &dock_player_center_id);
         auto dock_positions_id = ImGui::DockBuilderSplitNode(dock_player_center_id, ImGuiDir_Down, 0.15f, NULL, &dock_player_center_id);
         auto dock_mode_right_id = ImGui::DockBuilderSplitNode(dock_player_center_id, ImGuiDir_Right, 0.15f, NULL, &dock_player_center_id);
-        auto dock_simulator_right_id = ImGui::DockBuilderSplitNode(dock_mode_right_id, ImGuiDir_Down, 0.15f, NULL, &dock_mode_right_id);
-        auto dock_action_right_id = ImGui::DockBuilderSplitNode(dock_mode_right_id, ImGuiDir_Down, 0.38f, NULL, &dock_mode_right_id);
-        auto dock_stats_right_id = ImGui::DockBuilderSplitNode(dock_mode_right_id, ImGuiDir_Down, 0.38f, NULL, &dock_mode_right_id);
-        auto dock_undo_right_id = ImGui::DockBuilderSplitNode(dock_mode_right_id, ImGuiDir_Down, 0.5f, NULL, &dock_mode_right_id);
+        // The right column, bottom up. Mode is left the most room because it
+        // carries each mode's and grid's settings, which the tempo grid's run
+        // to several rows; the simulator gets enough for its mode bar and the
+        // settings under it; the undo history, empty to begin with, least.
+        // Seen in scripted screenshots of a fresh profile, where Mode cut the
+        // tempo settings off after one row and the history sat mostly empty.
+        auto dock_simulator_right_id = ImGui::DockBuilderSplitNode(dock_mode_right_id, ImGuiDir_Down, 0.24f, NULL, &dock_mode_right_id);
+        auto dock_action_right_id = ImGui::DockBuilderSplitNode(dock_mode_right_id, ImGuiDir_Down, 0.30f, NULL, &dock_mode_right_id);
+        auto dock_stats_right_id = ImGui::DockBuilderSplitNode(dock_mode_right_id, ImGuiDir_Down, 0.32f, NULL, &dock_mode_right_id);
+        auto dock_undo_right_id = ImGui::DockBuilderSplitNode(dock_mode_right_id, ImGuiDir_Down, 0.35f, NULL, &dock_mode_right_id);
 
-        auto dock_player_control_id = ImGui::DockBuilderSplitNode(dock_time_bottom_id, ImGuiDir_Left, 0.15f, &dock_time_bottom_id, &dock_time_bottom_id);
 
         ImGui::DockBuilderGetNode(dock_player_center_id)->LocalFlags |= ImGuiDockNodeFlags_AutoHideTabBar;
         ImGui::DockBuilderGetNode(dock_positions_id)->LocalFlags |= ImGuiDockNodeFlags_AutoHideTabBar;
         ImGui::DockBuilderGetNode(dock_time_bottom_id)->LocalFlags |= ImGuiDockNodeFlags_AutoHideTabBar;
-        ImGui::DockBuilderGetNode(dock_player_control_id)->LocalFlags |= ImGuiDockNodeFlags_AutoHideTabBar;
 
         ImGui::DockBuilderDockWindow(OFS_VideoplayerWindow::WindowId, dock_player_center_id);
         ImGui::DockBuilderDockWindow(OFS_VideoplayerControls::TimeId, dock_time_bottom_id);
-        ImGui::DockBuilderDockWindow(OFS_VideoplayerControls::ControlId, dock_player_control_id);
         ImGui::DockBuilderDockWindow(ScriptTimeline::WindowId, dock_positions_id);
         ImGui::DockBuilderDockWindow(ScriptingMode::WindowId, dock_mode_right_id);
         ImGui::DockBuilderDockWindow(ScriptSimulator::WindowId, dock_simulator_right_id);
-        ImGui::DockBuilderDockWindow(ActionEditorWindowId, dock_action_right_id);
+        // A tab beside statistics rather than a split of its own. Opened into
+        // its own split it took its height out of the undo history and the
+        // statistics, leaving one row of history and cutting the statistics
+        // off, and still had too little room for its own keypad.
+        (void)dock_action_right_id;
+        ImGui::DockBuilderDockWindow(ActionEditorWindowId, dock_stats_right_id);
         ImGui::DockBuilderDockWindow(StatisticsWindowId, dock_stats_right_id);
         ImGui::DockBuilderDockWindow(UndoSystem::WindowId, dock_undo_right_id);
         simulator.CenterSimulator();
+        simulator.CenterWhenVideoShows = true;
         ImGui::DockBuilderFinish(MainDockspaceID);
     }
 }
@@ -350,6 +423,9 @@ void OpenFunscripter::setupDefaultLayout(bool force) noexcept
 void OpenFunscripter::registerBindings()
 {
     keys->RegisterGroup("Actions", Tr::ACTIONS_BINDING_GROUP);
+    // Adding a point at a position is on the keypad and on the number row, for
+    // keyboards without a keypad. A default is only added to a profile that
+    // does not already use that key for something.
     {
         // DELETE ACTION
         keys->RegisterAction(
@@ -365,6 +441,7 @@ void OpenFunscripter::registerBindings()
             Tr::ACTION_ACTION_0, "Actions",
             {
                 { ImGuiMod_None, ImGuiKey_Keypad0 },
+                { ImGuiMod_None, ImGuiKey_0 },
             });
         keys->RegisterAction(
             { "action_10",
@@ -372,6 +449,7 @@ void OpenFunscripter::registerBindings()
             Tr::ACTION_ACTION_10, "Actions",
             {
                 { ImGuiMod_None, ImGuiKey_Keypad1 },
+                { ImGuiMod_None, ImGuiKey_1 },
             });
         keys->RegisterAction(
             { "action_20",
@@ -379,6 +457,7 @@ void OpenFunscripter::registerBindings()
             Tr::ACTION_ACTION_20, "Actions",
             {
                 { ImGuiMod_None, ImGuiKey_Keypad2 },
+                { ImGuiMod_None, ImGuiKey_2 },
             });
         keys->RegisterAction(
             { "action_30",
@@ -386,6 +465,7 @@ void OpenFunscripter::registerBindings()
             Tr::ACTION_ACTION_30, "Actions",
             {
                 { ImGuiMod_None, ImGuiKey_Keypad3 },
+                { ImGuiMod_None, ImGuiKey_3 },
             });
         keys->RegisterAction(
             { "action_40",
@@ -393,6 +473,7 @@ void OpenFunscripter::registerBindings()
             Tr::ACTION_ACTION_40, "Actions",
             {
                 { ImGuiMod_None, ImGuiKey_Keypad4 },
+                { ImGuiMod_None, ImGuiKey_4 },
             });
         keys->RegisterAction(
             { "action_50",
@@ -400,6 +481,7 @@ void OpenFunscripter::registerBindings()
             Tr::ACTION_ACTION_50, "Actions",
             {
                 { ImGuiMod_None, ImGuiKey_Keypad5 },
+                { ImGuiMod_None, ImGuiKey_5 },
             });
         keys->RegisterAction(
             { "action_60",
@@ -407,6 +489,7 @@ void OpenFunscripter::registerBindings()
             Tr::ACTION_ACTION_60, "Actions",
             {
                 { ImGuiMod_None, ImGuiKey_Keypad6 },
+                { ImGuiMod_None, ImGuiKey_6 },
             });
         keys->RegisterAction(
             { "action_70",
@@ -414,6 +497,7 @@ void OpenFunscripter::registerBindings()
             Tr::ACTION_ACTION_70, "Actions",
             {
                 { ImGuiMod_None, ImGuiKey_Keypad7 },
+                { ImGuiMod_None, ImGuiKey_7 },
             });
         keys->RegisterAction(
             { "action_80",
@@ -421,6 +505,7 @@ void OpenFunscripter::registerBindings()
             Tr::ACTION_ACTION_80, "Actions",
             {
                 { ImGuiMod_None, ImGuiKey_Keypad8 },
+                { ImGuiMod_None, ImGuiKey_8 },
             });
         keys->RegisterAction(
             { "action_90",
@@ -428,6 +513,7 @@ void OpenFunscripter::registerBindings()
             Tr::ACTION_ACTION_90, "Actions",
             {
                 { ImGuiMod_None, ImGuiKey_Keypad9 },
+                { ImGuiMod_None, ImGuiKey_9 },
             });
         keys->RegisterAction(
             { "action_100",
@@ -455,6 +541,14 @@ void OpenFunscripter::registerBindings()
             Tr::ACTION_QUICK_EXPORT, "Core",
             {
                 { ImGuiMod_Ctrl | ImGuiMod_Shift, ImGuiKey_S },
+            });
+
+        keys->RegisterAction(
+            { "quick_export_2_0",
+                [this]() { quickExport2(); } },
+            Tr::ACTION_QUICK_EXPORT_2_0, "Core",
+            {
+                { ImGuiMod_Alt, ImGuiKey_S },
             });
 
         keys->RegisterAction(
@@ -784,6 +878,67 @@ void OpenFunscripter::registerBindings()
                 false },
             Tr::ACTION_TOGGLE_FULLSCREEN, "Utility",
             { { ImGuiMod_None, ImGuiKey_F10 } });
+
+        // SIMULATOR MODE
+        // Unbound by default; every obvious key is already taken by something
+        // used far more often.
+        keys->RegisterAction(
+            { "cycle_simulator_mode",
+                [this]() { simulator.CycleMode(); },
+                false },
+            "Switch the simulator between 2D and 3D", "Utility");
+
+        // The 3D model's easter egg, also on a checkbox in its settings.
+        keys->RegisterAction(
+            { "toggle_simulator_finish",
+                [this]() {
+                    simulator.FinishEasterEgg = !simulator.FinishEasterEgg;
+                    if (!simulator.FinishEasterEgg) {
+                        simulator.FinishDrops.clear();
+                        simulator.FinishStimulation = 0.f;
+                    }
+                },
+                false },
+            "Toggle the 3D simulator's easter egg", "Utility");
+
+        // Finishes at once, turning the easter egg on if it is off, for
+        // trying it out without stroking up to it.
+        keys->RegisterAction(
+            { "simulator_finish_now",
+                [this]() {
+                    simulator.FinishEasterEgg = true;
+                    simulator.FinishRequested = true;
+                },
+                false },
+            "Make the 3D simulator's easter egg finish now", "Utility");
+
+        keys->RegisterAction(
+            { "toggle_simulator_cutaway",
+                [this]() {
+                    auto& simState = SimulatorState::State(simulator.StateHandle());
+                    simState.CutawayCase = !simState.CutawayCase;
+                },
+                false },
+            "Toggle the 3D simulator's cutaway", "Utility");
+
+        keys->RegisterAction(
+            { "toggle_simulator_rod",
+                [this]() {
+                    auto& simState = SimulatorState::State(simulator.StateHandle());
+                    simState.ShowRod = !simState.ShowRod;
+                },
+                false },
+            "Show or hide the 3D simulator's rod", "Utility");
+
+        keys->RegisterAction(
+            { "cycle_simulator_opacity",
+                [this]() {
+                    auto& simState = SimulatorState::State(simulator.StateHandle());
+                    simState.GlobalOpacity = simState.GlobalOpacity < 0.6f ? 0.75f
+                        : (simState.GlobalOpacity < 0.9f ? 1.f : 0.5f);
+                },
+                false },
+            "Cycle the simulator's opacity: half, three quarters, full", "Utility");
     }
 
     // MOVE LEFT/RIGHT
@@ -1246,6 +1401,18 @@ void OpenFunscripter::newFrame() noexcept
         const auto& prefState = PreferenceState::State(preferences->StateHandle());
         OFS_DynFontAtlas::RebuildFont(prefState.defaultFontSize);
     }
+
+    // Created on the first frame rather than in Init, since Run draws one
+    // frame before the loop and the driver needs a finished app to act on.
+    static bool uiDriverChecked = false;
+    if (!uiDriverChecked) {
+        uiDriverChecked = true;
+        uiDriver = OFS_UiDriver::FromEnvironment();
+    }
+    // After the backend has queued this frame's real input, so scripted input
+    // is the last word.
+    if (uiDriver) uiDriver->BeforeNewFrame();
+
     ImGui::NewFrame();
 }
 
@@ -1292,6 +1459,9 @@ void OpenFunscripter::render() noexcept
     }
     glFlush();
     glFinish();
+
+    // The finished frame is still in the back buffer until the swap.
+    if (uiDriver) uiDriver->AfterRender();
 }
 
 void OpenFunscripter::processEvents() noexcept
@@ -1392,24 +1562,54 @@ void OpenFunscripter::ScriptTimelineActionCreated(const FunscriptActionShouldCre
 {
     if (auto script = ev->script.lock()) {
         undoSystem->Snapshot(StateType::ADD_ACTION, script);
-        script->AddEditAction(ev->newAction, scripting->LogicalFrameTime());
+        // Through the scripting mode, like a point placed from the keyboard or
+        // the action editor. Placed straight into the script, a click ignored
+        // the mode entirely: Alternating never alternated and Auto peak never
+        // added its peak, though both say that is what a click does. The
+        // modes act on the active script, so a click in another lane still
+        // places exactly what was clicked.
+        if (script == ActiveFunscript()) {
+            scripting->AddEditAction(ev->newAction);
+        }
+        else {
+            script->AddEditAction(ev->newAction, scripting->LogicalFrameTime());
+        }
     }
 }
 
 void OpenFunscripter::ScriptTimelineActionMoved(const FunscriptActionShouldMoveEvent* ev) noexcept
 {
-    if (auto script = ev->script.lock()) {
-        if (ev->moveStarted) {
-            undoSystem->Snapshot(StateType::ACTIONS_MOVED, script);
-        }
-        else {
-            if (script->SelectionSize() == 1) {
-                script->RemoveSelectedActions();
-                script->AddAction(ev->action);
-                script->SelectAction(ev->action);
-            }
-        }
+    auto script = ev->script.lock();
+    if (!script) return;
+
+    if (ev->moveStarted) {
+        undoSystem->Snapshot(StateType::ACTIONS_MOVED, script);
+        dragGrabbed = ev->action;
+        dragGroup = script->Selection();
+        return;
     }
+    if (dragGroup.empty()) return;
+
+    // The points staying put. The selection is the group wherever the last
+    // move left it, so taking it out leaves exactly the neighbours.
+    FunscriptArray others;
+    others.reserve(script->Actions().size());
+    for (auto action : script->Actions()) {
+        if (!script->IsSelected(action)) others.emplace_back_unsorted(action);
+    }
+
+    // One millisecond, the resolution a funscript is saved at. Closer than
+    // that, two points would share a timestamp once written out. The clamp
+    // stops the group short of a neighbour instead of refusing the move, which
+    // is what used to delete a single point dropped onto an occupied slot.
+    constexpr float MinGap = 0.001f;
+    const auto offset = FunscriptGroupMove::Clamp(others, dragGroup,
+        ev->action.atS - dragGrabbed.atS, ev->action.pos - dragGrabbed.pos, MinGap);
+    const auto moved = FunscriptGroupMove::Apply(dragGroup, offset);
+
+    script->RemoveSelectedActions();
+    script->AddMultipleActions(moved);
+    script->SetSelection(moved);
 }
 
 void OpenFunscripter::DragNDrop(const OFS_SDL_Event* ev) noexcept
@@ -1436,6 +1636,11 @@ void OpenFunscripter::VideoDuration(const DurationChangeEvent* ev) noexcept
 void OpenFunscripter::VideoLoaded(const VideoLoadedEvent* ev) noexcept
 {
     OFS_PROFILE(__FUNCTION__);
+    // Ensure project metadata duration reflects the loaded video's duration
+    if (LoadedProject && player) {
+        auto& projectState = LoadedProject->State();
+        projectState.metadata.duration = player->Duration();
+    }
 }
 
 void OpenFunscripter::PlayPauseChange(const PlayPauseChangeEvent* ev) noexcept
@@ -1458,6 +1663,7 @@ void OpenFunscripter::update() noexcept
     ControllerInput::UpdateControllers();
     scripting->Update();
     scriptTimeline.Update();
+    autoWaveformForAudio();
 
     if (LoadedProject->IsValid()) {
         LoadedProject->Update(delta, IdleMode);
@@ -1468,6 +1674,28 @@ void OpenFunscripter::update() noexcept
     }
 
     webApi->Update();
+    deviceLink->Update(delta);
+}
+
+void OpenFunscripter::autoWaveformForAudio() noexcept
+{
+    // With no picture the waveform is the only view of what is playing, so an
+    // audio file gets one straight away instead of from a menu.
+    if (!player->IsAudioOnly()) {
+        // Forgotten on close, so the same song opened again gets one again.
+        autoWaveformMedia.clear();
+        return;
+    }
+    const std::string media = player->VideoPath();
+    if (media.empty() || media == autoWaveformMedia) return;
+    // The timeline learns of the new file by event, which can land a frame
+    // after the player knows. Until it does, a request would read the old file.
+    if (scriptTimeline.MediaPath() != media) return;
+
+    autoWaveformMedia = media;
+    if (OFS_DownloadFfmpeg::FfmpegMissing) return;
+    if (scriptTimeline.WaveformShown() || !scriptTimeline.CanGenerateWaveform()) return;
+    scriptTimeline.RequestWaveform();
 }
 
 void OpenFunscripter::autoBackup() noexcept
@@ -1483,7 +1711,11 @@ void OpenFunscripter::autoBackup() noexcept
     lastBackup = std::chrono::steady_clock::now();
 
     auto backupDir = Util::PathFromString(Util::Prefpath("backup"));
-    auto name = Util::Filename(player->VideoPath());
+    // A project with no media has no video name to file its backups under, so
+    // they go under the project's own.
+    auto name = LoadedProject->IsStandalone()
+        ? Util::PathFromString(LoadedProject->Path()).stem().u8string()
+        : Util::Filename(player->VideoPath());
     name = Util::trim(name); // this needs to be trimmed because trailing spaces
 
     static auto BackupStartPoint = asap::now();
@@ -1571,6 +1803,19 @@ void OpenFunscripter::Step() noexcept
         {
             OFS_PROFILE("ImGui");
             // IMGUI HERE
+
+            // Escape closes whatever menu, right click menu or dropdown is open.
+            // ImGui only does that itself with keyboard navigation turned on,
+            // which OFS leaves off, so Escape did nothing to an open menu, and
+            // a click on a second menu after pressing it closed the first
+            // instead of opening the second. Modals keep Escape to themselves:
+            // the keys window uses it to cancel capturing a binding.
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)
+                && GImGui->OpenPopupStack.Size > 0
+                && ImGui::GetTopMostPopupModal() == nullptr) {
+                ImGui::ClosePopupsExceptModals();
+            }
+
             CreateDockspace();
             blockingTask.ShowBlockingTask();
 
@@ -1587,6 +1832,10 @@ void OpenFunscripter::Step() noexcept
 
             specialFunctions->ShowFunctionsWindow(&ofsState.showSpecialFunctions);
             undoSystem->ShowUndoRedoHistory(&ofsState.showHistory);
+            // A click on a history entry, carried out once the window is done
+            // drawing the stacks it would change.
+            for (; undoSystem->PendingUndoSteps > 0; undoSystem->PendingUndoSteps -= 1) Undo();
+            for (; undoSystem->PendingRedoSteps > 0; undoSystem->PendingRedoSteps -= 1) Redo();
             simulator.ShowSimulator(&ofsState.showSimulator, ActiveFunscript(), player->CurrentTime(), overlayState.SplineMode);
 
             if (ShowMetadataEditor) {
@@ -1600,15 +1849,16 @@ void OpenFunscripter::Step() noexcept
             webApi->ShowWindow(&ofsState.showWsApi);
             scripting->DrawScriptingMode(NULL);
             LoadedProject->ShowProjectWindow(&ShowProjectEditor);
+            ShowNewScriptWindow(&ShowNewScriptDialog);
 
             extensions->ShowExtensions();
             OFS_FileLogger::DrawLogWindow(&ofsState.showDebugLog);
             keys->RenderKeybindingWindow();
             chapterMgr->ShowWindow(&ofsState.showChapterManager);
+            scriptCheck->ShowWindow(&ofsState.showScriptCheck);
+            deviceLink->DrawWindow(&ofsState.showDevices);
 
             if (preferences->ShowPreferenceWindow()) {}
-
-            playerControls.DrawControls();
 
             if (Status & OFS_GradientNeedsUpdate) {
                 Status &= ~(OFS_GradientNeedsUpdate);
@@ -1628,27 +1878,35 @@ void OpenFunscripter::Step() noexcept
                 ImGui::Begin(TR_ID(ActionEditorWindowId, Tr::ACTION_EDITOR), &ofsState.showActionEditor);
                 OFS_PROFILE(ActionEditorWindowId);
 
-                ImGui::Columns(1, 0, false);
-                if (ImGui::Button("100", ImVec2(-1, 0))) {
+                // 100 across the top, 90 to 10 as three rows of three, 0 across
+                // the bottom: the same keypad as before, sized by hand instead of
+                // through the old Columns API.
+                const auto& style = ImGui::GetStyle();
+                const float fullWidth = ImGui::GetContentRegionAvail().x;
+                const float thirdWidth = (fullWidth - (style.ItemSpacing.x * 2.f)) / 3.f;
+                char positionLabel[8];
+
+                if (ImGui::Button("100", ImVec2(fullWidth, 0.f))) {
                     addEditAction(100);
                 }
-                for (int i = 9; i != 0; i--) {
-                    if (i % 3 == 0) {
-                        ImGui::Columns(3, 0, false);
+                for (int row = 0; row < 3; row += 1) {
+                    for (int column = 0; column < 3; column += 1) {
+                        const int position = (9 - (row * 3) - column) * 10;
+                        if (column > 0) ImGui::SameLine();
+                        stbsp_snprintf(positionLabel, sizeof(positionLabel), "%d", position);
+                        if (ImGui::Button(positionLabel, ImVec2(thirdWidth, 0.f))) {
+                            addEditAction(position);
+                        }
                     }
-                    sprintf(tmpBuf[0], "%d", i * 10);
-                    if (ImGui::Button(tmpBuf[0], ImVec2(-1, 0))) {
-                        addEditAction(i * 10);
-                    }
-                    ImGui::NextColumn();
                 }
-                ImGui::Columns(1, 0, false);
-                if (ImGui::Button("0", ImVec2(-1, 0))) {
+                if (ImGui::Button("0", ImVec2(fullWidth, 0.f))) {
                     addEditAction(0);
                 }
+                OFS::Tooltip("Places a point at the playhead with this position, "
+                             "through the current scripting mode.");
 
+                ImGui::Spacing();
                 if (player->IsPaused()) {
-                    ImGui::Spacing();
                     auto scriptAction = ActiveFunscript()->GetActionAtTime(player->CurrentTime(), scripting->LogicalFrameTime());
                     if (!scriptAction) {
                         // create action
@@ -1659,6 +1917,16 @@ void OpenFunscripter::Step() noexcept
                             addEditAction(newActionPosition);
                         }
                     }
+                    else {
+                        ImGui::PushTextWrapPos(0.f);
+                        ImGui::TextDisabled("A point already sits at the playhead, at %d.", scriptAction->pos);
+                        ImGui::PopTextWrapPos();
+                    }
+                }
+                else {
+                    ImGui::PushTextWrapPos(0.f);
+                    ImGui::TextDisabled("Pause to place a point at any position with a slider.");
+                    ImGui::PopTextWrapPos();
                 }
                 ImGui::End();
             }
@@ -1694,6 +1962,7 @@ int OpenFunscripter::Run() noexcept
     while (!(Status & OFS_Status::OFS_ShouldExit)) {
 
         uint64_t FrameStart = SDL_GetPerformanceCounter();
+        OFS_CrashHandler::Heartbeat();
         Step();
         uint64_t FrameEnd = SDL_GetPerformanceCounter();
 
@@ -1804,18 +2073,73 @@ void OpenFunscripter::openFile(const std::string& file) noexcept
         });
 }
 
+void OpenFunscripter::createStandaloneProject(float durationSeconds) noexcept
+{
+    OFS_PROFILE(__FUNCTION__);
+    auto& ofsState = OpenFunscripterState::State(stateHandle);
+    Util::SaveFileDialog(
+        "New script without video", ofsState.lastPath,
+        [this, durationSeconds](auto& result) {
+            if (result.files.empty()) return;
+            startStandaloneProject(result.files[0], durationSeconds);
+        },
+        { "Funscript", "*.funscript" });
+}
+
+void OpenFunscripter::startStandaloneProject(const std::string& file, float durationSeconds) noexcept
+{
+    closeWithoutSavingDialog([this, file, durationSeconds]() noexcept {
+        LoadedProject = std::make_unique<OFS_Project>();
+        OFS_StateManager::Get()->ClearProjectAll();
+
+        if (LoadedProject->CreateStandalone(file, durationSeconds)) {
+            initProject();
+            // Written out at once. A project with no media cannot be found
+            // again from the file that was scripted, the way one opened from a
+            // video can, so it has to exist on disk from the start to be
+            // reopenable at all.
+            saveProject();
+        }
+        else {
+            Util::MessageBoxAlert("Failed to create script.", LoadedProject->NotValidError());
+        }
+    });
+}
+
 void OpenFunscripter::initProject() noexcept
 {
     OFS_PROFILE(__FUNCTION__);
+    // Whatever was open before is gone, and so is anything its edits could undo.
+    undoSystem->Clear();
     if (LoadedProject->IsValid()) {
         auto& projectState = LoadedProject->State();
+
+        // The title is the one piece of metadata the media already knows, so
+        // opening a dialog to ask for it was asking a question that had an
+        // answer. Taken from the file name, which is what someone would have
+        // typed in anyway, and only when there is nothing there to overwrite:
+        // a script that arrived with a title keeps it.
+        if (projectState.metadata.title.empty()) {
+            // With no media the project file's own name is the only name there
+            // is, and it is the one that was just typed into the save dialog.
+            auto namedAfter = Util::PathFromString(LoadedProject->IsStandalone()
+                    ? LoadedProject->Path()
+                    : LoadedProject->MediaPath());
+            projectState.metadata.title = namedAfter.stem().u8string();
+        }
+
         if (projectState.nudgeMetadata) {
             const auto& prefState = PreferenceState::State(preferences->StateHandle());
             ShowMetadataEditor = prefState.showMetaOnNew;
             projectState.nudgeMetadata = false;
         }
 
-        if (Util::FileExists(LoadedProject->MediaPath())) {
+        if (LoadedProject->IsStandalone()) {
+            // Nothing to load and nothing to go looking for: the timeline is
+            // the whole of it, at the length the project was saved with.
+            player->OpenBlank(projectState.standaloneDuration);
+        }
+        else if (Util::FileExists(LoadedProject->MediaPath())) {
             player->OpenVideo(LoadedProject->MediaPath());
         }
         else {
@@ -1843,15 +2167,15 @@ void OpenFunscripter::UpdateNewActiveScript(uint32_t activeIndex) noexcept
 
 void OpenFunscripter::updateTitle() noexcept
 {
-    const char* title = "OFS";
+    const char* title = "OFS-SE";
     if (LoadedProject->IsValid()) {
-        title = Util::Format("OpenFunscripter %s@%s - \"%s\"",
+        title = Util::Format("OFS-SE %s@%s - \"%s\"",
             OFS_LATEST_GIT_TAG,
             OFS_LATEST_GIT_HASH,
             LoadedProject->Path().c_str());
     }
     else {
-        title = Util::Format("OpenFunscripter %s@%s",
+        title = Util::Format("OFS-SE %s@%s",
             OFS_LATEST_GIT_TAG,
             OFS_LATEST_GIT_HASH);
     }
@@ -1876,6 +2200,34 @@ void OpenFunscripter::quickExport() noexcept
     LoadedProject->ExportFunscripts();
 }
 
+// Writes a copy for a device: everything the script check would complain about
+// is taken out of the copy, and the project keeps the script as it was
+// written. A folder rather than a file, since a project can hold an axis
+// script per channel and they have to stay together.
+void OpenFunscripter::exportForDevice() noexcept
+{
+    OFS_PROFILE(__FUNCTION__);
+    auto& ofsState = OpenFunscripterState::State(stateHandle);
+    Util::OpenDirectoryDialog("Export for device", ofsState.lastPath,
+        [this](auto& result) noexcept {
+            if (result.files.empty()) return;
+            const auto limits = scriptCheck->CurrentLimits();
+            std::vector<FunscriptArray> limited;
+            limited.reserve(LoadedFunscripts().size());
+            for (auto& script : LoadedFunscripts()) {
+                limited.emplace_back(
+                    OFS_Check::ThinOut(OFS_Check::LimitSpeed(script->Actions(), limits), limits));
+            }
+            LoadedProject->ExportFunscriptsLimited(result.files[0], limited);
+        });
+}
+
+void OpenFunscripter::quickExport2() noexcept
+{
+	OFS_PROFILE(__FUNCTION__);
+	LoadedProject->ExportFunscript2Quick();
+}
+
 bool OpenFunscripter::closeProject(bool closeWithUnsavedChanges) noexcept
 {
     OFS_PROFILE(__FUNCTION__);
@@ -1886,6 +2238,7 @@ bool OpenFunscripter::closeProject(bool closeWithUnsavedChanges) noexcept
     else {
         UpdateNewActiveScript(0);
         LoadedProject = std::make_unique<OFS_Project>();
+        undoSystem->Clear();
         player->CloseVideo();
         playerControls.videoPreview->CloseVideo();
         updateTitle();
@@ -1930,12 +2283,39 @@ void OpenFunscripter::removeAction(FunscriptAction action) noexcept
     ActiveFunscript()->RemoveAction(action);
 }
 
+std::vector<std::shared_ptr<Funscript>> OpenFunscripter::TargetedFunscripts() noexcept
+{
+    std::vector<std::shared_ptr<Funscript>> targets;
+    targets.push_back(ActiveFunscript());
+    for (auto& script : LoadedFunscripts()) {
+        if (script != ActiveFunscript() && script->Enabled && script->Targeted) {
+            targets.push_back(script);
+        }
+    }
+    return targets;
+}
+
+// The scripts of an edit, as the undo system wants them, so one undo takes
+// back what one key did to every targeted lane.
+static UndoContextScripts undoContextFor(const std::vector<std::shared_ptr<Funscript>>& targets) noexcept
+{
+    UndoContextScripts scripts;
+    scripts.reserve(targets.size());
+    for (auto& script : targets) scripts.push_back(script);
+    return scripts;
+}
+
 void OpenFunscripter::removeAction() noexcept
 {
     OFS_PROFILE(__FUNCTION__);
     if (ActiveFunscript()->HasSelection()) {
-        undoSystem->Snapshot(StateType::REMOVE_SELECTION, ActiveFunscript());
-        ActiveFunscript()->RemoveSelectedActions();
+        // A selection made by dragging across the timeline lands in every
+        // targeted lane, so deleting it clears them all.
+        auto targets = TargetedFunscripts();
+        undoSystem->Snapshot(StateType::REMOVE_SELECTION, undoContextFor(targets));
+        for (auto& script : targets) {
+            if (script->HasSelection()) script->RemoveSelectedActions();
+        }
     }
     else {
         auto action = ActiveFunscript()->GetClosestAction(player->CurrentTime());
@@ -1948,8 +2328,18 @@ void OpenFunscripter::removeAction() noexcept
 void OpenFunscripter::addEditAction(int pos) noexcept
 {
     OFS_PROFILE(__FUNCTION__);
-    undoSystem->Snapshot(StateType::ADD_EDIT_ACTIONS, ActiveFunscript());
-    scripting->AddEditAction(FunscriptAction(player->CurrentTime(), pos));
+    auto targets = TargetedFunscripts();
+    undoSystem->Snapshot(StateType::ADD_EDIT_ACTIONS, undoContextFor(targets));
+    const FunscriptAction action(player->CurrentTime(), pos);
+    // The active script goes through the mode as it always did. Every other
+    // target runs the same mode with the target swapped in underneath, so
+    // Alternating alternates and Auto peak adds its peak in each lane.
+    scripting->AddEditAction(action);
+    for (size_t i = 1; i < targets.size(); i += 1) {
+        ScriptingModeBase::TargetOverride = targets[i].get();
+        scripting->AddEditAction(action);
+    }
+    ScriptingModeBase::TargetOverride = nullptr;
 }
 
 void OpenFunscripter::cutSelection() noexcept
@@ -1957,8 +2347,11 @@ void OpenFunscripter::cutSelection() noexcept
     OFS_PROFILE(__FUNCTION__);
     if (ActiveFunscript()->HasSelection()) {
         copySelection();
-        undoSystem->Snapshot(StateType::CUT_SELECTION, ActiveFunscript());
-        ActiveFunscript()->RemoveSelectedActions();
+        auto targets = TargetedFunscripts();
+        undoSystem->Snapshot(StateType::CUT_SELECTION, undoContextFor(targets));
+        for (auto& script : targets) {
+            if (script->HasSelection()) script->RemoveSelectedActions();
+        }
     }
 }
 
@@ -1967,46 +2360,103 @@ void OpenFunscripter::copySelection() noexcept
     OFS_PROFILE(__FUNCTION__);
     if (ActiveFunscript()->HasSelection()) {
         CopiedSelection.clear();
+        CopiedTracks.clear();
         for (auto action : ActiveFunscript()->Selection()) {
             CopiedSelection.emplace(action);
         }
+        // Each targeted lane's selection is remembered with the lane it came
+        // from, so a paste puts every part back where it belongs.
+        for (auto& script : TargetedFunscripts()) {
+            if (!script->HasSelection()) continue;
+            CopiedTrack track;
+            track.script = script;
+            for (auto action : script->Selection()) track.actions.emplace(action);
+            CopiedTracks.push_back(std::move(track));
+        }
     }
+}
+
+// The scripts a paste goes into, and which part goes where. Parts copied from
+// a lane that has since been removed are dropped. A clipboard from before the
+// lanes were tracked, or with only the active lane in it, pastes into the
+// active script exactly as it always did.
+struct PasteTarget
+{
+    std::shared_ptr<Funscript> script;
+    const FunscriptArray* actions;
+};
+
+static std::vector<PasteTarget> pasteTargetsFor(OpenFunscripter* app) noexcept
+{
+    std::vector<PasteTarget> targets;
+    for (auto& track : app->CopiedTracks) {
+        auto script = track.script.lock();
+        if (!script || track.actions.empty()) continue;
+        targets.push_back({ script, &track.actions });
+    }
+    if (targets.size() <= 1) {
+        targets.clear();
+        if (!app->FunscriptClipboard().empty()) {
+            targets.push_back({ app->ActiveFunscript(), &app->FunscriptClipboard() });
+        }
+    }
+    return targets;
+}
+
+static UndoContextScripts undoContextFor(const std::vector<PasteTarget>& targets) noexcept
+{
+    UndoContextScripts scripts;
+    scripts.reserve(targets.size());
+    for (auto& target : targets) scripts.push_back(target.script);
+    return scripts;
 }
 
 void OpenFunscripter::pasteSelection() noexcept
 {
     OFS_PROFILE(__FUNCTION__);
-    if (CopiedSelection.empty()) return;
-    undoSystem->Snapshot(StateType::PASTE_COPIED_ACTIONS, ActiveFunscript());
-    // paste CopiedSelection relatively to position
-    // NOTE: assumes CopiedSelection is ordered by time
-    float currentTime = player->CurrentTime();
-    float offsetTime = currentTime - CopiedSelection.begin()->atS;
+    auto targets = pasteTargetsFor(this);
+    if (targets.empty()) return;
+    undoSystem->Snapshot(StateType::PASTE_COPIED_ACTIONS, undoContextFor(targets));
 
-    ActiveFunscript()->RemoveActionsInInterval(
-        currentTime - 0.0005f,
-        currentTime + (CopiedSelection.back().atS - CopiedSelection.front().atS + 0.0005f));
-
-    for (auto&& action : CopiedSelection) {
-        ActiveFunscript()->AddAction(FunscriptAction(action.atS + offsetTime, action.pos));
+    // Pasted relative to the playhead. The offset comes from the earliest
+    // point across every part, so parts copied from different lanes keep
+    // their timing against each other.
+    // NOTE: assumes each part is ordered by time
+    float firstTime = std::numeric_limits<float>::max();
+    float lastTime = 0.f;
+    for (auto& target : targets) {
+        firstTime = Util::Min(firstTime, target.actions->front().atS);
+        lastTime = Util::Max(lastTime, target.actions->back().atS);
     }
-    float newPosTime = (CopiedSelection.end() - 1)->atS + offsetTime;
-    player->SetPositionExact(newPosTime);
+    const float currentTime = player->CurrentTime();
+    const float offsetTime = currentTime - firstTime;
+
+    for (auto& target : targets) {
+        target.script->RemoveActionsInInterval(
+            target.actions->front().atS + offsetTime - 0.0005f,
+            target.actions->back().atS + offsetTime + 0.0005f);
+        for (auto&& action : *target.actions) {
+            target.script->AddAction(FunscriptAction(action.atS + offsetTime, action.pos));
+        }
+    }
+    player->SetPositionExact(lastTime + offsetTime);
 }
 
 void OpenFunscripter::pasteSelectionExact() noexcept
 {
     OFS_PROFILE(__FUNCTION__);
-    if (CopiedSelection.empty()) return;
-
-    undoSystem->Snapshot(StateType::PASTE_COPIED_ACTIONS, ActiveFunscript());
-    if (CopiedSelection.size() >= 2) {
-        ActiveFunscript()->RemoveActionsInInterval(CopiedSelection.front().atS, CopiedSelection.back().atS);
-    }
+    auto targets = pasteTargetsFor(this);
+    if (targets.empty()) return;
+    undoSystem->Snapshot(StateType::PASTE_COPIED_ACTIONS, undoContextFor(targets));
 
     // paste without altering timestamps
-    for (auto&& action : CopiedSelection) {
-        ActiveFunscript()->AddAction(action);
+    for (auto& target : targets) {
+        if (target.actions->size() >= 2) {
+            target.script->RemoveActionsInInterval(target.actions->front().atS, target.actions->back().atS);
+        }
+        for (auto&& action : *target.actions) {
+            target.script->AddAction(action);
+        }
     }
 }
 
@@ -2050,7 +2500,12 @@ void OpenFunscripter::invertSelection() noexcept
             ActiveFunscript()->ClearSelection();
         }
     }
-    else if (ActiveFunscript()->Selection().size() >= 3) {
+    else {
+        // Any selection. This asked for at least three points, a condition
+        // that belongs to equalize, which needs a first and last point with
+        // something between them to space out. Mirroring positions has no such
+        // need, and with one or two points selected the key and the right
+        // click menu's Invert did nothing at all, with nothing to say why.
         undoSystem->Snapshot(StateType::INVERT_ACTIONS, ActiveFunscript());
         ActiveFunscript()->InvertSelection();
     }
@@ -2123,7 +2578,7 @@ void OpenFunscripter::saveActiveScriptAs()
 
 void OpenFunscripter::ShowMainMenuBar() noexcept
 {
-#define BINDING_STRING(binding) nullptr // TODO: keybinds.getBindingString(binding)
+#define BINDING_STRING(binding) keys->GetBindingString(binding)
     OFS_PROFILE(__FUNCTION__);
     ImColor alertCol = ImGui::GetStyleColorVec4(ImGuiCol_MenuBarBg);
     std::chrono::duration<float> saveDuration;
@@ -2152,6 +2607,10 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
                     },
                     false);
             }
+            if (ImGui::MenuItem("New script without video...")) {
+                ShowNewScriptDialog = true;
+            }
+            OFS::Tooltip("Script to a length you pick, with no media to open.");
             if (LoadedProject->IsValid() && ImGui::MenuItem(TR(CLOSE_PROJECT), NULL, false, LoadedProject->IsValid())) {
                 closeWithoutSavingDialog([]() {});
             }
@@ -2188,6 +2647,14 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
                     quickExport();
                 }
                 OFS::Tooltip(TR(QUICK_EXPORT_TOOLTIP));
+                if (ImGui::MenuItem(FMT(ICON_SHARE " %s", TR(QUICK_EXPORT_2_0)), BINDING_STRING("quick_export_2_0"))) {
+                    quickExport2();
+                }
+                OFS::Tooltip(TR(QUICK_EXPORT_2_0_TOOLTIP));
+                if (ImGui::MenuItem(FMT(ICON_SHARE " %s", TR(QUICK_EXPORT_1_1)))) {
+                    LoadedProject->ExportFunscript11Quick();
+                }
+                OFS::Tooltip(TR(QUICK_EXPORT_1_1_TOOLTIP));
                 if (ImGui::MenuItem(FMT(ICON_SHARE " %s", TR(EXPORT_ACTIVE_SCRIPT)))) {
                     saveActiveScriptAs();
                 }
@@ -2214,6 +2681,85 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
                                 }
                             });
                     }
+                }
+
+                if (ImGui::MenuItem(FMT(ICON_SHARE " %s", "Export for device..."))) {
+                    exportForDevice();
+                }
+                OFS::Tooltip("Writes a copy with nothing in it faster or closer together than "
+                             "the script check's limits. The project keeps the script as written.");
+
+                // Images of the video and of the script. These were in Edit,
+                // among undo and the clipboard, though they change nothing and
+                // produce a file, which is what this menu is for.
+                ImGui::Separator();
+                if (ImGui::MenuItem(TR(SAVE_FRAME_AS_IMAGE), BINDING_STRING("save_frame_as_image"))) {
+                    auto screenshotDir = Util::Prefpath("screenshot");
+                    player->SaveFrameToImage(screenshotDir);
+                }
+                if (ImGui::MenuItem(TR(OPEN_SCREENSHOT_DIR))) {
+                    auto screenshotDir = Util::Prefpath("screenshot");
+                    Util::CreateDirectories(screenshotDir);
+                    Util::OpenFileExplorer(screenshotDir.c_str());
+                }
+
+                ImGui::Separator();
+                // The size used to be two unlabelled number boxes with their
+                // own plus and minus buttons, in a menu, with no hint of what
+                // they sized.
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextDisabled("Heatmap size");
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 4.f);
+                if (ImGui::InputInt("##heatmapWidth", &ofsState.heatmapSettings.defaultWidth, 0, 0)) {
+                    ofsState.heatmapSettings.defaultWidth = Util::Clamp(ofsState.heatmapSettings.defaultWidth, 32, 8192);
+                }
+                ImGui::SameLine();
+                ImGui::TextUnformatted("x");
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 4.f);
+                if (ImGui::InputInt("##heatmapHeight", &ofsState.heatmapSettings.defaultHeight, 0, 0)) {
+                    ofsState.heatmapSettings.defaultHeight = Util::Clamp(ofsState.heatmapSettings.defaultHeight, 8, 8192);
+                }
+                ImGui::SameLine();
+                ImGui::TextDisabled("px");
+                if (ImGui::MenuItem(TR(SAVE_HEATMAP))) {
+                    std::string filename = ActiveFunscript()->Title() + "_Heatmap.png";
+                    auto defaultPath = Util::PathFromString(ofsState.heatmapSettings.defaultPath);
+                    Util::ConcatPathSafe(defaultPath, filename);
+                    Util::SaveFileDialog(
+                        TR(SAVE_HEATMAP), defaultPath.u8string(),
+                        [this](auto& result) {
+                            if (result.files.size() > 0) {
+                                auto savePath = Util::PathFromString(result.files.front());
+                                if (savePath.has_filename()) {
+                                    auto& ofsState = OpenFunscripterState::State(stateHandle);
+                                    saveHeatmap(result.files.front().c_str(), ofsState.heatmapSettings.defaultWidth, ofsState.heatmapSettings.defaultHeight, false);
+                                    savePath.remove_filename();
+                                    ofsState.heatmapSettings.defaultPath = savePath.u8string();
+                                }
+                            }
+                        },
+                        { "*.png" }, "PNG");
+                }
+                if (ImGui::MenuItem(TR(SAVE_HEATMAP_WITH_CHAPTERS))) {
+                    std::string filename = ActiveFunscript()->Title() + "_Heatmap.png";
+                    auto defaultPath = Util::PathFromString(ofsState.heatmapSettings.defaultPath);
+                    Util::ConcatPathSafe(defaultPath, filename);
+                    Util::SaveFileDialog(
+                        TR(SAVE_HEATMAP), defaultPath.u8string(),
+                        [this](auto& result) {
+                            if (result.files.size() > 0) {
+                                auto savePath = Util::PathFromString(result.files.front());
+                                if (savePath.has_filename()) {
+                                    auto& ofsState = OpenFunscripterState::State(stateHandle);
+                                    saveHeatmap(result.files.front().c_str(), ofsState.heatmapSettings.defaultWidth, ofsState.heatmapSettings.defaultHeight, true);
+                                    savePath.remove_filename();
+                                    ofsState.heatmapSettings.defaultPath = savePath.u8string();
+                                }
+                            }
+                        },
+                        { "*.png" }, "PNG");
                 }
                 ImGui::EndMenu();
             }
@@ -2321,65 +2867,9 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
             }
             ImGui::EndMenu();
         }
+        // Undo and the clipboard. Frame and heatmap images moved to File >
+        // Export, since they change nothing and make a file.
         if (ImGui::BeginMenu(TR_ID("EDIT", Tr::EDIT))) {
-            if (ImGui::MenuItem(TR(SAVE_FRAME_AS_IMAGE), BINDING_STRING("save_frame_as_image"))) {
-                auto screenshotDir = Util::Prefpath("screenshot");
-                player->SaveFrameToImage(screenshotDir);
-            }
-            if (ImGui::MenuItem(TR(OPEN_SCREENSHOT_DIR))) {
-                auto screenshotDir = Util::Prefpath("screenshot");
-                Util::CreateDirectories(screenshotDir);
-                Util::OpenFileExplorer(screenshotDir.c_str());
-            }
-
-            ImGui::Separator();
-
-            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.f);
-            ImGui::InputInt("##width", &ofsState.heatmapSettings.defaultWidth);
-            ImGui::SameLine();
-            ImGui::TextUnformatted("x");
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.f);
-            ImGui::InputInt("##height", &ofsState.heatmapSettings.defaultHeight);
-            if (ImGui::MenuItem(TR(SAVE_HEATMAP))) {
-                std::string filename = ActiveFunscript()->Title() + "_Heatmap.png";
-                auto defaultPath = Util::PathFromString(ofsState.heatmapSettings.defaultPath);
-                Util::ConcatPathSafe(defaultPath, filename);
-                Util::SaveFileDialog(
-                    TR(SAVE_HEATMAP), defaultPath.u8string(),
-                    [this](auto& result) {
-                        if (result.files.size() > 0) {
-                            auto savePath = Util::PathFromString(result.files.front());
-                            if (savePath.has_filename()) {
-                                auto& ofsState = OpenFunscripterState::State(stateHandle);
-                                saveHeatmap(result.files.front().c_str(), ofsState.heatmapSettings.defaultWidth, ofsState.heatmapSettings.defaultHeight, false);
-                                savePath.remove_filename();
-                                ofsState.heatmapSettings.defaultPath = savePath.u8string();
-                            }
-                        }
-                    },
-                    { "*.png" }, "PNG");
-            }
-            if (ImGui::MenuItem(TR(SAVE_HEATMAP_WITH_CHAPTERS))) {
-                std::string filename = ActiveFunscript()->Title() + "_Heatmap.png";
-                auto defaultPath = Util::PathFromString(ofsState.heatmapSettings.defaultPath);
-                Util::ConcatPathSafe(defaultPath, filename);
-                Util::SaveFileDialog(
-                    TR(SAVE_HEATMAP), defaultPath.u8string(),
-                    [this](auto& result) {
-                        if (result.files.size() > 0) {
-                            auto savePath = Util::PathFromString(result.files.front());
-                            if (savePath.has_filename()) {
-                                auto& ofsState = OpenFunscripterState::State(stateHandle);
-                                saveHeatmap(result.files.front().c_str(), ofsState.heatmapSettings.defaultWidth, ofsState.heatmapSettings.defaultHeight, true);
-                                savePath.remove_filename();
-                                ofsState.heatmapSettings.defaultPath = savePath.u8string();
-                            }
-                        }
-                    },
-                    { "*.png" }, "PNG");
-            }
-            ImGui::Separator();
             if (ImGui::MenuItem(TR(UNDO), BINDING_STRING("undo"), false, !undoSystem->UndoEmpty())) {
                 this->Undo();
             }
@@ -2436,20 +2926,18 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
                 ImGui::EndMenu();
             }
             ImGui::Separator();
-            if (ImGui::MenuItem(TR(TOP_POINTS_ONLY), BINDING_STRING("select_top_points"), false)) {
-                if (ActiveFunscript()->HasSelection()) {
-                    selectTopPoints();
-                }
+            // Greyed out below three selected points, the least these need to
+            // tell a top from a bottom, as in the timeline's right click menu.
+            // Always enabled, they did nothing when chosen with fewer.
+            const bool enoughForStroke = ActiveFunscript()->SelectionSize() >= 3;
+            if (ImGui::MenuItem(TR(TOP_POINTS_ONLY), BINDING_STRING("select_top_points"), false, enoughForStroke)) {
+                selectTopPoints();
             }
-            if (ImGui::MenuItem(TR(MID_POINTS_ONLY), BINDING_STRING("select_middle_points"), false)) {
-                if (ActiveFunscript()->HasSelection()) {
-                    selectMiddlePoints();
-                }
+            if (ImGui::MenuItem(TR(MID_POINTS_ONLY), BINDING_STRING("select_middle_points"), false, enoughForStroke)) {
+                selectMiddlePoints();
             }
-            if (ImGui::MenuItem(TR(BOTTOM_POINTS_ONLY), BINDING_STRING("select_bottom_points"), false)) {
-                if (ActiveFunscript()->HasSelection()) {
-                    selectBottomPoints();
-                }
+            if (ImGui::MenuItem(TR(BOTTOM_POINTS_ONLY), BINDING_STRING("select_bottom_points"), false, enoughForStroke)) {
+                selectBottomPoints();
             }
             ImGui::Separator();
             if (ImGui::MenuItem(TR(EQUALIZE), BINDING_STRING("equalize_actions"), false)) {
@@ -2471,6 +2959,7 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
             }
             ImGui::Separator();
 #endif
+            if (ImGui::MenuItem("Toolbar", NULL, &ofsState.showToolbar)) {}
             if (ImGui::MenuItem(TR(STATISTICS), NULL, &ofsState.showStatistics)) {}
             if (ImGui::MenuItem(TR(UNDO_REDO_HISTORY), NULL, &ofsState.showHistory)) {}
             if (ImGui::MenuItem(TR(SIMULATOR), NULL, &ofsState.showSimulator)) {}
@@ -2479,6 +2968,10 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
             if (ImGui::MenuItem(TR(SPECIAL_FUNCTIONS), NULL, &ofsState.showSpecialFunctions)) {}
             if (ImGui::MenuItem(TR(WEBSOCKET_API), NULL, &ofsState.showWsApi)) {}
             if (ImGui::MenuItem(TR(CHAPTERS), NULL, &ofsState.showChapterManager)) {}
+            if (ImGui::MenuItem("Script check", NULL, &ofsState.showScriptCheck)) {}
+            if (ImGui::MenuItem("Devices", NULL, &ofsState.showDevices)) {}
+            OFS::Tooltip("Plays the script on a real device through Intiface Central.");
+            OFS::Tooltip("Lists the strokes a device cannot follow, and slows them down.");
 
 
             ImGui::Separator();
@@ -2685,8 +3178,151 @@ void OpenFunscripter::CreateDockspace() noexcept
     }
 
     ShowMainMenuBar();
+    ShowToolbar();
 
     ImGui::End();
+}
+
+// One row under the menu bar with the choices made most often while scripting:
+// how a click places a point, which grid is under the timeline, whether points
+// snap to it, and what the simulator shows. Each is the same control its panel
+// uses, so the two can never disagree, and the panels keep the settings that
+// go with each choice.
+void OpenFunscripter::ShowToolbar() noexcept
+{
+    auto& ofsState = OpenFunscripterState::State(stateHandle);
+    if (!ofsState.showToolbar) return;
+    OFS_PROFILE(__FUNCTION__);
+
+    const auto& style = ImGui::GetStyle();
+    constexpr float VerticalPadding = 4.f;
+    const float height = ImGui::GetFrameHeight() + (VerticalPadding * 2.f);
+    constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar
+        | ImGuiWindowFlags_NoScrollWithMouse
+        | ImGuiWindowFlags_NoSavedSettings;
+
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(style.WindowPadding.x, VerticalPadding));
+    const bool visible = ImGui::BeginViewportSideBar("##Toolbar", ImGui::GetMainViewport(), ImGuiDir_Up, height, flags);
+    ImGui::PopStyleVar();
+
+    if (visible) {
+        constexpr ImGuiTableFlags tableFlags = ImGuiTableFlags_BordersInnerV
+            | ImGuiTableFlags_SizingStretchProp
+            | ImGuiTableFlags_NoPadOuterX;
+        if (ImGui::BeginTable("##ToolbarTable", 5, tableFlags)) {
+            // Weighted by how much each control has to say, so the four mode
+            // names get the room they need before the simulator's two.
+            ImGui::TableSetupColumn("Mode", ImGuiTableColumnFlags_WidthStretch, 4.f);
+            ImGui::TableSetupColumn("Grid", ImGuiTableColumnFlags_WidthStretch, 2.8f);
+            ImGui::TableSetupColumn("Note", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 6.f);
+            ImGui::TableSetupColumn("Snap", ImGuiTableColumnFlags_WidthStretch, 3.4f);
+            ImGui::TableSetupColumn("Simulator", ImGuiTableColumnFlags_WidthStretch, 1.8f);
+            ImGui::TableNextRow();
+
+            // A short dimmed name in front of each group, so the row reads
+            // without hovering. On their own the bars were mode names, grid
+            // names and bare numbers that said nothing about what they set.
+            auto groupLabel = [](const char* label, const char* tip) noexcept {
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextDisabled("%s", label);
+                OFS::Tooltip(tip);
+                ImGui::SameLine();
+            };
+
+            ImGui::TableNextColumn();
+            groupLabel("Mode", "How a click on the timeline places a point.");
+            scripting->DrawModeSelector("##ToolbarMode");
+
+            ImGui::TableNextColumn();
+            groupLabel("Grid", "What the lines on the timeline mark, and what points snap to.");
+            scripting->DrawOverlaySelector("##ToolbarGrid");
+
+            ImGui::TableNextColumn();
+            groupLabel("Note", "Spacing of the tempo grid's lines, as a note length.");
+            ImGui::SetNextItemWidth(-1.f);
+            TempoOverlay::DrawNoteDivisionSelector("##ToolbarNote",
+                scripting->ActiveOverlay() == ScriptingOverlayModes::TEMPO);
+
+            ImGui::TableNextColumn();
+            {
+                groupLabel("Snap", "Where points placed or dragged with the mouse land.");
+                auto& overlayState = BaseOverlay::State();
+                const bool hasGrid = scripting->Overlay() != nullptr && scripting->Overlay()->HasSnapGrid();
+                const bool gridSnapOn = overlayState.SnapToGrid && hasGrid;
+
+                // One label whether on or off, lit when on: a label that changed
+                // with the state changed the button's width, and at toolbar
+                // widths got cut off.
+                ImGui::BeginDisabled(!hasGrid);
+                if (OFS::ToggleButton("Grid###ToolbarSnap", gridSnapOn)) {
+                    overlayState.SnapToGrid = !overlayState.SnapToGrid;
+                }
+                ImGui::EndDisabled();
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayNormal)) {
+                    ImGui::SetTooltip("%s", hasGrid
+                        ? "Snap times to the grid lines. Hold Alt to place one point off the grid."
+                        : "There is no grid to snap to. Pick Frame or Tempo.");
+                }
+
+                ImGui::SameLine();
+                ImGui::TextDisabled("Round position");
+                OFS::Tooltip("Rounds the position, up and down, of points placed or dragged with the mouse.");
+                ImGui::SameLine();
+                ImGui::SetNextItemWidth(-1.f);
+                DrawPositionRoundingSelector("##ToolbarPosStep");
+            }
+
+            ImGui::TableNextColumn();
+            groupLabel("Simulator", "What the simulator shows: a 2D bar, or a 3D model driven by every loaded axis.");
+            simulator.DrawModeSelector("##ToolbarSimulator");
+
+            ImGui::EndTable();
+        }
+    }
+    // BeginViewportSideBar wants its End whether or not it was visible.
+    ImGui::End();
+}
+
+// Asks the one thing a script without a video cannot be given by a file: how
+// long it runs. Everything else about the project follows from the save dialog
+// this hands off to.
+void OpenFunscripter::ShowNewScriptWindow(bool* open) noexcept
+{
+    static constexpr const char* WindowId = "New script without video";
+    if (*open) {
+        ImGui::OpenPopup(WindowId);
+    }
+    if (!ImGui::BeginPopupModal(WindowId, open, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_AlwaysAutoResize)) {
+        return;
+    }
+    OFS_PROFILE(__FUNCTION__);
+
+    auto& ofsState = OpenFunscripterState::State(stateHandle);
+
+    ImGui::TextDisabled("%s", "A timeline of a fixed length with nothing playing behind it.");
+    ImGui::Spacing();
+
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Length");
+    ImGui::SameLine();
+    OFS::InputDuration("##NewScriptDuration", &ofsState.newScriptDurationSeconds,
+        (int32_t)OFS_Project::MinStandaloneDuration, (int32_t)OFS_Project::MaxStandaloneDuration);
+    OFS::Tooltip("Can be changed later under Project > Configure.");
+
+    ImGui::Spacing();
+    if (ImGui::Button("Choose location...", ImVec2(-1.f, 0.f))) {
+        // Closed first: the file dialog is the next thing the user deals with,
+        // and the modal behind it would only be in the way.
+        *open = false;
+        ImGui::CloseCurrentPopup();
+        createStandaloneProject((float)ofsState.newScriptDurationSeconds);
+    }
+    if (ImGui::Button("Cancel", ImVec2(-1.f, 0.f))) {
+        *open = false;
+        ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::EndPopup();
 }
 
 void OpenFunscripter::ShowAboutWindow(bool* open) noexcept
@@ -2694,13 +3330,46 @@ void OpenFunscripter::ShowAboutWindow(bool* open) noexcept
     if (!*open) return;
     OFS_PROFILE(__FUNCTION__);
     ImGui::Begin(TR(ABOUT), open, ImGuiWindowFlags_None | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse);
-    ImGui::TextUnformatted("OpenFunscripter " OFS_LATEST_GIT_TAG);
+    ImGui::TextUnformatted("OFS-SE " OFS_LATEST_GIT_TAG);
+    ImGui::TextUnformatted("OpenFunscripter - Sashimi Edition");
     ImGui::Text("%s: %s", TR(GIT_COMMIT), OFS_LATEST_GIT_HASH);
 
-    if (ImGui::Button(FMT("%s " ICON_GITHUB, TR(LATEST_RELEASE)), ImVec2(-1.f, 0.f))) {
-        Util::OpenUrl("https://github.com/OpenFunscripter/OFS/releases/latest");
-    }
     ImGui::End();
+}
+
+bool OpenFunscripter::ToolbarVisible() noexcept
+{
+    return OpenFunscripterState::State(stateHandle).showToolbar;
+}
+
+// One label and value per row, label dimmed, so a column of numbers can be
+// read down without the names in the way.
+static bool beginStatisticsTable(const char* id) noexcept
+{
+    if (!ImGui::BeginTable(id, 2, ImGuiTableFlags_SizingStretchProp)) return false;
+    // Labels take the width they need and values the rest. Split by ratio, a
+    // narrow panel cut the longer labels short.
+    ImGui::TableSetupColumn("label", ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableSetupColumn("value", ImGuiTableColumnFlags_WidthStretch);
+    return true;
+}
+
+static void statisticsRow(const char* label, const char* fmt, ...) noexcept
+{
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::TextDisabled("%s", label);
+    ImGui::TableNextColumn();
+    va_list args;
+    va_start(args, fmt);
+    ImGui::TextV(fmt, args);
+    va_end(args);
+}
+
+static void statisticsHeading(const char* heading) noexcept
+{
+    ImGui::Spacing();
+    OFS::SeparatorText(heading);
 }
 
 void OpenFunscripter::ShowStatisticsWindow(bool* open) noexcept
@@ -2709,37 +3378,89 @@ void OpenFunscripter::ShowStatisticsWindow(bool* open) noexcept
     OFS_PROFILE(__FUNCTION__);
     ImGui::Begin(TR_ID(StatisticsWindowId, Tr::STATISTICS), open, ImGuiWindowFlags_None);
 
+    auto script = ActiveFunscript();
+    const auto& actions = script->Actions();
     const float currentTime = player->CurrentTime();
-    const FunscriptAction* front = ActiveFunscript()->GetActionAtTime(currentTime, 0.001f);
+
+    // The stroke under the playhead.
+    const FunscriptAction* front = script->GetActionAtTime(currentTime, 0.001f);
     const FunscriptAction* behind = nullptr;
     if (front != nullptr) {
-        behind = ActiveFunscript()->GetPreviousActionBehind(front->atS);
+        behind = script->GetPreviousActionBehind(front->atS);
     }
     else {
-        behind = ActiveFunscript()->GetPreviousActionBehind(currentTime);
-        front = ActiveFunscript()->GetNextActionAhead(currentTime);
+        behind = script->GetPreviousActionBehind(currentTime);
+        front = script->GetNextActionAhead(currentTime);
     }
 
-    if (behind != nullptr) {
-        FUN_ASSERT(((double)currentTime - behind->atS) * 1000.0 > 0.001, "This maybe a bug");
-
-        ImGui::Text("%s: %.2lf ms", TR(INTERVAL), ((double)currentTime - behind->atS) * 1000.0);
+    statisticsHeading("At the playhead");
+    if (actions.empty()) {
+        ImGui::PushTextWrapPos(0.f);
+        ImGui::TextDisabled("This script has no points yet. Once it does, the stroke under "
+                            "the playhead is measured here.");
+        ImGui::PopTextWrapPos();
+    }
+    else if (behind == nullptr) {
+        ImGui::PushTextWrapPos(0.f);
+        ImGui::TextDisabled("The playhead is before the first point. Move past it to measure "
+                            "the stroke it is in.");
+        ImGui::PopTextWrapPos();
+    }
+    else if (beginStatisticsTable("##playheadStats")) {
+        // Short enough for the value column of a narrow panel; the longer
+        // "since the last point" ran out of the panel.
+        statisticsRow("Since last point", "%.0f ms", ((double)currentTime - behind->atS) * 1000.0);
         if (front != nullptr) {
-            auto duration = front->atS - behind->atS;
-            int32_t length = front->pos - behind->pos;
-            ImGui::Text("%s: %.02lf units/s", TR(SPEED), std::abs(length) / duration);
-            ImGui::Text("%s: %.2lf ms", TR(DURATION), (double)duration * 1000.0);
-            if (length > 0) {
-                ImGui::Text("%3d " ICON_LONG_ARROW_RIGHT " %3d"
-                            " = %3d " ICON_LONG_ARROW_UP,
-                    behind->pos, front->pos, length);
-            }
-            else {
-                ImGui::Text("%3d " ICON_LONG_ARROW_RIGHT " %3d"
-                            " = %3d " ICON_LONG_ARROW_DOWN,
-                    behind->pos, front->pos, -length);
-            }
+            const float duration = front->atS - behind->atS;
+            const int32_t length = front->pos - behind->pos;
+            statisticsRow(TR(SPEED), "%.0f units/s", std::abs(length) / duration);
+            statisticsRow(TR(DURATION), "%.0f ms", (double)duration * 1000.0);
+            statisticsRow("Stroke", "%d " ICON_LONG_ARROW_RIGHT " %d  (%d %s)",
+                behind->pos, front->pos, std::abs(length),
+                length >= 0 ? ICON_LONG_ARROW_UP : ICON_LONG_ARROW_DOWN);
         }
+        else {
+            statisticsRow("Stroke", "past the last point");
+        }
+        ImGui::EndTable();
+    }
+
+    // The selection, measured between its own points. A selection that skips
+    // points in between is still measured point to point, which is what
+    // editing it will act on.
+    const auto& selection = script->Selection();
+    if (selection.size() >= 2) {
+        const float span = selection.back().atS - selection.front().atS;
+        float travelled = 0.f;
+        float topSpeed = 0.f;
+        for (size_t i = 1; i < selection.size(); i += 1) {
+            const float dt = selection[i].atS - selection[i - 1].atS;
+            const float dp = (float)std::abs(selection[i].pos - selection[i - 1].pos);
+            travelled += dp;
+            if (dt > 0.f) topSpeed = std::max(topSpeed, dp / dt);
+        }
+
+        statisticsHeading("Selection");
+        if (beginStatisticsTable("##selectionStats")) {
+            statisticsRow("Points", "%u", (uint32_t)selection.size());
+            statisticsRow("Span", "%.2f s", span);
+            statisticsRow("Average speed", "%.0f units/s", span > 0.f ? travelled / span : 0.f);
+            statisticsRow("Top speed", "%.0f units/s", topSpeed);
+            ImGui::EndTable();
+        }
+    }
+    else if (selection.size() == 1) {
+        statisticsHeading("Selection");
+        ImGui::TextDisabled("One point, at %.3f s and %d.", selection.front().atS, selection.front().pos);
+    }
+
+    statisticsHeading("Script");
+    if (beginStatisticsTable("##scriptStats")) {
+        statisticsRow("Points", "%u", (uint32_t)actions.size());
+        if (actions.size() >= 2) {
+            statisticsRow("Span", "%.1f s", actions.back().atS - actions.front().atS);
+        }
+        ImGui::EndTable();
     }
 
     ImGui::End();
@@ -2785,6 +3506,14 @@ void OpenFunscripter::ScriptTimelineSelectTime(const FunscriptShouldSelectTimeEv
     OFS_PROFILE(__FUNCTION__);
     if (auto script = ev->script.lock()) {
         script->SelectTime(ev->startTime, ev->endTime, ev->clearSelection);
+        // Dragging across the active lane selects the same span in every
+        // targeted lane, which is what makes copying a passage from several
+        // channels a single drag rather than one per lane.
+        if (script == ActiveFunscript()) {
+            for (auto& target : TargetedFunscripts()) {
+                if (target != script) target->SelectTime(ev->startTime, ev->endTime, ev->clearSelection);
+            }
+        }
     }
 }
 

@@ -12,6 +12,36 @@
 #include <algorithm>
 #include <limits>
 
+// Helper: Extract unknown fields from JSON object (fields not in knownKeys)
+static nlohmann::json extractUnknown(const nlohmann::json& obj, std::initializer_list<const char*> knownKeys) {
+	nlohmann::json unknown = nlohmann::json::object();
+	if (!obj.is_object()) return unknown;
+	
+	for (auto it = obj.begin(); it != obj.end(); ++it) {
+		bool isKnown = false;
+		for (const char* key : knownKeys) {
+			if (it.key() == key) {
+				isKnown = true;
+				break;
+			}
+		}
+		if (!isKnown) {
+			unknown[it.key()] = it.value();
+		}
+	}
+	return unknown;
+}
+
+// Helper: Append unknown fields to JSON object (skip keys that already exist)
+static void appendUnknown(nlohmann::json& obj, const nlohmann::json& unknown) {
+	if (!unknown.is_object()) return;
+	for (auto it = unknown.begin(); it != unknown.end(); ++it) {
+		if (!obj.contains(it.key())) {
+			obj[it.key()] = it.value();
+		}
+	}
+}
+
 std::array<const char*, 9> Funscript::AxisNames = 
 {
 	"surge",
@@ -40,12 +70,23 @@ void Funscript::loadMetadata(const nlohmann::json& metadataObj, Funscript::Metad
 {
 	OFS_PROFILE(__FUNCTION__);
 	OFS::Serializer<false>::Deserialize(outMetadata, metadataObj);
+	
+	outMetadata.metadataUnknownFields = extractUnknown(metadataObj, {
+		"type", "title", "creator", "script_url", "video_url",
+		"tags", "performers", "description", "license", "notes", "duration",
+		"topic_url", "topic_tags", "topic_creator", "topic_date",
+		"bookmarks", "chapters", "durationTime"
+	});
 }
 
 void Funscript::saveMetadata(nlohmann::json& outMetadataObj, const Funscript::Metadata& inMetadata) noexcept
 {
 	OFS_PROFILE(__FUNCTION__);
 	OFS::Serializer<false>::Serialize(inMetadata, outMetadataObj);
+	
+	outMetadataObj.erase("scriptUnknownFields");
+	outMetadataObj.erase("metadataUnknownFields");
+	appendUnknown(outMetadataObj, inMetadata.metadataUnknownFields);
 }
 
 void Funscript::notifyActionsChanged(bool isEdit) noexcept
@@ -348,8 +389,19 @@ void Funscript::RangeExtendSelection(int32_t rangeExtend) noexcept
 		}
 	}
 	if (rangeExtendSelection.size() == 0) { return; }
+	// The selection holds copies, matched on time and position, so it is
+	// cleared while the positions change and then rebuilt from the stretched
+	// points. It used to be left cleared, so after extending nothing was
+	// selected any more, and simplifying or extending the same points again
+	// meant selecting them again first. Rebuilt quietly, without a selection
+	// change notification: the range extender resets its slider on one, which
+	// would snap the slider back to zero in the middle of a drag.
 	ClearSelection();
 	ExtendRange(rangeExtendSelection, rangeExtend);
+	for (auto* action : rangeExtendSelection) {
+		// Still in time order, since only positions changed.
+		data.Selection.emplace_back_unsorted(*action);
+	}
 }
 
 bool Funscript::ToggleSelection(FunscriptAction action) noexcept
@@ -690,6 +742,30 @@ void Funscript::UpdateRelativePath(const std::string& path) noexcept
 		.u8string();
 }
 
+std::string Funscript::AxisName() const noexcept
+{
+	// Unsaved scripts have no file name to go on.
+	if (currentPathRelative.empty()) return title;
+
+	// AxisNames plus the other suffixes multi-axis scripts are seen with,
+	// including the raw TCode channel ids.
+	static constexpr const char* OtherNames[] = {
+		"stroke", "valve", "lube", "vibe",
+		"L0", "L1", "L2", "R0", "R1", "R2", "V0", "V1", "A0", "A1", "A2"
+	};
+	auto dot = title.rfind('.');
+	if (dot != std::string::npos && dot + 1 < title.size()) {
+		auto suffix = title.substr(dot + 1);
+		for (auto name : AxisNames) {
+			if (Util::StringEqualsInsensitive(suffix, name)) return name;
+		}
+		for (auto name : OtherNames) {
+			if (Util::StringEqualsInsensitive(suffix, name)) return name;
+		}
+	}
+	return "stroke";
+}
+
 bool Funscript::Deserialize(const nlohmann::json& json, Funscript::Metadata* outMetadata, bool loadChapters) noexcept
 {
 	OFS_PROFILE(__FUNCTION__);
@@ -721,6 +797,10 @@ bool Funscript::Deserialize(const nlohmann::json& json, Funscript::Metadata* out
 		{
 			*outMetadata = Funscript::Metadata();
 		}
+		
+		outMetadata->scriptUnknownFields = extractUnknown(json, {
+			"actions", "metadata", "version", "inverted", "range"
+		});
 	}
 
 	if(loadChapters && json.contains("metadata"))
@@ -754,6 +834,7 @@ bool Funscript::Deserialize(const nlohmann::json& json, Funscript::Metadata* out
 					if(auto bookmark = chapterState.AddBookmark(time)) 
 					{
 						bookmark->name = std::move(name);
+						bookmark->unknownFields = extractUnknown(jsonBookmark, {"name", "time"});
 					}
 				}
 			}
@@ -797,6 +878,7 @@ bool Funscript::Deserialize(const nlohmann::json& json, Funscript::Metadata* out
 					if(auto chapter = chapterState.AddChapter(middlePoint, 1.f))
 					{
 						chapter->name = std::move(name);
+						chapter->unknownFields = extractUnknown(jsonChapter, {"name", "startTime", "endTime"});
 						// Set size is used to safely resize the chapter to the correct size
 						chapterState.SetChapterSize(*chapter, startTime);
 						chapterState.SetChapterSize(*chapter, endTime);
@@ -817,11 +899,20 @@ void Funscript::Serialize(nlohmann::json& json, const FunscriptData& funscriptDa
 	json["actions"] = nlohmann::json::array();
 	json["metadata"] = nlohmann::json::object();
 	json["version"] = "1.0";
-	json["inverted"] = false;
-	json["range"] = 100;
 
 	auto& jsonMetadata = json["metadata"];
 	OFS::Serializer<false>::Serialize(metadata, jsonMetadata);
+	// Ensure duration is saved with millisecond precision (0.000)
+	if (jsonMetadata.contains("duration") && jsonMetadata["duration"].is_number()) {
+		double rounded = std::round(metadata.duration * 1000.0) / 1000.0;
+		jsonMetadata["duration"] = rounded;
+	}
+	// Add a human-readable duration string for compatibility consumers
+	{
+		char durationBuf[32] = {};
+		Util::FormatTime(durationBuf, sizeof(durationBuf), (float)metadata.duration, true);
+		jsonMetadata["durationTime"] = std::string(durationBuf);
+	}
 	if(includeChapters)
 	{
 		auto& chapters = ChapterState::StaticStateSlow();
@@ -834,6 +925,7 @@ void Funscript::Serialize(nlohmann::json& json, const FunscriptData& funscriptDa
 					{"name", bookmark.name },
 					{"time", std::move(bookmark.TimeToString()) }
 				};
+				appendUnknown(jsonBookmark, bookmark.unknownFields);
 				jsonBookmarks.emplace_back(std::move(jsonBookmark));
 			}
 			jsonMetadata["bookmarks"] = std::move(jsonBookmarks);
@@ -848,6 +940,7 @@ void Funscript::Serialize(nlohmann::json& json, const FunscriptData& funscriptDa
 					{"startTime", std::move(chapter.StartTimeToString()) },
 					{"endTime", std::move(chapter.EndTimeToString()) },
 				};
+				appendUnknown(jsonChapter, chapter.unknownFields);
 				jsonChapters.emplace_back(std::move(jsonChapter));
 			}
 			jsonMetadata["chapters"] = std::move(jsonChapters);
@@ -878,4 +971,6 @@ void Funscript::Serialize(nlohmann::json& json, const FunscriptData& funscriptDa
 			LOG_WARN("Action was ignored since it had the same millisecond timestamp as the previous one.");
 		}
 	}
-}
+	
+	appendUnknown(json, metadata.scriptUnknownFields);
+}

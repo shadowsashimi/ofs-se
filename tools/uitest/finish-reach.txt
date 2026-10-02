@@ -1,0 +1,52 @@
+# Where the rod is when it finishes decides how far it reaches: at the lip,
+# halfway up the canal, and bottomed out against the cervix, each with a
+# finish asked for at once, cut away.
+#! sweep
+#! covers src/UI/OFS_ScriptSimulator.* src/UI/OFS_VulvaHeightMap.h src/state/SimulatorState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 5
+key keypaddivide
+seek 6
+wait 5
+key keypad0
+seek 5
+wait 10
+click 1560 43
+wait 30
+shot 00-lip-rest
+action simulator_finish_now
+waituntil finish_count >= 1 2400
+wait 40
+shot 01-lip-during
+wait 440
+state 02-lip-after
+shot 02-lip-after
+seek 5.5
+wait 20
+action simulator_finish_now
+waituntil finish_count >= 2 2400
+wait 40
+shot 03-canal-during
+wait 440
+state 04-canal-after
+shot 04-canal-after
+seek 6
+wait 20
+shot 05-bottom-rest
+action simulator_finish_now
+waituntil finish_count >= 3 2400
+wait 40
+shot 06-bottom-during
+wait 440
+state 07-bottom-after
+shot 07-bottom-after
+seek 5.5
+wait 30
+shot 08-withdrawn
+expect finish_count 3
+quit

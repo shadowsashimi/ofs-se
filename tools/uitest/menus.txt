@@ -1,0 +1,60 @@
+# Every top level menu opens on one click. Each is closed by clicking empty
+# video area rather than Escape, and then the same menus again with Escape,
+# to tell a scripting artefact from a menu that really does not open.
+#! covers OFS-lib/UI/OFS_ImGui.* src/OpenFunscripter.cpp:ShowMainMenuBar
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+wait 10
+
+note open and close by clicking away
+click 28 13
+wait 5
+shot 01-file
+click 700 400
+wait 5
+click 89 13
+wait 5
+shot 02-project
+click 700 400
+wait 5
+click 151 13
+wait 5
+shot 03-edit
+click 700 400
+wait 5
+click 208 13
+wait 5
+shot 04-select
+click 700 400
+wait 5
+click 266 13
+wait 5
+shot 05-view
+click 700 400
+wait 5
+click 327 13
+wait 5
+shot 06-options
+click 700 400
+wait 5
+click 414 13
+wait 5
+shot 07-extensions
+click 700 400
+wait 5
+
+note the same with escape in between
+click 28 13
+wait 5
+key escape
+wait 5
+click 89 13
+wait 5
+shot 10-project-after-escape
+state 10-project-after-escape
+key escape
+wait 5
+quit

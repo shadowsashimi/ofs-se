@@ -1,0 +1,46 @@
+# A second script added from Project > Add > Shortcuts gives the timeline two
+# lanes, each with a header: a target tick box, an eye that hides the lane,
+# and the name, which makes its script active when clicked.
+#! covers OFS-lib/UI/OFS_ScriptTimeline.* src/OpenFunscripter.cpp:UpdateNewActiveScript src/OpenFunscripter.cpp:ScriptTimelineActiveScriptChanged
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note Project > Add... > Shortcuts > twist
+click 89 13
+wait 5
+move 90 90
+wait 15
+move 320 90
+wait 20
+click 425 178
+wait 30
+shot 01-two-lanes
+windows 01-two-lanes
+state 01-two-lanes
+expect scripts 2
+expect active_index 0
+
+note clicking the second lane's name makes it active
+click 91 739
+wait 10
+state 02-second-active
+shot 02-second-active
+expect active_index 1
+expect active_title uitest.twist
+
+note clicking the first lane's eye hides it, which is no longer active, and leaves the second active
+click 57 670
+wait 10
+state 03-first-hidden
+shot 03-first-hidden
+expect active_index 1
+note the first script line in the state dump is the hidden one: title, enabled, points, targeted
+expect script uitest,0,0,0
+
+note with one lane left the eye is dimmed and does nothing
+quit

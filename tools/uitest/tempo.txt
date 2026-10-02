@@ -1,0 +1,36 @@
+# Tempo detection end to end from the chapters panel. The test media is a
+# click every half second for a minute, which is 120 BPM throughout, so
+# detection should find one musical chapter at 120.
+#! covers src/UI/OFS_ChapterManager.* OFS-lib/state/states/ChapterState.* OFS-lib/UI/OFS_Waveform.* src/UI/OFS_ScriptPositionsOverlays.*
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note open chapters from the View menu
+click 266 13
+wait 5
+click 300 238
+wait 20
+expect show_chapter_manager 1
+state 00-before
+expect chapters 0
+
+note Detect tracks and chapters; it makes the waveform with ffmpeg first
+click 800 349
+wait 600
+shot 01-detected
+state 01-detected
+windows 01-detected
+expect chapters 1
+expect chapter 120,0.0,60.0
+
+note the tempo grid follows the chapter under the playhead
+click 808 43
+wait 20
+shot 02-tempo-grid
+state 02-tempo-grid
+quit

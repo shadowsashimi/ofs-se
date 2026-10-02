@@ -3,6 +3,7 @@
 #include "OFS_Profiling.h"
 #include "OFS_Localization.h"
 #include "FunscriptHeatmap.h"
+#include "OFS_SashimiTheme.h"
 
 #include "state/states/BaseOverlayState.h"
 
@@ -18,7 +19,7 @@ uint32_t BaseOverlay::StateHandle = 0xFFFF'FFFF;
 bool BaseOverlay::ShowLines = true;
 bool BaseOverlay::ShowPoints = true;
 
-static constexpr auto SelectedLineColor = IM_COL32(3, 194, 252, 255);
+static constexpr auto SelectedLineColor = OFS_Sashimi::PinkBright;
 
 BaseOverlay::BaseOverlay(ScriptTimeline* timeline) noexcept
 {
@@ -172,34 +173,43 @@ void BaseOverlay::drawActionLinesSpline(const OverlayDrawingCtx& ctx, const Base
         auto startIt = drawingScript->Actions().begin() + ctx.actionFromIdx;
         auto endIt = drawingScript->Actions().begin() + ctx.actionToIdx;
 
+        // The selection is sorted the same way as the action list, so walking a
+        // parallel iterator is enough to know whether an action is selected.
+        // Doing it in one pass avoids drawing selected segments twice, and means
+        // a highlight can no longer span actions that are not themselves
+        // selected, which the old second pass would happily do.
+        auto selectionIt = drawingScript->Selection().begin() + ctx.selectionFromIdx;
+        auto selectionEndIt = drawingScript->Selection().begin() + ctx.selectionToIdx;
+
+        bool prevActionSelected = false;
         const FunscriptAction* prevAction = nullptr;
-        for (; startIt != endIt; ++startIt) {
+        while (startIt != endIt) {
             auto& action = *startIt;
-            auto p1 = BaseOverlay::GetPointForAction(ctx, action);
+
+            // Both ranges are sorted by time but their windows are derived
+            // independently, so the selection iterator can start behind the
+            // action window. Skip past anything earlier or the two never
+            // resynchronise and later selected actions stop highlighting.
+            while (selectionIt != selectionEndIt && *selectionIt < action) ++selectionIt;
+            const bool actionSelected = selectionIt != selectionEndIt && *selectionIt == action;
 
             if (prevAction != nullptr) {
-                ImColor speedColor;
-                getActionLineColor(&speedColor, FunscriptHeatmap::LineColors, action, *prevAction, state);
-                drawSpline(ctx, *prevAction, action, ImGui::ColorConvertFloat4ToU32(speedColor), 3.f);
-            }
-            prevAction = &action;
-        }
-    }
-
-    if(drawingScript->HasSelection())
-    {
-        auto startIt = drawingScript->Selection().begin() + ctx.selectionFromIdx;
-        auto endIt = drawingScript->Selection().begin() + ctx.selectionToIdx;
-        const FunscriptAction* prevAction = nullptr;
-        for (; startIt != endIt; ++startIt) {
-            auto&& action = *startIt;
-
-            if (prevAction != nullptr) {
-                // draw highlight line
-                drawSpline(ctx, *prevAction, action, SelectedLineColor, 3.f, false);
+                uint32_t color;
+                if (actionSelected && prevActionSelected) {
+                    color = SelectedLineColor;
+                }
+                else {
+                    ImColor speedColor;
+                    getActionLineColor(&speedColor, FunscriptHeatmap::LineColors, action, *prevAction, state);
+                    color = ImGui::ColorConvertFloat4ToU32(speedColor);
+                }
+                drawSpline(ctx, *prevAction, action, color, 3.f);
             }
 
             prevAction = &action;
+            prevActionSelected = actionSelected;
+
+            ++startIt;
         }
     }
 }
@@ -217,46 +227,42 @@ void BaseOverlay::drawActionLinesLinear(const OverlayDrawingCtx& ctx, const Base
         auto startIt = drawingScript->Actions().begin() + ctx.actionFromIdx;
         auto endIt = drawingScript->Actions().begin() + ctx.actionToIdx;
 
+        // Single pass, see the note in drawActionLinesSpline.
+        auto selectionIt = drawingScript->Selection().begin() + ctx.selectionFromIdx;
+        auto selectionEndIt = drawingScript->Selection().begin() + ctx.selectionToIdx;
+
+        bool prevActionSelected = false;
         const FunscriptAction* prevAction = nullptr;
-        for (; startIt != endIt; ++startIt) {
+        ImVec2 prevPoint;
+        while (startIt != endIt) {
             auto& action = *startIt;
-
-            auto p1 = BaseOverlay::GetPointForAction(ctx, action);
-
-            if (prevAction != nullptr) {
-                // draw line
-                auto p2 = BaseOverlay::GetPointForAction(ctx, *prevAction);
-                ImColor speedColor;
-                getActionLineColor(&speedColor, FunscriptHeatmap::LineColors, action, *prevAction, state);
-                drawLine(ctx, p1, p2, ImGui::ColorConvertFloat4ToU32(speedColor));
-            }
-
-            prevAction = &action;
-        }
-    }
-
-    if(drawingScript->HasSelection())
-    {
-        auto startIt = drawingScript->Selection().begin() + ctx.selectionFromIdx;
-        auto endIt = drawingScript->Selection().begin() + ctx.selectionToIdx;
-        const FunscriptAction* prevAction = nullptr;
-        for (; startIt != endIt; ++startIt) {
-            auto&& action = *startIt;
             auto point = BaseOverlay::GetPointForAction(ctx, action);
 
+            // Both ranges are sorted by time but their windows are derived
+            // independently, so the selection iterator can start behind the
+            // action window. Skip past anything earlier or the two never
+            // resynchronise and later selected actions stop highlighting.
+            while (selectionIt != selectionEndIt && *selectionIt < action) ++selectionIt;
+            const bool actionSelected = selectionIt != selectionEndIt && *selectionIt == action;
+
             if (prevAction != nullptr) {
-                // draw highlight line
-                ColoredLines.emplace_back(
-                    std::move(
-                        BaseOverlay::ColoredLine{ 
-                            BaseOverlay::GetPointForAction(ctx, *prevAction),
-                            point,
-                            SelectedLineColor
-                        })
-                );
+                uint32_t color;
+                if (actionSelected && prevActionSelected) {
+                    color = SelectedLineColor;
+                }
+                else {
+                    ImColor speedColor;
+                    getActionLineColor(&speedColor, FunscriptHeatmap::LineColors, action, *prevAction, state);
+                    color = ImGui::ColorConvertFloat4ToU32(speedColor);
+                }
+                drawLine(ctx, point, prevPoint, color);
             }
 
             prevAction = &action;
+            prevPoint = point;
+            prevActionSelected = actionSelected;
+
+            ++startIt;
         }
     }
 }
@@ -308,28 +314,27 @@ void BaseOverlay::DrawActionPoints(const OverlayDrawingCtx& ctx) noexcept
     if(opacity >= 0.25f) 
     {
         auto& drawingScript = ctx.DrawingScript();
-        int opcacityInt = 255 * opacity;
-        {
-            auto startIt = drawingScript->Actions().begin() + ctx.actionFromIdx;
-            auto endIt = drawingScript->Actions().begin() + ctx.actionToIdx;
-            for (; startIt != endIt; ++startIt) 
-            {
-                auto p = BaseOverlay::GetPointForAction(ctx, *startIt);
-                ctx.drawList->AddCircleFilled(p, BaseOverlay::PointSize, IM_COL32(0, 0, 0, opcacityInt), 4); // border
-                ctx.drawList->AddCircleFilled(p, BaseOverlay::PointSize*0.7f, IM_COL32(255, 0, 0, opcacityInt), 4);
-            }
-        }
+        const int opacityInt = 255 * opacity;
+        const auto borderColor = IM_COL32(0, 0, 0, opacityInt);
+        const auto pointColor = IM_COL32(0xE6, 0xE6, 0xE6, opacityInt);
+        const auto selectedColor = IM_COL32(0xFF, 0x70, 0xA2, opacityInt);
 
-        if(drawingScript->HasSelection())
+        // One pass, walking the selection alongside the actions the same way
+        // the lines are drawn. A selected point used to be drawn grey with the
+        // rest and then again in pink on top, which with a large selection
+        // doubled the circles submitted for nothing.
+        auto startIt = drawingScript->Actions().begin() + ctx.actionFromIdx;
+        auto endIt = drawingScript->Actions().begin() + ctx.actionToIdx;
+        auto selectionIt = drawingScript->Selection().begin() + ctx.selectionFromIdx;
+        auto selectionEndIt = drawingScript->Selection().begin() + ctx.selectionToIdx;
+        for (; startIt != endIt; ++startIt)
         {
-            auto startIt = drawingScript->Selection().begin() + ctx.selectionFromIdx;
-            auto endIt = drawingScript->Selection().begin() + ctx.selectionToIdx;
-            for (; startIt != endIt; ++startIt) 
-            {
-                auto p = BaseOverlay::GetPointForAction(ctx, *startIt);
-                const auto selectedDots = IM_COL32(11, 252, 3, opcacityInt);
-			    ctx.drawList->AddCircleFilled(p, BaseOverlay::PointSize * 0.7f, selectedDots, 4);
-            }
+            while (selectionIt != selectionEndIt && *selectionIt < *startIt) ++selectionIt;
+            const bool selected = selectionIt != selectionEndIt && *selectionIt == *startIt;
+
+            auto p = BaseOverlay::GetPointForAction(ctx, *startIt);
+            ctx.drawList->AddCircleFilled(p, BaseOverlay::PointSize, borderColor, 4);
+            ctx.drawList->AddCircleFilled(p, BaseOverlay::PointSize * 0.7f, selected ? selectedColor : pointColor, 4);
         }
     }
 }
@@ -341,8 +346,11 @@ void BaseOverlay::DrawSecondsLabel(const OverlayDrawingCtx& ctx) noexcept
         OFS_PROFILE(__FUNCTION__);
         auto tmp = FMT("%.2f %s", ctx.visibleTime, TR(TIMELINE_SECONDS));
         auto textSize = ImGui::CalcTextSize(tmp);
+        // Bottom right. Bottom left, with several lanes each only a little
+        // taller than a line of text, it ran into the last lane's name tag,
+        // which sits at the lane's left edge.
         ctx.drawList->AddText(
-            ctx.canvasPos + ImVec2(style.FramePadding.x, ctx.canvasSize.y - textSize.y - style.FramePadding.y),
+            ctx.canvasPos + ImVec2(ctx.canvasSize.x - textSize.x - style.FramePadding.x, ctx.canvasSize.y - textSize.y - style.FramePadding.y),
             ImGui::GetColorU32(ImGuiCol_Text),
             tmp
         );
@@ -365,16 +373,3 @@ void BaseOverlay::DrawHeightLines(const OverlayDrawingCtx& ctx) noexcept
     }
 }
 
-void BaseOverlay::DrawScriptLabel(const OverlayDrawingCtx& ctx) noexcept
-{
-    OFS_PROFILE(__FUNCTION__);
-    auto& style = ImGui::GetStyle();
-    auto& title = ctx.DrawingScript()->Title();
-    auto textSize = ImGui::CalcTextSize(title.c_str());
-
-    ctx.drawList->AddText(
-        ctx.canvasPos + ctx.canvasSize - style.FramePadding - textSize,
-        ImGui::GetColorU32(ImGuiCol_Text),
-        title.c_str()
-    );
-}

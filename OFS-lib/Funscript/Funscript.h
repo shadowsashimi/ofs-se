@@ -77,7 +77,15 @@ public:
 		std::string description;
 		std::string license;
 		std::string notes;
-		int64_t duration = 0;
+		double duration = 0.0;
+		// Extra properties to preserve external metadata
+		std::string topic_url;
+		std::vector<std::string> topic_tags;
+		std::string topic_creator;
+		std::string topic_date;
+		// Unknown fields preservation (fields not recognized by OFS)
+		nlohmann::json scriptUnknownFields;   // Unknown fields at script root level
+		nlohmann::json metadataUnknownFields; // Unknown fields within "metadata" object
 	};
 
 	template<typename S>
@@ -89,6 +97,7 @@ public:
 				s.text1b(o.currentPathRelative, o.currentPathRelative.max_size());
 				s.text1b(o.title, o.title.max_size());
 				s.boolValue(o.Enabled);
+				s.boolValue(o.Targeted);
 			});
 	}
 
@@ -174,7 +183,15 @@ private:
 	void moveActionsPosition(std::vector<FunscriptAction*> moving, int32_t posOffset);
 	inline void sortSelection() noexcept { sortActions(data.Selection); }
 	inline void sortActions(FunscriptArray& actions) noexcept { std::sort(actions.begin(), actions.end()); }
-	inline void addAction(FunscriptArray& actions, FunscriptAction newAction) noexcept { actions.emplace(newAction); notifyActionsChanged(true); }
+	// Returns false when an action already occupies newAction's timestamp.
+	// vector_set::emplace rejects the insert in that case, so the result has to
+	// be propagated or callers silently lose the action they meant to add.
+	inline bool addAction(FunscriptArray& actions, FunscriptAction newAction) noexcept
+	{
+		if(!actions.emplace(newAction)) return false;
+		notifyActionsChanged(true);
+		return true;
+	}
 	inline void notifySelectionChanged() noexcept { selectionChanged = true; }
 
 	static void loadMetadata(const nlohmann::json& metadataObj, Funscript::Metadata& outMetadata) noexcept;
@@ -190,12 +207,20 @@ public:
 	static std::array<const char*, 9> AxisNames;
 
 	bool Enabled = true;
+	// Ticked in its lane header: edits made from the keyboard, and the
+	// clipboard, act on this script as well as the active one. The active
+	// script is always a target whether or not this is set.
+	bool Targeted = false;
 	std::unique_ptr<FunscriptUndoSystem> undoSystem;
 
 	void UpdateRelativePath(const std::string& path) noexcept;
 	inline void ClearUnsavedEdits() noexcept { unsavedEdits = false;	}
 	inline const std::string& RelativePath() const noexcept { return currentPathRelative; }
 	inline const std::string& Title() const noexcept { return title; }
+	// The axis this script is for, from its file name: "name.roll.funscript"
+	// is "roll". Only a known axis name counts as a suffix, so a name with
+	// dots of its own ("Site.com - clip.funscript") is still the "stroke".
+	std::string AxisName() const noexcept;
 
 	inline void Rollback(FunscriptData&& data) noexcept { this->data = std::move(data); notifyActionsChanged(true); }
 	inline void Rollback(const FunscriptData& data) noexcept { this->data = data; notifyActionsChanged(true); }
@@ -222,7 +247,7 @@ public:
 
 	float GetPositionAtTime(float time) const noexcept;
 	
-	inline void AddAction(FunscriptAction newAction) noexcept { addAction(data.Actions, newAction); }
+	inline bool AddAction(FunscriptAction newAction) noexcept { return addAction(data.Actions, newAction); }
 	void AddMultipleActions(const FunscriptArray& actions) noexcept;
 
 	bool EditAction(FunscriptAction oldAction, FunscriptAction newAction) noexcept;
@@ -289,4 +314,8 @@ REFL_TYPE(Funscript::Metadata)
 	REFL_FIELD(license)
 	REFL_FIELD(notes)
 	REFL_FIELD(duration)
+	REFL_FIELD(topic_url)
+	REFL_FIELD(topic_tags)
+	REFL_FIELD(topic_creator)
+	REFL_FIELD(topic_date)
 REFL_END
