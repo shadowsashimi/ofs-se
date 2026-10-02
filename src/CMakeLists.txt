@@ -148,7 +148,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 if(WIN32)
-	if(CMAKE_BUILD_TYPE MATCHES "Release" OR CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo") 
+	# Record only the PDB's file name in the exe, not the path of the machine
+	# it was built on. The crash handler still finds the symbols beside the exe.
+	target_link_options(${PROJECT_NAME} PRIVATE "$<$<CONFIG:Release>:/PDBALTPATH:${PROJECT_NAME}.pdb>")
+	if(CMAKE_BUILD_TYPE MATCHES "Release" OR CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
 		target_compile_options(${PROJECT_NAME} PUBLIC /GL)
 		target_link_options(${PROJECT_NAME} PUBLIC /LTCG)
 		message("== ${PROJECT_NAME} - Whole program optimization enabled.")
