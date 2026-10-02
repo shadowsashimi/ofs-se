@@ -213,6 +213,52 @@ void TempoOverlay::DrawSettings() noexcept
                      "which measuring all chapters leaves alone; or count it half or double "
                      "time below.");
     }
+    else if(tempo.autoTempo) {
+        // Says why nothing is being followed, with the fix one click away.
+        // Detection used to be reachable only from the Chapters window, so
+        // ticking this box with no measured chapters did nothing anyone could
+        // see, and nothing here said where the tempo was meant to come from.
+        auto app = OpenFunscripter::ptr;
+        auto& chapterMgr = *app->chapterMgr;
+        const auto& chapters = ChapterState::State(chapterStateHandle).chapters;
+        auto* here = chapterUnderPlayhead();
+        const float fullWidth = ImGui::GetContentRegionAvail().x;
+
+        ImGui::PushTextWrapPos(0.f);
+        if(chapterMgr.Busy()) {
+            ImGui::TextDisabled("Reading the audio...");
+        }
+        else if(chapters.empty()) {
+            ImGui::TextDisabled("No chapters yet, so there is no tempo to follow.");
+            if(ImGui::Button("Detect tempo and chapters", ImVec2(fullWidth, 0.f))) {
+                chapterMgr.DetectTempo();
+                app->ShowChapters();
+            }
+            OFS::Tooltip("Scans the audio, lays a chapter over each track and measures its tempo. "
+                         "The grid then follows whichever chapter the playhead is in.");
+        }
+        else if(here == nullptr) {
+            ImGui::TextDisabled("The playhead is between chapters, so the grid keeps the last tempo it had.");
+        }
+        else if(here->isBreak) {
+            ImGui::TextDisabled("\"%s\" is marked as having no music, so the grid keeps the last tempo it had.",
+                here->name.c_str());
+        }
+        else {
+            ImGui::TextDisabled("\"%s\" has no tempo yet.", here->name.c_str());
+            if(ImGui::Button("Measure this chapter", ImVec2(fullWidth, 0.f))) {
+                if(!chapterMgr.MeasureChapter(*here)) app->ShowChapters();
+            }
+            OFS::Tooltip("Measures this chapter's tempo from the audio. The Chapters window can measure all of them at once.");
+        }
+        ImGui::PopTextWrapPos();
+    }
+    if(tempo.autoTempo) {
+        if(ImGui::Button("Open the Chapters window", ImVec2(ImGui::GetContentRegionAvail().x, 0.f))) {
+            OpenFunscripter::ptr->ShowChapters();
+        }
+        OFS::Tooltip("Opens the Chapters window, where the tempo of each chapter is detected, checked and corrected.");
+    }
 
     // Half or double time, for a tempo read off the wrong pulse: music is often
     // felt in a beat twice as fast as the one its kick marks, or half as fast.

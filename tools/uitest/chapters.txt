@@ -1,5 +1,5 @@
 # Making and naming chapters by hand in the chapters panel. With one chapter
-# at 1600x900 its row is at y 444: name field from x 538 to 912, row menu
+# at 1600x900 its row is at y 427: name field from x 538 to 912, row menu
 # button at 1067.
 #! covers src/UI/OFS_ChapterManager.* OFS-lib/state/states/ChapterState.*
 size 1600 900
@@ -27,7 +27,7 @@ note a chapter made by hand has a name to start from
 expect chapter_name Chapter 1
 
 note rename it: click the name, select what is there, type over it
-click 730 444
+click 730 427
 wait 5
 key ctrl+a
 wait 3
@@ -40,7 +40,7 @@ shot 02-renamed
 expect chapter_name Intro
 
 note the row menu
-click 1067 444
+click 1067 427
 wait 10
 shot 03-row-menu
 windows 03-row-menu

@@ -1,7 +1,7 @@
 # Special functions > Multi-axis writes twist, roll and pitch from the
 # selected stroke points, as a preview that is only kept once applied.
 # Special functions window at 1600x900: the tool bar is two rows, Multi-axis
-# 935,260. Once moved up and made taller: presets Sway 642, Corkscrew 747,
+# 935,243. Once moved up and made taller: presets Sway 642, Corkscrew 747,
 # Grind 852, Orbit 957 at y 240; Amount +5 988,446; Preview 799,696, or while
 # previewing Apply 699,696 and Discard 885,696; the close button 997,110.
 #! covers src/UI/OFS_SpecialFunctions.*
@@ -38,7 +38,7 @@ click 266 13
 wait 5
 click 300 190
 wait 15
-click 935 260
+click 935 243
 wait 10
 key ctrl+a
 wait 5
@@ -46,7 +46,7 @@ expect selection 7
 shot 01-multiaxis
 
 note move the window up and make it tall enough to show everything
-drag 700 223 700 110 10
+drag 700 206 700 110 10
 wait 10
 drag 1014 637 1014 880 10
 wait 10

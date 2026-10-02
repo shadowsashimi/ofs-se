@@ -20,6 +20,9 @@ struct PreferenceState
 
 	int32_t defaultFontSize = 18;
 	int32_t currentTheme = static_cast<int32_t>(OFS_Theme::Sashimi);
+	// Rounded corners on windows, buttons and the timeline lanes. Off gives
+	// the square corners of the original OFS, in any theme.
+	bool roundedCorners = true;
 
 	int32_t fastStepAmount = 6;
 
@@ -44,6 +47,7 @@ REFL_TYPE(PreferenceState)
 	REFL_FIELD(fontOverride)
 	REFL_FIELD(defaultFontSize)
 	REFL_FIELD(currentTheme)
+	REFL_FIELD(roundedCorners)
 	REFL_FIELD(fastStepAmount)
 	REFL_FIELD(vsync)
 	REFL_FIELD(framerateLimit)

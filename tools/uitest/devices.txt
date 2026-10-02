@@ -4,7 +4,7 @@
 # Real hardware is the thing to try before trusting it; this only shows that
 # OFS says the right words in the right order.
 # Devices panel at 1600x900: View 266,13 with Devices at 300,282. The backend
-# bar is at y 260, Intiface 552; Connect is at 792,457.
+# bar is at y 243, Intiface 552; Connect is at 792,440.
 #! server mock-intiface
 #! covers src/api/OFS_DeviceLink.* src/state/DeviceLinkState.h
 size 1600 900
@@ -42,24 +42,24 @@ shot 01-panel
 windows 01-panel
 
 note the first connect asks first, and nothing is connected while it does.
-note The note is centred, with I understand at 645,593 and Cancel at 832,593
-click 792 457
+note The note is centred, with I understand at 645,576 and Cancel at 832,576
+click 792 440
 wait 10
 expect device_safety_note 1
 expect device_status 0
 shot 02-safety-note
 
 note cancel leaves it unconnected, and the next connect asks again
-click 832 593
+click 832 576
 wait 10
 expect device_safety_note 0
 expect device_status 0
-click 792 457
+click 792 440
 wait 10
 expect device_safety_note 1
 
 note connect: the handshake, then the device list
-click 645 593
+click 645 576
 wait 5
 expect device_safety_note 0
 waituntil device_status >= 2 300
@@ -81,10 +81,10 @@ waituntil device_moves <= 12 10
 note once accepted it is not asked again: Disconnect is where Connect was,
 note and connecting again goes straight to trying. The stand-in serves one
 note client only, so the second try fails, which is still a try
-click 792 457
+click 792 440
 wait 10
 expect device_status 0
-click 792 457
+click 792 440
 wait 5
 expect device_safety_note 0
 waituntil device_status >= 2 300

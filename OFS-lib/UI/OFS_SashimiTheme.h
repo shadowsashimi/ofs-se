@@ -61,4 +61,53 @@ inline ImVec4 V4(uint32_t col, float alpha) noexcept
 
 // Applies the full monochrome-grey/pink palette to an ImGui style.
 void ApplyStyle(ImGuiStyle& style) noexcept;
+
+// Rounded corners, or the square ones of the original OFS. Applies to any
+// theme, so it is called after the theme's colours are set.
+void SetRounding(ImGuiStyle& style, bool rounded) noexcept;
+
+// The colours OFS-SE's own widgets draw with, by what they are for rather than
+// by shade. Under the Sashimi theme they are the palette above; under Dark and
+// Light they are worked out from the ImGui style, so a segmented bar or a lit
+// toggle follows the theme instead of staying grey and pink on a white UI.
+struct Roles
+{
+    // The highlight colour and its lighter and darker steps. These also mark
+    // things on the timeline, which stays dark in every theme, so Pale and
+    // Bright must read on a dark background.
+    uint32_t Accent       = Pink;
+    uint32_t AccentBright = PinkBright;
+    uint32_t AccentDeep   = PinkDeep;
+    uint32_t AccentPale   = PinkPale;
+
+    // A selected segment or a toggle that is on.
+    uint32_t OnFill   = PinkFill;
+    uint32_t OnFillHi = PinkFillHi;
+    uint32_t OnText   = PinkPale;
+    uint32_t OnBorder = Pink;
+
+    // A segment that is not selected or a toggle that is off.
+    uint32_t OffFill       = Grey15;
+    uint32_t OffFillHi     = Grey25;
+    uint32_t OffFillActive = Grey30;
+    uint32_t OffText       = Grey80;
+    uint32_t OffBorder     = Grey30;
+
+    // The line between segments and the outline around a segmented bar.
+    uint32_t Divider = Grey40;
+    uint32_t Outline = Grey50;
+
+    // Dimmed text, such as a paused recording.
+    uint32_t TextFaint = Grey60;
+
+    // The active timeline lane and its name pill, tinted toward the accent.
+    uint32_t LaneActiveBg   = IM_COL32(0x24, 0x14, 0x1B, 0xFF);
+    uint32_t LaneActivePill = IM_COL32(0x2A, 0x14, 0x1E, 0xC8);
+};
+
+// The roles for the theme in use.
+const Roles& Role() noexcept;
+
+// Recomputes the roles. Call after a theme has been applied to the style.
+void UpdateRoles(const ImGuiStyle& style, bool sashimi) noexcept;
 }

@@ -60,6 +60,10 @@ void OFS_ChapterManager::ShowWindow(bool* open) noexcept
         ImGui::SetNextWindowSize(ImVec2(em * 34.f, em * 20.f), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowPos(viewport->GetWorkCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
     }
+    if(focusNext) {
+        ImGui::SetNextWindowFocus();
+        focusNext = false;
+    }
     ImGui::Begin(TR_ID("ChapterManager", Tr::CHAPTERS), open);
 
     // Fetched once for the whole window rather than per row: every control that
@@ -682,9 +686,9 @@ void OFS_ChapterManager::showRenameControls(ChapterState& chapterState) noexcept
 
     ImGui::Spacing();
     const float buttonWidth = em * 8.f;
-    ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::V4(OFS_Sashimi::PinkFill));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::V4(OFS_Sashimi::PinkFillHi));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::V4(OFS_Sashimi::PinkFillHi));
+    ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::Role().OnFill);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::Role().OnFillHi);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::Role().OnFillHi);
     const bool rename = ImGui::Button("Rename", ImVec2(buttonWidth, 0.f));
     ImGui::PopStyleColor(3);
     ImGui::SameLine();
@@ -784,6 +788,54 @@ void OFS_ChapterManager::showAnalysisControls(ChapterState& chapterState,
     else {
         ImGui::TextDisabled("%s", status);
     }
+}
+
+bool OFS_ChapterManager::Busy() noexcept
+{
+    return pendingAnalysis || OpenFunscripter::ptr->scriptTimeline.WaveformBusy();
+}
+
+bool OFS_ChapterManager::MeasureChapter(Chapter& chapter) noexcept
+{
+    auto& chapterState = ChapterState::State(stateHandle);
+    const std::vector<float>* samples = nullptr;
+    float rate = 0.f;
+    const bool haveAudio = audioEnvelope(samples, rate);
+    if(!haveAudio && !OpenFunscripter::ptr->scriptTimeline.CanGenerateWaveform()) return false;
+
+    // As the row's own measure button: asking is an assertion the chapter
+    // has music, and replaces a tempo typed by hand.
+    chapter.isBreak = false;
+    chapter.bpmManual = false;
+    if(haveAudio) {
+        measureChapter(chapter, *samples, rate);
+    }
+    else {
+        const int32_t idx = (int32_t)(&chapter - chapterState.chapters.data());
+        if(idx < 0 || idx >= (int32_t)chapterState.chapters.size()) return false;
+        requestWaveformThen(idx);
+    }
+    EV::Enqueue<ChapterStateChanged>();
+    return true;
+}
+
+bool OFS_ChapterManager::DetectTempo() noexcept
+{
+    auto& chapterState = ChapterState::State(stateHandle);
+    const std::vector<float>* samples = nullptr;
+    float rate = 0.f;
+    if(!audioEnvelope(samples, rate)) {
+        if(!OpenFunscripter::ptr->scriptTimeline.CanGenerateWaveform()) return false;
+        requestWaveformThen(-1);
+    }
+    else if(chapterState.chapters.empty()) {
+        createChaptersFromTracks(chapterState, *samples, rate);
+    }
+    else {
+        measureAllChapters(chapterState, *samples, rate);
+        EV::Enqueue<ChapterStateChanged>();
+    }
+    return true;
 }
 
 bool OFS_ChapterManager::ExportClip(const Chapter& chapter, const std::string& outputDirStr) noexcept

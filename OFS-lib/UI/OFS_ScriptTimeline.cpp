@@ -518,11 +518,12 @@ void ScriptTimeline::ShowScriptPositions(
 		const bool IsActivated = i == activeScriptIdx && drawingCtx.drawnScriptCount > 1;
 
 		// Rounded like every other surface, with a faint light edge along the
-		// top so the lane reads as a pane rather than a flat box.
-		constexpr float LaneRounding = 6.f;
+		// top so the lane reads as a pane rather than a flat box. Square when
+		// the theme's frames are, so turning rounded corners off reaches here.
+		const float LaneRounding = ImGui::GetStyle().FrameRounding > 0.f ? 6.f : 0.f;
 		const ImVec2 laneMax(drawingCtx.canvasPos.x + drawingCtx.canvasSize.x, drawingCtx.canvasPos.y + drawingCtx.canvasSize.y);
 		drawingCtx.drawList->AddRectFilled(drawingCtx.canvasPos, laneMax,
-			IsActivated ? IM_COL32(0x24, 0x14, 0x1B, 255) : IM_COL32(0x17, 0x17, 0x17, 255), LaneRounding);
+			IsActivated ? OFS_Sashimi::Role().LaneActiveBg : IM_COL32(0x17, 0x17, 0x17, 255), LaneRounding);
 		drawingCtx.drawList->AddRectFilledMultiColor(
 			drawingCtx.canvasPos + ImVec2(LaneRounding, 0.f),
 			ImVec2(laneMax.x - LaneRounding, drawingCtx.canvasPos.y + (drawingCtx.canvasSize.y * 0.5f)),
@@ -567,7 +568,7 @@ void ScriptTimeline::ShowScriptPositions(
 
 		// border
 		constexpr float borderThicknes = 1.f;
-		uint32_t borderColor = IsActivated ? OFS_Sashimi::Pink : OFS_Sashimi::Grey50;
+		uint32_t borderColor = IsActivated ? OFS_Sashimi::Role().Accent : OFS_Sashimi::Grey50;
 		if (script->HasSelection()) { 
 			borderColor = ImGui::GetColorU32(ImGuiCol_SliderGrabActive); 
 		}
@@ -601,8 +602,8 @@ void ScriptTimeline::ShowScriptPositions(
 		4.0f);
 
 		// selection box
-		constexpr auto selectColor = OFS_Sashimi::PinkBright;
-		constexpr auto selectColorBackground = IM_COL32(0xFF, 0x70, 0xA2, 100);
+		const auto selectColor = OFS_Sashimi::Role().AccentBright;
+		const auto selectColorBackground = (selectColor & ~IM_COL32_A_MASK) | (100u << IM_COL32_A_SHIFT);
 		if (IsSelecting && (i == activeScriptIdx)) {
 			float relSel1 = (absSel1 - drawingCtx.offsetTime) / visibleTime;
 			drawingCtx.drawList->AddRectFilled(drawingCtx.canvasPos + ImVec2(drawingCtx.canvasSize.x * relSel1, 0), drawingCtx.canvasPos + ImVec2(drawingCtx.canvasSize.x * relSel2, drawingCtx.canvasSize.y), selectColorBackground);
@@ -779,17 +780,18 @@ void ScriptTimeline::ShowScriptPositions(
 
 			auto drawList = drawingCtx.drawList;
 			// One translucent pill behind the whole header.
+			const float pillRounding = ImGui::GetStyle().FrameRounding > 0.f ? headerHeight * 0.5f : 0.f;
 			drawList->AddRectFilled(laneLabelBounds.Min, laneLabelBounds.Max,
-				isActiveLane ? IM_COL32(0x2A, 0x14, 0x1E, 0xC8) : IM_COL32(0x10, 0x10, 0x10, 0xB8), headerHeight * 0.5f);
-			drawList->AddRect(laneLabelBounds.Min, laneLabelBounds.Max, IM_COL32(255, 255, 255, 0x14), headerHeight * 0.5f);
+				isActiveLane ? OFS_Sashimi::Role().LaneActivePill : IM_COL32(0x10, 0x10, 0x10, 0xB8), pillRounding);
+			drawList->AddRect(laneLabelBounds.Min, laneLabelBounds.Max, IM_COL32(255, 255, 255, 0x14), pillRounding);
 
 			// Target tick box. The active lane is always a target, so its box
 			// is always ticked and does nothing when clicked.
 			{
 				const bool lit = isTargeted;
-				const uint32_t boxFill = lit ? (isActiveLane ? OFS_Sashimi::PinkDeep : OFS_Sashimi::Pink)
+				const uint32_t boxFill = lit ? (isActiveLane ? OFS_Sashimi::Role().AccentDeep : OFS_Sashimi::Role().Accent)
 					: (targetHovered ? IM_COL32(0x3A, 0x3A, 0x3A, 0xFF) : IM_COL32(0x22, 0x22, 0x22, 0xFF));
-				const uint32_t boxEdge = lit ? OFS_Sashimi::PinkBright
+				const uint32_t boxEdge = lit ? OFS_Sashimi::Role().AccentBright
 					: (targetHovered ? OFS_Sashimi::Grey80 : OFS_Sashimi::Grey50);
 				drawList->AddRectFilled(laneTargetRect.Min, laneTargetRect.Max, boxFill, 3.f);
 				drawList->AddRect(laneTargetRect.Min, laneTargetRect.Max, boxEdge, 3.f);
@@ -830,7 +832,7 @@ void ScriptTimeline::ShowScriptPositions(
 			// Name. Click makes the lane active.
 			drawList->AddText(ImGui::GetFont(), headerFontSize,
 				ImVec2(laneNameRect.Min.x, laneNameRect.Min.y + ((headerHeight - laneTitleSize.y) * 0.5f)),
-				isActiveLane ? OFS_Sashimi::PinkPale : (nameHovered ? OFS_Sashimi::Grey95 : OFS_Sashimi::Grey80),
+				isActiveLane ? OFS_Sashimi::Role().AccentPale : (nameHovered ? OFS_Sashimi::Grey95 : OFS_Sashimi::Grey80),
 				laneTitle.c_str());
 			if (nameHovered) {
 				if (!isActiveLane) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);

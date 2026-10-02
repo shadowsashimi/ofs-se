@@ -1,0 +1,42 @@
+# The toolbar is a panel like any other: it starts docked across the top with
+# its tab hidden, its right click menu shows the tab, and dragged by the tab it
+# docks beside the Mode panel, where it lays out as a column.
+# Toolbar at 1600x900: right click on it at 1000,46; Show tab is the menu's
+# first row at 1060,66. With the tab showing, the tab is at 70,40 and the Mode
+# panel's middle at 1450,150.
+#! covers src/OpenFunscripter.cpp:ShowToolbar src/OpenFunscripter.cpp:setupDefaultLayout
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+wait 10
+
+note docked across the top, under the menu bar, with no tab
+state 00-top
+expect toolbar_rect 0,26,1600,32
+expect toolbar_tab_hidden 1
+
+note the right click menu shows the tab, and the bar grows to fit it
+click 1000 46 right
+wait 10
+shot 01-menu
+click 1060 66
+wait 10
+state 02-tab-shown
+shot 02-tab-shown
+expect toolbar_tab_hidden 0
+
+note dragged by its tab onto the Mode panel, it becomes a tab beside it
+drag 70 40 1450 150 30
+wait 20
+state 03-docked-right
+shot 03-docked-right
+expect toolbar_rect 1312,26,288,203
+expect show_toolbar 1
+
+note it still works there: pick the tempo grid from its column
+click 1534 200
+wait 10
+expect overlay_mode 1
+quit

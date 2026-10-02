@@ -1,7 +1,7 @@
 # A chapter's tempo can be set by hand, and measuring every chapter leaves it
 # alone. The test media is a click every half second for a minute, which
 # detection makes one chapter of at 120 BPM.
-# Chapters: Measure all 800,349, the chapter's tempo 978,468, its menu 1067,468.
+# Chapters: Measure all 800,332, the chapter's tempo 978,451, its menu 1067,451.
 # Toolbar Tempo 786,43; Mode panel BPM +1 1560,220.
 #! covers src/UI/OFS_ChapterManager.* OFS-lib/state/states/ChapterState.* OFS-lib/UI/OFS_Waveform.* src/UI/OFS_ScriptPositionsOverlays.*
 size 1600 900
@@ -17,7 +17,7 @@ click 266 13
 wait 5
 click 300 238
 wait 20
-click 800 349
+click 800 332
 wait 600
 expect chapter 120,0.0,60.0
 
@@ -31,26 +31,26 @@ shot 01-typed
 expect chapter 121,0.0,60.0
 
 note measuring all chapters leaves a tempo set by hand alone
-click 800 349
+click 800 332
 wait 60
 state 02-measured-all
 shot 02-measured-all
 expect chapter 121,0.0,60.0
 
 note measuring the chapter itself asks for the audio's answer
-click 978 468
+click 978 451
 wait 60
 state 03-measured-one
 expect chapter 120,0.0,60.0
 
-note the chapter's menu, with its typed tempo (field 1145,672, Keep this tempo 1139,700)
-click 1067 468
+note the chapter's menu, with its typed tempo (field 1145,655, Keep this tempo 1139,683)
+click 1067 451
 wait 10
 shot 04-row-menu
 windows 04-row-menu
 
 note type a tempo there
-click 1145 672
+click 1145 655
 wait 5
 key ctrl+a
 type 128
@@ -62,11 +62,11 @@ state 05-typed-in-menu
 expect chapter 128,0.0,60.0
 
 note untick Keep this tempo, and measuring all chapters measures it again
-click 1067 468
+click 1067 451
 wait 10
-click 1139 700
+click 1139 683
 wait 10
-click 800 349
+click 800 332
 wait 60
 state 06-unkept
 expect chapter 120,0.0,60.0

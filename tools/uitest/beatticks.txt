@@ -2,8 +2,8 @@
 # audio, whose waveform is made as soon as it opens: the test media is a click
 # every half second, so there is a hit to find twice a second.
 # Preferences at 1600x900: Options 327,13 with Preferences at 380,86; the
-# sidebar's Timeline section 460,356; after scrolling to the bottom of it,
-# Bass only 1026,589.
+# sidebar's Timeline section 460,339; after scrolling to the bottom of it,
+# Bass only 1026,572.
 #! media mp3
 #! covers OFS-lib/UI/OFS_Waveform.* OFS-lib/UI/OFS_ScriptTimeline.*
 size 1600 900
@@ -29,18 +29,18 @@ wait 5
 click 380 86
 wait 20
 expect preferences_open 1
-click 460 356
+click 460 339
 wait 20
 shot 02-timeline-section
 note the waveform settings are at the bottom of the section
-move 880 600
+move 880 583
 wheel -10
 wait 10
 shot 03-waveform-settings
 windows 03-waveform-settings
 
 note bass only reads the audio again, and the ticks are found from that instead
-click 1026 589
+click 1026 572
 wait 10
 expect waveform_bass 1
 waituntil waveform_shown >= 1 900

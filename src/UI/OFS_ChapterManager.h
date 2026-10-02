@@ -44,6 +44,8 @@ class OFS_ChapterManager
     // worked out when the button is pressed and shown for confirmation.
     std::vector<std::string> renamePreview;
 
+    bool focusNext = false;
+
     void waveformReady(const class WaveformProcessingFinishedEvent* ev) noexcept;
     static void autoChapterNames(const ChapterState& chapterState, std::vector<std::string>& out) noexcept;
     void showRenameControls(ChapterState& chapterState) noexcept;
@@ -70,6 +72,19 @@ class OFS_ChapterManager
 
     static bool ExportClip(const Chapter& chapter, const std::string& outputDirStr) noexcept;
     void ShowWindow(bool* open) noexcept;
+
+    // For the tempo grid's panel, so detection can be reached from where its
+    // result is used. Both fetch the waveform first when there is none.
+    // MeasureChapter reads one chapter's tempo; DetectTempo is the Chapters
+    // window's main button: lay chapters over the tracks when there are none,
+    // or measure every chapter. Both return false when there is no media.
+    bool MeasureChapter(Chapter& chapter) noexcept;
+    bool DetectTempo() noexcept;
+    // Reading the audio or running a detection asked for earlier.
+    bool Busy() noexcept;
+    // Brings the window to the front the next time it is drawn, for a window
+    // docked behind another tab.
+    inline void FocusNextFrame() noexcept { focusNext = true; }
 
     ChapterState& State() noexcept;
 };

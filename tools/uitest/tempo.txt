@@ -20,7 +20,7 @@ state 00-before
 expect chapters 0
 
 note Detect tracks and chapters; it makes the waveform with ffmpeg first
-click 800 349
+click 800 332
 wait 600
 shot 01-detected
 state 01-detected

@@ -15,7 +15,7 @@ click 266 13
 wait 5
 click 300 238
 wait 20
-click 800 349
+click 800 332
 wait 600
 state 01-detected
 shot 01-detected
@@ -24,7 +24,7 @@ expect chapters 1
 expect chapter_name Track 1 - 120 BPM
 
 note already named as it would be: the confirmation says so and changes nothing
-click 800 406
+click 800 389
 wait 10
 state 02-nothing
 shot 02-nothing
@@ -34,7 +34,7 @@ wait 10
 expect open_popups 0
 
 note give it a name of its own
-click 730 468
+click 730 451
 wait 5
 key ctrl+a
 type My song
@@ -43,7 +43,7 @@ wait 10
 expect chapter_name My song
 
 note Rename chapters now has a change to confirm
-click 800 406
+click 800 389
 wait 10
 state 03-confirm
 shot 03-confirm
@@ -51,16 +51,16 @@ windows 03-confirm
 expect open_popups 1
 expect chapter_name My song
 
-note Cancel leaves the name alone (Rename 601,555, Cancel 753,555)
-click 753 555
+note Cancel leaves the name alone (Rename 601,538, Cancel 753,538)
+click 753 538
 wait 10
 expect open_popups 0
 expect chapter_name My song
 
 note Rename gives it the name it would get
-click 800 406
+click 800 389
 wait 10
-click 601 555
+click 601 538
 wait 10
 state 04-renamed
 shot 04-renamed

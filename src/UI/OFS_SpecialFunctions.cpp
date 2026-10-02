@@ -729,9 +729,9 @@ void MultiAxisGenerator::DrawUI() noexcept
     }
     else {
         const float half = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2.f;
-        ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::V4(OFS_Sashimi::PinkFill));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::V4(OFS_Sashimi::PinkFillHi));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::V4(OFS_Sashimi::PinkFillHi));
+        ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::Role().OnFill);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::Role().OnFillHi);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::Role().OnFillHi);
         if (ImGui::Button("Apply", ImVec2(half, 0.f))) {
             previewing = false;
             appliedAxes = previewAxes;
@@ -747,7 +747,7 @@ void MultiAxisGenerator::DrawUI() noexcept
 
     ImGui::PushTextWrapPos(0.f);
     if (previewing) {
-        ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::V4(OFS_Sashimi::PinkPale));
+        ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Role().Accent);
         ImGui::TextUnformatted("Previewing, not applied yet.");
         ImGui::PopStyleColor();
         ImGui::TextDisabled("%s from %.2f s to %.2f s. Changes above update it; axes set to Off keep what they had. "

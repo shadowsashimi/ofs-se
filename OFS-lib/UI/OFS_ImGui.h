@@ -199,18 +199,18 @@ namespace OFS {
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.f);
 		if (on) {
-			ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::V4(OFS_Sashimi::PinkFill));
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::V4(OFS_Sashimi::PinkFillHi));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::V4(OFS_Sashimi::PinkFillHi));
-			ImGui::PushStyleColor(ImGuiCol_Border, OFS_Sashimi::V4(OFS_Sashimi::Pink));
-			ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::V4(OFS_Sashimi::PinkPale));
+			ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::Role().OnFill);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::Role().OnFillHi);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::Role().OnFillHi);
+			ImGui::PushStyleColor(ImGuiCol_Border, OFS_Sashimi::Role().OnBorder);
+			ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Role().OnText);
 		}
 		else {
-			ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::V4(OFS_Sashimi::Grey15));
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::V4(OFS_Sashimi::Grey25));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::V4(OFS_Sashimi::Grey30));
-			ImGui::PushStyleColor(ImGuiCol_Border, OFS_Sashimi::V4(OFS_Sashimi::Grey30));
-			ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::V4(OFS_Sashimi::Grey80));
+			ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::Role().OffFill);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::Role().OffFillHi);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::Role().OffFillActive);
+			ImGui::PushStyleColor(ImGuiCol_Border, OFS_Sashimi::Role().OffBorder);
+			ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Role().OffText);
 		}
 		const bool clicked = ImGui::Button(label, size);
 		ImGui::PopStyleColor(5);
@@ -278,16 +278,16 @@ namespace OFS {
 
 			const bool isSelected = (i == selected);
 			if (isSelected) {
-				ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::V4(OFS_Sashimi::PinkFill));
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::V4(OFS_Sashimi::PinkFillHi));
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::V4(OFS_Sashimi::PinkFillHi));
-				ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::V4(OFS_Sashimi::PinkPale));
+				ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::Role().OnFill);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::Role().OnFillHi);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::Role().OnFillHi);
+				ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Role().OnText);
 			}
 			else {
-				ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::V4(OFS_Sashimi::Grey15));
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::V4(OFS_Sashimi::Grey25));
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::V4(OFS_Sashimi::Grey30));
-				ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::V4(OFS_Sashimi::Grey80));
+				ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::Role().OffFill);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::Role().OffFillHi);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::Role().OffFillActive);
+				ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Role().OffText);
 			}
 
 			ImGui::PushID(i);
@@ -302,13 +302,13 @@ namespace OFS {
 			// A thin divider between neighbouring segments.
 			if (column != 0) {
 				drawList->AddLine(ImVec2(itemMin.x, itemMin.y + 3.f), ImVec2(itemMin.x, itemMax.y - 3.f),
-					OFS_Sashimi::Grey40, 1.f);
+					OFS_Sashimi::Role().Divider, 1.f);
 			}
 
 			if (tips != nullptr && tips[i] != nullptr) Tooltip(tips[i]);
 		}
 		ImGui::PopStyleVar(3);
-		drawList->AddRect(groupMin, groupMax, OFS_Sashimi::Grey50, style.FrameRounding, 0, 1.f);
+		drawList->AddRect(groupMin, groupMax, OFS_Sashimi::Role().Outline, style.FrameRounding, 0, 1.f);
 		ImGui::PopID();
 		return clicked;
 	}

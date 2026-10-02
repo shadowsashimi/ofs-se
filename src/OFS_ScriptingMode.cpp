@@ -619,12 +619,12 @@ void RecordingMode::DrawModeSettings() noexcept
     }
 
     if (recordingActive && playing) {
-        ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::PinkBright);
+        ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Role().Accent);
         ImGui::TextUnformatted(TR(RECORDING_ACTIVE));
         ImGui::PopStyleColor();
     }
     else {
-        ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Grey60);
+        ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Role().TextFaint);
         ImGui::TextUnformatted(TR(RECORDING_PAUSED));
         ImGui::PopStyleColor();
     }

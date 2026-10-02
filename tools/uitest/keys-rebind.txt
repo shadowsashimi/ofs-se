@@ -28,7 +28,7 @@ windows 01-keys-filtered
 state 01-keys-filtered
 
 note change a binding: click Action at 10's "1" and press F7
-click 780 306
+click 780 277
 wait 10
 shot 02-capturing
 key f7
@@ -38,7 +38,7 @@ shot 03-changed
 expect bindings:action_10 F7|Keypad1
 
 note add a binding: Action at 100's "+" and press F8
-click 907 350
+click 907 321
 wait 10
 key f8
 wait 10
@@ -47,7 +47,7 @@ shot 04-added
 expect bindings:action_100 F8|KeypadDivide
 
 note close the keys window, and the new binding adds a point at 10
-click 1146 195
+click 1146 166
 wait 10
 seek 6
 wait 10

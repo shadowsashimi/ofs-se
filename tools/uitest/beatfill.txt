@@ -4,8 +4,8 @@
 # across that chapter, saving the result as a pattern stamps it back, and
 # loudness scales the quieter strokes down.
 # Special functions at 1600x900 after Beat fill is picked: the tool bar's
-# second row is y 291 (Beat fill 697, Loudness 902), Fill 799,679, save as a
-# pattern 799,711, the pattern list 799,409. Loudness has Apply at 799,569.
+# second row is y 274 (Beat fill 697, Loudness 902), Fill 799,662, save as a
+# pattern 799,694, the pattern list 799,392. Loudness has Apply at 799,552.
 #! media ramp
 #! covers src/UI/OFS_SpecialFunctions.* src/state/SpecialFunctionsState.h
 size 1600 900
@@ -22,12 +22,12 @@ click 266 13
 wait 5
 click 300 238
 wait 20
-click 800 349
+click 800 332
 waituntil chapters >= 1 900
 state 01-detected
 note the quiet opening is marked as having no music, so the music starts at 15s
 expect chapters 2
-click 1088 313
+click 1088 296
 wait 10
 note the playhead goes into the music, which is the chapter the fill works on
 seek 30
@@ -38,14 +38,14 @@ click 266 13
 wait 5
 click 300 190
 wait 15
-click 697 291
+click 697 274
 wait 10
 shot 02-beatfill
 windows 02-beatfill
 expect actions 0
 
 note fill the chapter: a point every quarter note is one every half second
-click 799 679
+click 799 662
 wait 20
 state 03-filled
 shot 03-filled
@@ -56,28 +56,28 @@ expect first_position 10
 note save what was filled as a pattern, then stamp it back over the chapter
 key ctrl+a
 wait 5
-click 799 711
+click 799 694
 wait 10
 type bar
 wait 5
-click 715 711
+click 715 694
 wait 15
 shot 04-pattern-saved
 state 04-pattern-saved
-click 799 679
+click 799 662
 wait 20
 state 05-stamped
 waituntil actions >= 80 5
 
 note loudness: the quiet start is scaled in, the loud end keeps its depth
-click 902 291
+click 902 274
 wait 10
 key ctrl+a
 wait 5
 state 06-before-loudness
 expect first_position 10
 expect last_position 90
-click 799 569
+click 799 552
 wait 20
 state 07-loudness
 shot 07-loudness

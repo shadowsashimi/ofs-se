@@ -4253,10 +4253,10 @@ static bool rowButton(const char* label, int32_t index, int32_t count, bool high
     }
 
     if (highlighted) {
-        ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::V4(OFS_Sashimi::PinkFill));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::V4(OFS_Sashimi::PinkFillHi));
-        ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::V4(OFS_Sashimi::PinkFillHi));
-        ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::V4(OFS_Sashimi::PinkPale));
+        ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::Role().OnFill);
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::Role().OnFillHi);
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::Role().OnFillHi);
+        ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Role().OnText);
     }
     const bool clicked = ImGui::Button(label, ImVec2(width, 0.f));
     if (highlighted) ImGui::PopStyleColor(4);

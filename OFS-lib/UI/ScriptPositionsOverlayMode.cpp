@@ -19,7 +19,6 @@ uint32_t BaseOverlay::StateHandle = 0xFFFF'FFFF;
 bool BaseOverlay::ShowLines = true;
 bool BaseOverlay::ShowPoints = true;
 
-static constexpr auto SelectedLineColor = OFS_Sashimi::PinkBright;
 
 BaseOverlay::BaseOverlay(ScriptTimeline* timeline) noexcept
 {
@@ -196,7 +195,7 @@ void BaseOverlay::drawActionLinesSpline(const OverlayDrawingCtx& ctx, const Base
             if (prevAction != nullptr) {
                 uint32_t color;
                 if (actionSelected && prevActionSelected) {
-                    color = SelectedLineColor;
+                    color = OFS_Sashimi::Role().AccentBright;
                 }
                 else {
                     ImColor speedColor;
@@ -248,7 +247,7 @@ void BaseOverlay::drawActionLinesLinear(const OverlayDrawingCtx& ctx, const Base
             if (prevAction != nullptr) {
                 uint32_t color;
                 if (actionSelected && prevActionSelected) {
-                    color = SelectedLineColor;
+                    color = OFS_Sashimi::Role().AccentBright;
                 }
                 else {
                     ImColor speedColor;

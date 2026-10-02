@@ -1,7 +1,7 @@
 # Special functions change a selection when their value is changed.
 # Special functions window at 1600x900: the tool bar is two rows, Range
-# extend 663,260, Simplify 799,260, Multi-axis 935,260, Beat fill 697,291 and
-# Loudness 902,291. The value row is at y 353, Extend by's +5 at 988 and the
+# extend 663,243, Simplify 799,243, Multi-axis 935,243, Beat fill 697,274 and
+# Loudness 902,274. The value row is at y 336, Extend by's +5 at 988 and the
 # typed field around 799.
 #! covers src/UI/OFS_SpecialFunctions.*
 size 1600 900
@@ -45,15 +45,15 @@ shot 01-range-extend
 windows 01-range-extend
 
 note five presses of +5: the strokes spread out by 25
-click 988 353
+click 988 336
 wait 3
-click 988 353
+click 988 336
 wait 3
-click 988 353
+click 988 336
 wait 3
-click 988 353
+click 988 336
 wait 3
-click 988 353
+click 988 336
 wait 10
 state 02-extended
 shot 02-extended
@@ -62,14 +62,14 @@ expect positions 30,95,5,95,5,95,30
 expect selection 7
 
 note Simplify, on the same selection, which is still selected
-click 799 260
+click 799 243
 wait 10
 shot 03-simplify
 state 03-simplify
 expect selection 7
 
 note type a tolerance: points that add little to the shape go
-dclick 799 353
+dclick 799 336
 wait 3
 key ctrl+a
 type 0.3

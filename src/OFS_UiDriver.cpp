@@ -839,6 +839,8 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
     add("overlay_mode", std::to_string((int32_t)app->scripting->ActiveOverlay()));
     add("tempo_division", std::to_string(TempoOverlayState::State(
         OFS_ProjectState<TempoOverlayState>::Register(TempoOverlayState::StateName)).measureIndex));
+    add("tempo_bpm", number(TempoOverlayState::State(
+        OFS_ProjectState<TempoOverlayState>::Register(TempoOverlayState::StateName)).bpm, "%.1f"));
     const auto& overlay = BaseOverlay::State();
     add("snap_grid", flag(overlay.SnapToGrid));
     add("snap_position_step", std::to_string(overlay.SnapPositionStep));
@@ -903,6 +905,13 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
         }
     }
     add("show_toolbar", flag(ofsState.showToolbar));
+    // Where the toolbar is, as x,y,w,h, and whether its tab is hidden, which is
+    // how it sits across the top as a bar.
+    if (auto* toolbar = ImGui::FindWindowByName("Toolbar###TOOLBAR"); toolbar != nullptr && toolbar->WasActive) {
+        add("toolbar_rect", number(toolbar->Pos.x, "%.0f") + "," + number(toolbar->Pos.y, "%.0f") + ","
+            + number(toolbar->Size.x, "%.0f") + "," + number(toolbar->Size.y, "%.0f"));
+        add("toolbar_tab_hidden", flag(toolbar->DockNode != nullptr && toolbar->DockNode->IsHiddenTabBar()));
+    }
     add("show_simulator", flag(ofsState.showSimulator));
     add("show_statistics", flag(ofsState.showStatistics));
     add("show_special_functions", flag(ofsState.showSpecialFunctions));

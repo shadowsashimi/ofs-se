@@ -156,6 +156,12 @@ private:
     void ShowStatisticsWindow(bool* open) noexcept;
     void ShowMainMenuBar() noexcept;
     void ShowToolbar() noexcept;
+    // Whether the toolbar was wide enough for one row last frame, which
+    // decides its flags before this frame's width is known.
+    bool toolbarWide = true;
+    // Set when the toolbar has just been docked for the first time, to hide
+    // its tab once the dock has happened.
+    bool toolbarHideTabBar = false;
     bool ShowMetadataEditorWindow(bool* open) noexcept;
     void ShowNewScriptWindow(bool* open) noexcept;
 
@@ -190,6 +196,8 @@ public:
     // Whether the toolbar is showing, for panels that leave out what it
     // already offers.
     bool ToolbarVisible() noexcept;
+    // Brings up the Chapters window, where tempo detection lives.
+    void ShowChapters() noexcept;
 
     bool Init(int argc, char* argv[]);
     int Run() noexcept;

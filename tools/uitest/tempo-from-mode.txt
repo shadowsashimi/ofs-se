@@ -1,0 +1,31 @@
+# Tempo detection can be started from the tempo grid's settings in the Mode
+# panel, where its result is used, and the grid then follows the chapter it
+# made. The test media is a click every half second, 120 BPM.
+#! covers src/UI/OFS_ScriptPositionsOverlays.* src/UI/OFS_ChapterManager.*
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note tempo grid, then scroll the Mode panel to the auto tempo status
+click 786 43
+wait 10
+move 1450 180
+wheel -1
+wait 10
+shot 00-no-chapters
+expect tempo_bpm 100.0
+
+note Detect tempo and chapters
+click 1450 114
+wait 600
+state 01-detected
+shot 01-detected
+expect chapter 120,0.0,60.0
+note the grid follows the chapter detected, measured at 119.9
+expect show_chapter_manager 1
+expect tempo_bpm 119.9
+quit

@@ -40,6 +40,7 @@ static constexpr const char* GlslVersion = "#version 330 core";
 static ImGuiID MainDockspaceID;
 static constexpr const char* StatisticsWindowId = "###STATISTICS";
 static constexpr const char* ActionEditorWindowId = "###ACTION_EDITOR";
+static constexpr const char* ToolbarWindowId = "Toolbar###TOOLBAR";
 
 static constexpr int DefaultWidth = 1920;
 static constexpr int DefaultHeight = 1080;
@@ -361,6 +362,22 @@ bool OpenFunscripter::Init(int argc, char* argv[])
     return true;
 }
 
+// The height of the toolbar's dock node as one row: a control and a little
+// air above and below it. Together with the 2 pixel splitter ImGui leaves
+// between docked nodes, it is the room the toolbar took when it was a bar fixed
+// to the window, so everything under it is where it always was.
+static constexpr float DockSplitterSize = 2.f;
+static float toolbarRowHeight() noexcept
+{
+    return std::ceil(ImGui::GetFrameHeight() + 8.f) - DockSplitterSize;
+}
+
+// The padding that centres one row of controls in that height.
+static float toolbarVerticalPadding() noexcept
+{
+    return std::floor((toolbarRowHeight() - ImGui::GetFrameHeight()) * 0.5f);
+}
+
 void OpenFunscripter::setupDefaultLayout(bool force) noexcept
 {
     MainDockspaceID = ImGui::GetID("MainAppDockspace");
@@ -378,11 +395,20 @@ void OpenFunscripter::setupDefaultLayout(bool force) noexcept
 
         ImGui::DockBuilderRemoveNode(MainDockspaceID); // Clear out existing layout
         ImGui::DockBuilderAddNode(MainDockspaceID, ImGuiDockNodeFlags_DockSpace); // Add empty node
-        ImGui::DockBuilderSetNodeSize(MainDockspaceID, ImVec2(DefaultWidth, DefaultHeight));
+        // The toolbar takes one row across the top. Measured on a node grown
+        // by its height, so everything under it is laid out at the same
+        // proportions as before it was a window. It keeps its height when the
+        // app is resized, since the node beside it holds the central one.
+        const float toolbarHeight = toolbarRowHeight();
+        const float rootHeight = DefaultHeight + toolbarHeight + DockSplitterSize;
+        ImGui::DockBuilderSetNodeSize(MainDockspaceID, ImVec2(DefaultWidth, rootHeight));
+        ImGuiID dock_rest_id;
+        auto dock_toolbar_id = ImGui::DockBuilderSplitNode(MainDockspaceID, ImGuiDir_Up,
+            toolbarHeight / rootHeight, NULL, &dock_rest_id);
 
         ImGuiID dock_player_center_id;
         ImGuiID opposite_node_id;
-        auto dock_time_bottom_id = ImGui::DockBuilderSplitNode(MainDockspaceID, ImGuiDir_Down, 0.1f, NULL, &dock_player_center_id);
+        auto dock_time_bottom_id = ImGui::DockBuilderSplitNode(dock_rest_id, ImGuiDir_Down, 0.1f, NULL, &dock_player_center_id);
         auto dock_positions_id = ImGui::DockBuilderSplitNode(dock_player_center_id, ImGuiDir_Down, 0.15f, NULL, &dock_player_center_id);
         auto dock_mode_right_id = ImGui::DockBuilderSplitNode(dock_player_center_id, ImGuiDir_Right, 0.15f, NULL, &dock_player_center_id);
         // The right column, bottom up. Mode is left the most room because it
@@ -400,6 +426,8 @@ void OpenFunscripter::setupDefaultLayout(bool force) noexcept
         ImGui::DockBuilderGetNode(dock_player_center_id)->LocalFlags |= ImGuiDockNodeFlags_AutoHideTabBar;
         ImGui::DockBuilderGetNode(dock_positions_id)->LocalFlags |= ImGuiDockNodeFlags_AutoHideTabBar;
         ImGui::DockBuilderGetNode(dock_time_bottom_id)->LocalFlags |= ImGuiDockNodeFlags_AutoHideTabBar;
+        ImGui::DockBuilderGetNode(dock_toolbar_id)->LocalFlags |= ImGuiDockNodeFlags_HiddenTabBar;
+        ImGui::DockBuilderDockWindow(ToolbarWindowId, dock_toolbar_id);
 
         ImGui::DockBuilderDockWindow(OFS_VideoplayerWindow::WindowId, dock_player_center_id);
         ImGui::DockBuilderDockWindow(OFS_VideoplayerControls::TimeId, dock_time_bottom_id);
@@ -2960,6 +2988,8 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
             ImGui::Separator();
 #endif
             if (ImGui::MenuItem("Toolbar", NULL, &ofsState.showToolbar)) {}
+            OFS::Tooltip("The row of mode, grid, snap and simulator choices under the menu bar. "
+                "Hidden, the Mode panel and the Simulator window show the same choices.");
             if (ImGui::MenuItem(TR(STATISTICS), NULL, &ofsState.showStatistics)) {}
             if (ImGui::MenuItem(TR(UNDO_REDO_HISTORY), NULL, &ofsState.showHistory)) {}
             if (ImGui::MenuItem(TR(SIMULATOR), NULL, &ofsState.showSimulator)) {}
@@ -2969,9 +2999,9 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
             if (ImGui::MenuItem(TR(WEBSOCKET_API), NULL, &ofsState.showWsApi)) {}
             if (ImGui::MenuItem(TR(CHAPTERS), NULL, &ofsState.showChapterManager)) {}
             if (ImGui::MenuItem("Script check", NULL, &ofsState.showScriptCheck)) {}
+            OFS::Tooltip("Lists the strokes a device cannot follow, and slows them down.");
             if (ImGui::MenuItem("Devices", NULL, &ofsState.showDevices)) {}
             OFS::Tooltip("Plays the script on a real device through Intiface Central.");
-            OFS::Tooltip("Lists the strokes a device cannot follow, and slows them down.");
 
 
             ImGui::Separator();
@@ -3178,16 +3208,21 @@ void OpenFunscripter::CreateDockspace() noexcept
     }
 
     ShowMainMenuBar();
-    ShowToolbar();
 
     ImGui::End();
+
+    ShowToolbar();
 }
 
-// One row under the menu bar with the choices made most often while scripting:
-// how a click places a point, which grid is under the timeline, whether points
-// snap to it, and what the simulator shows. Each is the same control its panel
-// uses, so the two can never disagree, and the panels keep the settings that
-// go with each choice.
+// The choices made most often while scripting: how a click places a point,
+// which grid is under the timeline, whether points snap to it, and what the
+// simulator shows. Each is the same control its panel uses, so the two can
+// never disagree, and the panels keep the settings that go with each choice.
+//
+// An ordinary window, so it docks, floats and closes like every other panel.
+// It starts docked across the top with its tab hidden, where it reads as a
+// bar. It is laid out as one row when wide enough, and as a column of groups
+// when docked somewhere narrow such as the right side.
 void OpenFunscripter::ShowToolbar() noexcept
 {
     auto& ofsState = OpenFunscripterState::State(stateHandle);
@@ -3195,57 +3230,99 @@ void OpenFunscripter::ShowToolbar() noexcept
     OFS_PROFILE(__FUNCTION__);
 
     const auto& style = ImGui::GetStyle();
-    constexpr float VerticalPadding = 4.f;
-    const float height = ImGui::GetFrameHeight() + (VerticalPadding * 2.f);
-    constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollbar
-        | ImGuiWindowFlags_NoScrollWithMouse
-        | ImGuiWindowFlags_NoSavedSettings;
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(style.WindowPadding.x, VerticalPadding));
-    const bool visible = ImGui::BeginViewportSideBar("##Toolbar", ImGui::GetMainViewport(), ImGuiDir_Up, height, flags);
-    ImGui::PopStyleVar();
+    // A profile saved before the toolbar was a window has no place for it.
+    // It goes where it used to be, across the top of the dockspace, the same
+    // place dragging it to the top edge would put it.
+    const bool firstUse = ImGui::FindWindowSettings(ImHashStr(ToolbarWindowId)) == nullptr
+        && ImGui::FindWindowByName(ToolbarWindowId) == nullptr;
+
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoCollapse;
+    if (toolbarWide) {
+        flags |= ImGuiWindowFlags_NoScrollbar;
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(style.WindowPadding.x, toolbarVerticalPadding()));
+    }
+    const bool visible = ImGui::Begin(ToolbarWindowId, &ofsState.showToolbar, flags);
+    if (toolbarWide) ImGui::PopStyleVar();
+
+    if (firstUse) {
+        auto* root = ImGui::DockBuilderGetNode(MainDockspaceID);
+        if (root != nullptr && root->HostWindow != nullptr && root->Size.y > 0.f) {
+            ImGui::DockContextQueueDock(ImGui::GetCurrentContext(), root->HostWindow, root,
+                ImGui::GetCurrentWindow(), ImGuiDir_Up, toolbarRowHeight() / root->Size.y, true);
+            toolbarHideTabBar = true;
+        }
+    }
+    else if (toolbarHideTabBar && ImGui::IsWindowDocked()) {
+        // Docking clears the flag, so it is set once the dock has happened.
+        if (auto* node = ImGui::GetWindowDockNode()) {
+            node->SetLocalFlags(node->LocalFlags | ImGuiDockNodeFlags_HiddenTabBar);
+        }
+        toolbarHideTabBar = false;
+    }
+
+    // Docked alone in a bar across the top or bottom, the bar is sized to one
+    // row, plus the tab when it is showing. Without this, showing the tab to
+    // move the toolbar pushed the row out of sight.
+    if (auto* node = ImGui::GetWindowDockNode(); node != nullptr && node->Windows.Size == 1
+        && node->ParentNode != nullptr && node->ParentNode->SplitAxis == ImGuiAxis_Y && toolbarWide) {
+        const float want = toolbarRowHeight() + (node->IsHiddenTabBar() ? 0.f : ImGui::GetFrameHeight());
+        if (node->SizeRef.y != want) node->SizeRef.y = want;
+    }
 
     if (visible) {
+        const float fontSize = ImGui::GetFontSize();
+        const bool wide = ImGui::GetContentRegionAvail().x >= fontSize * 48.f;
+        toolbarWide = wide;
+
+        // A short dimmed name in front of each group, so the row reads
+        // without hovering. On their own the bars were mode names, grid
+        // names and bare numbers that said nothing about what they set.
+        // Down a column it sits on its own line above its group instead.
+        auto group = [wide](const char* label, const char* tip) noexcept {
+            if (wide) {
+                ImGui::TableNextColumn();
+                ImGui::AlignTextToFramePadding();
+            }
+            else {
+                ImGui::Spacing();
+            }
+            ImGui::TextDisabled("%s", label);
+            OFS::Tooltip(tip);
+            if (wide) ImGui::SameLine();
+        };
+
         constexpr ImGuiTableFlags tableFlags = ImGuiTableFlags_BordersInnerV
             | ImGuiTableFlags_SizingStretchProp
             | ImGuiTableFlags_NoPadOuterX;
-        if (ImGui::BeginTable("##ToolbarTable", 5, tableFlags)) {
+        const bool table = wide && ImGui::BeginTable("##ToolbarTable", 5, tableFlags);
+        if (table) {
             // Weighted by how much each control has to say, so the four mode
             // names get the room they need before the simulator's two.
             ImGui::TableSetupColumn("Mode", ImGuiTableColumnFlags_WidthStretch, 4.f);
             ImGui::TableSetupColumn("Grid", ImGuiTableColumnFlags_WidthStretch, 2.8f);
-            ImGui::TableSetupColumn("Note", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 6.f);
+            ImGui::TableSetupColumn("Note", ImGuiTableColumnFlags_WidthFixed, fontSize * 6.f);
             ImGui::TableSetupColumn("Snap", ImGuiTableColumnFlags_WidthStretch, 3.4f);
             ImGui::TableSetupColumn("Simulator", ImGuiTableColumnFlags_WidthStretch, 1.8f);
             ImGui::TableNextRow();
+        }
 
-            // A short dimmed name in front of each group, so the row reads
-            // without hovering. On their own the bars were mode names, grid
-            // names and bare numbers that said nothing about what they set.
-            auto groupLabel = [](const char* label, const char* tip) noexcept {
-                ImGui::AlignTextToFramePadding();
-                ImGui::TextDisabled("%s", label);
-                OFS::Tooltip(tip);
-                ImGui::SameLine();
-            };
-
-            ImGui::TableNextColumn();
-            groupLabel("Mode", "How a click on the timeline places a point.");
+        if (table || !wide) {
+            group("Mode", "How a click on the timeline places a point.");
             scripting->DrawModeSelector("##ToolbarMode");
 
-            ImGui::TableNextColumn();
-            groupLabel("Grid", "What the lines on the timeline mark, and what points snap to.");
+            group("Grid", "What the lines on the timeline mark, and what points snap to.");
             scripting->DrawOverlaySelector("##ToolbarGrid");
 
-            ImGui::TableNextColumn();
-            groupLabel("Note", "Spacing of the tempo grid's lines, as a note length.");
+            group("Note", "Spacing of the tempo grid's lines, as a note length.");
+            if (!wide) ImGui::SameLine();
             ImGui::SetNextItemWidth(-1.f);
             TempoOverlay::DrawNoteDivisionSelector("##ToolbarNote",
                 scripting->ActiveOverlay() == ScriptingOverlayModes::TEMPO);
 
-            ImGui::TableNextColumn();
             {
-                groupLabel("Snap", "Where points placed or dragged with the mouse land.");
+                group("Snap", "Where points placed or dragged with the mouse land.");
+                if (!wide) ImGui::SameLine();
                 auto& overlayState = BaseOverlay::State();
                 const bool hasGrid = scripting->Overlay() != nullptr && scripting->Overlay()->HasSnapGrid();
                 const bool gridSnapOn = overlayState.SnapToGrid && hasGrid;
@@ -3272,14 +3349,31 @@ void OpenFunscripter::ShowToolbar() noexcept
                 DrawPositionRoundingSelector("##ToolbarPosStep");
             }
 
-            ImGui::TableNextColumn();
-            groupLabel("Simulator", "What the simulator shows: a 2D bar, or a 3D model driven by every loaded axis.");
+            group("Simulator", "What the simulator shows: a 2D bar, or a 3D model driven by every loaded axis.");
             simulator.DrawModeSelector("##ToolbarSimulator");
+        }
+        if (table) ImGui::EndTable();
 
-            ImGui::EndTable();
+        // Docked across the top its tab is hidden, so the way to move or put
+        // it away is offered where it is, not only in the View menu.
+        // Asked for here, since inside the popup the current window is the popup.
+        ImGuiDockNode* toolbarNode = ImGui::GetWindowDockNode();
+        if (ImGui::BeginPopupContextWindow("##ToolbarMenu")) {
+            if (auto* node = toolbarNode) {
+                const bool tabHidden = node->IsHiddenTabBar();
+                if (ImGui::MenuItem(tabHidden ? "Show tab, to move it" : "Hide tab")) {
+                    node->WantHiddenTabBarToggle = true;
+                }
+                if (tabHidden) {
+                    OFS::Tooltip("Shows the toolbar's tab. Drag the tab to dock the toolbar somewhere else, "
+                        "such as the right side, or out on its own.");
+                }
+            }
+            if (ImGui::MenuItem("Hide toolbar")) ofsState.showToolbar = false;
+            ImGui::TextDisabled("View > Toolbar brings it back. With it hidden,\nthe Mode panel shows the mode and grid choices.");
+            ImGui::EndPopup();
         }
     }
-    // BeginViewportSideBar wants its End whether or not it was visible.
     ImGui::End();
 }
 
@@ -3340,6 +3434,12 @@ void OpenFunscripter::ShowAboutWindow(bool* open) noexcept
 bool OpenFunscripter::ToolbarVisible() noexcept
 {
     return OpenFunscripterState::State(stateHandle).showToolbar;
+}
+
+void OpenFunscripter::ShowChapters() noexcept
+{
+    OpenFunscripterState::State(stateHandle).showChapterManager = true;
+    chapterMgr->FocusNextFrame();
 }
 
 // One label and value per row, label dimmed, so a column of numbers can be

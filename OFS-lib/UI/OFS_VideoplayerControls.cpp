@@ -102,7 +102,7 @@ bool OFS_VideoplayerControls::DrawTimelineWidget(const char* label, float* posit
     ImVec2 p1(currentPosX, frameBB.Min.y);
     ImVec2 p2(currentPosX, frameBB.Max.y);
     constexpr float timelinePosCursorW = 2.f;
-    drawList->AddLine(p1 + ImVec2(0.f, h / 3.f), p2 + ImVec2(0.f, h / 3.f), OFS_Sashimi::Pink, timelinePosCursorW);
+    drawList->AddLine(p1 + ImVec2(0.f, h / 3.f), p2 + ImVec2(0.f, h / 3.f), OFS_Sashimi::Role().Accent, timelinePosCursorW);
 
     Heatmap->DrawHeatmap(drawList, frameBB.Min, frameBB.Max);
 
@@ -413,7 +413,7 @@ bool OFS_VideoplayerControls::DrawBookmark(ImDrawList* drawList, const ImRect& f
         auto bookmarkRect = ImRect(p1 - ImVec2(bookmarkSize, bookmarkSize), p1 + ImVec2(bookmarkSize, bookmarkSize));
         if(bookmarkRect.Contains(mousePos))
         {
-            bookmarkColor = OFS_Sashimi::PinkBright;
+            bookmarkColor = OFS_Sashimi::Role().AccentBright;
             bookmarkHover = true;
         }
     }

@@ -148,6 +148,11 @@ bool OFS_Preferences::ShowPreferenceWindow() noexcept
 					SetTheme((OFS_Theme)state.currentTheme);
 					save = true;
 				}
+				if (ImGui::Checkbox("Rounded corners", &state.roundedCorners)) {
+					SetTheme((OFS_Theme)state.currentTheme);
+					save = true;
+				}
+				OFS::Tooltip("Round the corners of windows, buttons, tabs and timeline lanes, in any theme. Off gives the square look of the original OFS.");
 
 				groupHeader("Performance");
 				ImGui::PushTextWrapPos(0.f);
@@ -332,6 +337,12 @@ void OFS_Preferences::SetTheme(OFS_Theme theme) noexcept
 {
 	auto& style = ImGui::GetStyle();
 	auto& io = ImGui::GetIO();
+	const auto& state = PreferenceState::State(prefStateHandle);
+
+	// Start from stock spacing each time, so going from Sashimi to Dark or
+	// Light gives the same layout as starting in them rather than keeping
+	// Sashimi's padding.
+	style = ImGuiStyle();
 
 	switch (theme) {
 		case OFS_Theme::Sashimi: {
@@ -344,14 +355,20 @@ void OFS_Preferences::SetTheme(OFS_Theme theme) noexcept
 		}
 		case OFS_Theme::Light: {
 			ImGui::StyleColorsLight(&style);
+			// Stock Light draws frames white, the same as a popup, so an
+			// unticked box or an empty field in a dialog was not drawn at all.
+			style.FrameBorderSize = 1.f;
 			break;
 		}
 	}
 
+	OFS_Sashimi::SetRounding(style, state.roundedCorners);
 	if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-		//style.WindowRounding = 0.0f;
-		style.WindowRounding = 6.f;
+		// Windows dragged out of the main one become OS windows, whose own
+		// corners suit a smaller radius.
+		if (state.roundedCorners) style.WindowRounding = 6.f;
 		style.Colors[ImGuiCol_WindowBg].w = 1.f;
 		style.Colors[ImGuiCol_PopupBg].w = 1.f;
 	}
+	OFS_Sashimi::UpdateRoles(style, theme == OFS_Theme::Sashimi);
 }

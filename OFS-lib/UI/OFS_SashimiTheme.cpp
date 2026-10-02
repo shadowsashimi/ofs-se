@@ -111,17 +111,8 @@ void ApplyStyle(ImGuiStyle& style) noexcept
     c[ImGuiCol_ModalWindowDimBg]      = V4(Grey00, 0.65f);
 
     // ----------------------------------------------------------- geometry
-    // One radius family throughout: windows and popups at the large size,
-    // frames and grabs at the small one, so every corner in the app matches.
     // A little more air in the padding, since the flat greys read as cramped
-    // with stock spacing.
-    style.WindowRounding    = 10.f;
-    style.ChildRounding     = 8.f;
-    style.PopupRounding     = 10.f;
-    style.FrameRounding     = 6.f;
-    style.ScrollbarRounding = 8.f;
-    style.GrabRounding      = 6.f;
-    style.TabRounding       = 6.f;
+    // with stock spacing. The corners are set by SetRounding, for every theme.
     style.WindowBorderSize  = 1.f;
     style.FrameBorderSize   = 0.f;
     style.PopupBorderSize   = 1.f;
@@ -132,6 +123,86 @@ void ApplyStyle(ImGuiStyle& style) noexcept
     style.ScrollbarSize     = 12.f;
     style.GrabMinSize       = 10.f;
     style.WindowTitleAlign  = ImVec2(0.5f, 0.5f);
+}
+
+void SetRounding(ImGuiStyle& style, bool rounded) noexcept
+{
+    // One radius family throughout: windows and popups at the large size,
+    // frames and grabs at the small one, so every corner in the app matches.
+    const float scale = rounded ? 1.f : 0.f;
+    style.WindowRounding    = 10.f * scale;
+    style.ChildRounding     = 8.f * scale;
+    style.PopupRounding     = 10.f * scale;
+    style.FrameRounding     = 6.f * scale;
+    style.ScrollbarRounding = 8.f * scale;
+    style.GrabRounding      = 6.f * scale;
+    style.TabRounding       = 6.f * scale;
+}
+
+static Roles roles;
+
+const Roles& Role() noexcept
+{
+    return roles;
+}
+
+static ImVec4 mix(const ImVec4& a, const ImVec4& b, float t) noexcept
+{
+    return ImVec4(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t,
+        a.z + (b.z - a.z) * t, a.w + (b.w - a.w) * t);
+}
+
+static ImVec4 withAlpha(ImVec4 c, float alpha) noexcept
+{
+    c.w = alpha;
+    return c;
+}
+
+void UpdateRoles(const ImGuiStyle& style, bool sashimi) noexcept
+{
+    if (sashimi) {
+        roles = Roles();
+        return;
+    }
+
+    // Built the same way as the Sashimi roles: fills are the theme's text
+    // colour laid thinly over whatever is behind, so they are light greys on a
+    // light theme and dark greys on a dark one, and the selection is the
+    // theme's own highlight (its tick mark colour) at the same strengths.
+    const ImVec4* c = style.Colors;
+    const ImVec4 text = c[ImGuiCol_Text];
+    const ImVec4 accent = withAlpha(c[ImGuiCol_CheckMark], 1.f);
+    const ImVec4 white(1.f, 1.f, 1.f, 1.f);
+    const ImVec4 black(0.f, 0.f, 0.f, 1.f);
+    auto u32 = [](const ImVec4& v) { return ImGui::ColorConvertFloat4ToU32(v); };
+
+    Roles r;
+    r.Accent       = u32(accent);
+    r.AccentBright = u32(mix(accent, white, 0.2f));
+    r.AccentDeep   = u32(mix(accent, black, 0.4f));
+    r.AccentPale   = u32(mix(accent, white, 0.5f));
+
+    r.OnFill   = u32(withAlpha(accent, 0.35f));
+    r.OnFillHi = u32(withAlpha(accent, 0.55f));
+    r.OnText   = u32(text);
+    r.OnBorder = u32(accent);
+
+    r.OffFill       = u32(withAlpha(text, 0.06f));
+    r.OffFillHi     = u32(withAlpha(text, 0.12f));
+    r.OffFillActive = u32(withAlpha(text, 0.18f));
+    r.OffText       = u32(text);
+    r.OffBorder     = u32(withAlpha(text, 0.25f));
+
+    r.Divider = u32(withAlpha(text, 0.25f));
+    r.Outline = u32(withAlpha(text, 0.35f));
+
+    r.TextFaint = u32(c[ImGuiCol_TextDisabled]);
+
+    // The timeline is dark in every theme, so these tint its own greys.
+    const ImVec4 deep = mix(accent, black, 0.4f);
+    r.LaneActiveBg   = u32(mix(V4(IM_COL32(0x17, 0x17, 0x17, 0xFF)), deep, 0.14f));
+    r.LaneActivePill = u32(withAlpha(mix(V4(IM_COL32(0x10, 0x10, 0x10, 0xFF)), deep, 0.2f), 0xC8 / 255.f));
+    roles = r;
 }
 
 }
