@@ -14,6 +14,7 @@
 //
 // Ported from MultiFunPlayer (MIT licensed), which is where the format, the
 // three digit values, the interval, and sending only what changed come from.
+// Its licence is in THIRD_PARTY_NOTICES.md.
 namespace OFS_TCode
 {
 

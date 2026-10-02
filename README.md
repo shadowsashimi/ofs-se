@@ -12,6 +12,10 @@ Built on OpenGL, SDL2, ImGui, libmpv and the other libraries vendored under
 [`lib/`](lib) - see [lib/VENDORED.md](lib/VENDORED.md) for the exact upstream
 revision each one came from.
 
+The TCode device output is ported from
+[MultiFunPlayer](https://github.com/Yoooi0/MultiFunPlayer) by Yoooi, which is
+MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
 ![OFS-SE, with the 3D simulator driven by stroke, roll and pitch](docs/screenshots/simulator-3d.png)
 
 ## What's new

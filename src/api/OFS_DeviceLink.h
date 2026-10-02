@@ -22,6 +22,7 @@
 // The TCode side follows MultiFunPlayer (MIT licensed): the command format,
 // the send rate, sending only what changed, and the safety - per axis travel
 // limits, a speed limit, and easing an axis home when nothing drives it.
+// Its licence is in THIRD_PARTY_NOTICES.md.
 //
 // The websocket connection runs on civetweb's own thread, so everything it
 // touches is behind a mutex and the UI only ever reads a copy.
