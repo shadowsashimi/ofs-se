@@ -1,0 +1,37 @@
+# Ctrl with a digit adds a point halfway between the plain digits' positions:
+# Ctrl+0 at 5 through Ctrl+9 at 95, on the number row and on the keypad. The
+# plain digits still add 0 through 90.
+#! covers src/OpenFunscripter.cpp:registerBindings
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 1
+wait 5
+key ctrl+0
+seek 2
+wait 5
+key ctrl+1
+seek 3
+wait 5
+key ctrl+5
+seek 4
+wait 5
+key ctrl+9
+seek 5
+wait 5
+key ctrl+keypad3
+seek 6
+wait 5
+key ctrl+keypad9
+seek 7
+wait 5
+key 5
+seek 8
+wait 5
+key keypad9
+wait 10
+state 01-points
+expect positions 5,15,55,95,35,95,50,90
+quit

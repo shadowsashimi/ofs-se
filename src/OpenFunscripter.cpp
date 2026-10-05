@@ -550,6 +550,20 @@ void OpenFunscripter::registerBindings()
             {
                 { ImGuiMod_None, ImGuiKey_KeypadDivide },
             });
+        // Halfway between those, on the same keys with Ctrl: Ctrl+0 adds a
+        // point at 5 through Ctrl+9 at 95. Not localized: English only for now.
+        for (int32_t digit = 0; digit <= 9; digit += 1) {
+            const int32_t pos = (digit * 10) + 5;
+            const std::string id = "action_" + std::to_string(pos);
+            keys->RegisterAction(
+                { id.c_str(),
+                    [this, pos]() { addEditAction(pos); } },
+                "Action at " + std::to_string(pos), "Actions",
+                {
+                    { ImGuiMod_Ctrl, (ImGuiKey)(ImGuiKey_Keypad0 + digit) },
+                    { ImGuiMod_Ctrl, (ImGuiKey)(ImGuiKey_0 + digit) },
+                });
+        }
     }
 
     keys->RegisterGroup("Core", Tr::CORE_BINDING_GROUP);
