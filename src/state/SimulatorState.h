@@ -49,6 +49,11 @@ struct SimulatorState
     // pitch and surge, which move towards and away from a camera in front,
     // can be seen.
     float CameraYaw = 0.f;
+    // Stroke (L0) limits for the 3D model, in percent of its full travel, as
+    // a machine's L0 range is set: the script's 0 moves the model only down
+    // to StrokeMin and its 100 only up to StrokeMax.
+    int32_t StrokeMin = 0;
+    int32_t StrokeMax = 100;
 
     bool EnableIndicators = true;
     bool EnablePosition = false;
@@ -119,4 +124,6 @@ REFL_TYPE(SimulatorState)
 	REFL_FIELD(CameraElevation)
 	REFL_FIELD(CameraYaw)
 	REFL_FIELD(CutawayCase)
+	REFL_FIELD(StrokeMin)
+	REFL_FIELD(StrokeMax)
 REFL_END

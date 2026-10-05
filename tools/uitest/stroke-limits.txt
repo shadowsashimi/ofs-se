@@ -1,0 +1,51 @@
+# The 3D model's stroke limits: the full stroke, then the same stroke with the
+# lower limit raised to 20% and the upper lowered to 70%, at stroke 100 and 0.
+# Simulator panel at 1600x1100 scrolled 3: lower +5 1560,712, upper -5 1338,768.
+#! covers src/UI/OFS_ScriptSimulator.* src/state/SimulatorState.h
+size 1600 1100
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 5
+key keypaddivide
+seek 6
+wait 5
+key keypad0
+seek 5
+wait 10
+click 1560 43
+wait 30
+shot 01-full-100
+seek 6
+wait 20
+shot 02-full-0
+move 1450 700
+wheel -3
+wait 10
+click 1560 712
+wait 3
+click 1560 712
+wait 3
+click 1560 712
+wait 3
+click 1560 712
+wait 3
+click 1338 768
+wait 3
+click 1338 768
+wait 3
+click 1338 768
+wait 3
+click 1338 768
+wait 3
+click 1338 768
+wait 3
+click 1338 768
+wait 10
+shot 03-limited-0
+seek 5
+wait 20
+shot 04-limited-100
+quit

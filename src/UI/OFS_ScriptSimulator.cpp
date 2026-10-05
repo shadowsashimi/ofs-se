@@ -779,7 +779,12 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
     constexpr float MaxTiltRadians = 0.5236f;  // 30 degrees
     constexpr float LateralTravel = 0.45f;
 
-    const float stroke = centered(axes.value[(int32_t)Axis::Stroke]);
+    // The stroke limits squeeze the script's 0 to 100 into the travel the
+    // machine is set to, as its L0 range would.
+    const float strokeMin = (float)Util::Clamp(state.StrokeMin, 0, 100);
+    const float strokeMax = (float)Util::Clamp(state.StrokeMax, 0, 100);
+    const float stroke = centered(strokeMin
+        + ((strokeMax - strokeMin) * (Util::Clamp(axes.value[(int32_t)Axis::Stroke], 0.f, 100.f) / 100.f)));
     const float surge = centered(axes.value[(int32_t)Axis::Surge]);
     const float sway = centered(axes.value[(int32_t)Axis::Sway]);
     const float twist = centered(axes.value[(int32_t)Axis::Twist]);
@@ -4451,6 +4456,18 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
         OFS::StepperFloat("Camera height (degrees)", "##CameraAngle", &state.CameraElevation, 5.f, -25.f, 75.f, "%.0f");
         OFS::Tooltip("Raises the viewpoint. 0 looks straight on. Raise it to tip the "
                      "underside into view, which is where the orifice is.");
+
+        // Each limit keeps at least one percent of travel to the other.
+        if (OFS::StepperInt("Stroke lower limit (%)", "##StrokeMin", &state.StrokeMin, 5, 0, 99)) {
+            state.StrokeMax = Util::Max(state.StrokeMax, state.StrokeMin + 1);
+        }
+        OFS::Tooltip("Where the model is at stroke 0, as a share of its full travel. "
+                     "Like the L0 lower limit of a machine.");
+        if (OFS::StepperInt("Stroke upper limit (%)", "##StrokeMax", &state.StrokeMax, 5, 1, 100)) {
+            state.StrokeMin = Util::Min(state.StrokeMin, state.StrokeMax - 1);
+        }
+        OFS::Tooltip("Where the model is at stroke 100, as a share of its full travel. "
+                     "Like the L0 upper limit of a machine.");
 
         ImGui::Checkbox("Cutaway case", &state.CutawayCase);
         OFS::Tooltip("Remove the near half of the case so the sleeve inside is visible.");
