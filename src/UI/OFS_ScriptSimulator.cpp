@@ -4018,7 +4018,9 @@ constexpr float FallAcceleration = 4.5f;
         // away from it there is no direction on screen to show, so it becomes
         // a dot, filled facing the camera and hollow facing away. Drawn after
         // the model, so the case does not cover it when it lies over the case.
-        if(state.ShowTwistIndicator) {
+        // Not while posing: the twist ring's knob shows the same, and the two
+        // sat on top of each other at the tip.
+        if(state.ShowTwistIndicator && !posingThisFrame) {
             float caseRadius = 0.f;
             for (const auto& profileRing : Profile) caseRadius = Util::Max(caseRadius, profileRing.r * Radius);
             const float topY = Profile[0].y * HalfLength;
@@ -4355,6 +4357,8 @@ constexpr float PoseRingRadius = 1.25f * ModelRadius;
 constexpr float PoseFloorY = -ModelStrokeTravel + ModelLipSeatDepth;  // plus the vulva's height, below
 constexpr float PoseFloorHalf = 0.13f;
 constexpr int32_t PoseRingSamples = 64;
+// Half the length of the case's grip on screen, in pixels.
+constexpr float PoseCaseHalfLength = 12.f;
 
 // Which axes each handle moves. -1 for none.
 constexpr int32_t PoseHandleAxes[(int32_t)PoseHandle::Count][2] = {
@@ -4604,7 +4608,158 @@ const char* PoseHandleMissing[(int32_t)PoseHandle::Count] = {
     "No roll or pitch track. Add them from Add in the Tracks panel.",
     "No surge or sway track. Add them from Add in the Tracks panel.",
 };
-const char* PoseAxisNames[AxisCount] = { "stroke", "surge", "sway", "twist", "roll", "pitch" };
+
+const char* PoseAxisLabels[AxisCount] = { "Stroke", "Surge", "Sway", "Twist", "Roll", "Pitch" };
+const char* PoseAxisNamesLower[AxisCount] = { "stroke", "surge", "sway", "twist", "roll", "pitch" };
+
+// ---- The handles' look ------------------------------------------------------
+// Knobs like a slider's thumb: a white disc lifted off the scene by a soft
+// shadow, filling with the accent while dragged. Everything a little
+// translucent, so the video still reads through.
+
+uint32_t poseColor(uint32_t rgb, float alpha) noexcept
+{
+    const uint32_t a = (uint32_t)(Util::Clamp(alpha, 0.f, 1.f) * 255.f);
+    return IM_COL32((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, a);
+}
+
+uint32_t poseAccent(float alpha) noexcept
+{
+    const uint32_t accent = OFS_Sashimi::Role().AccentBright;
+    const uint32_t a = (uint32_t)(Util::Clamp(alpha, 0.f, 1.f) * 255.f);
+    return (accent & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
+}
+
+struct PoseLook
+{
+    bool usable = true;
+    bool active = false;
+    // 0 at rest to 1 under the mouse.
+    float grow = 0.f;
+    // Less while the mouse is away from the model.
+    float strength = 1.f;
+};
+
+// A soft shadow under a round shape: a few wide, faint discs, offset down.
+void poseShadow(ImDrawList* drawList, ImVec2 at, float radius, float strength) noexcept
+{
+    drawList->AddCircleFilled(at + ImVec2(0.f, 1.5f), radius + 3.f, poseColor(0x000000, 0.10f * strength), 24);
+    drawList->AddCircleFilled(at + ImVec2(0.f, 1.f), radius + 1.5f, poseColor(0x000000, 0.22f * strength), 24);
+}
+
+void poseKnob(ImDrawList* drawList, ImVec2 at, float radius, const PoseLook& l) noexcept
+{
+    const float r = radius * (1.f + (0.3f * l.grow));
+    if (!l.usable) {
+        drawList->AddCircleFilled(at, r, poseColor(0x8C8C8C, 0.45f * l.strength), 24);
+        drawList->AddCircle(at, r, poseColor(0x000000, 0.25f * l.strength), 24, 1.f);
+        return;
+    }
+    poseShadow(drawList, at, r, l.strength);
+    if (l.active) {
+        drawList->AddCircleFilled(at, r, poseAccent(1.f), 24);
+        drawList->AddCircle(at, r, poseColor(0xFFFFFF, 0.95f), 24, 1.5f);
+    }
+    else {
+        drawList->AddCircleFilled(at, r, poseColor(0xF7F7F7, 0.97f * l.strength), 24);
+        drawList->AddCircle(at, r, poseColor(0x000000, 0.18f * l.strength), 24, 1.f);
+        if (l.grow > 0.05f) drawList->AddCircle(at, r + 2.5f, poseAccent(0.8f * l.grow), 24, 1.5f);
+    }
+}
+
+// A capsule centred on at, lying along dir, with two short grabber lines
+// across it.
+void poseCapsule(ImDrawList* drawList, ImVec2 at, ImVec2 dir, float halfLength, float radius,
+    const PoseLook& l) noexcept
+{
+    const float r = radius * (1.f + (0.25f * l.grow));
+    const float half = halfLength * (1.f + (0.15f * l.grow));
+    const ImVec2 side(-dir.y, dir.x);
+    constexpr int32_t Arc = 10;
+    ImVec2 outline[(Arc + 1) * 2];
+    int32_t n = 0;
+    for (int32_t i = 0; i <= Arc; i += 1) {
+        const float t = (float)M_PI * (float)i / (float)Arc;
+        outline[n++] = at + dir * half + (side * std::cos(t) + dir * std::sin(t)) * r;
+    }
+    for (int32_t i = 0; i <= Arc; i += 1) {
+        const float t = (float)M_PI * (float)i / (float)Arc;
+        outline[n++] = at - dir * half - (side * std::cos(t) + dir * std::sin(t)) * r;
+    }
+    if (l.usable) {
+        ImVec2 shadowed[(Arc + 1) * 2];
+        for (int32_t i = 0; i < n; i += 1) shadowed[i] = outline[i] + ImVec2(0.f, 1.5f);
+        drawList->AddConvexPolyFilled(shadowed, n, poseColor(0x000000, 0.25f * l.strength));
+    }
+    const uint32_t fill = !l.usable ? poseColor(0x8C8C8C, 0.45f * l.strength)
+        : l.active ? poseAccent(1.f) : poseColor(0xF7F7F7, 0.97f * l.strength);
+    drawList->AddConvexPolyFilled(outline, n, fill);
+    drawList->AddPolyline(outline, n, l.active ? poseColor(0xFFFFFF, 0.95f) : poseColor(0x000000, 0.18f * l.strength),
+        ImDrawFlags_Closed, l.active ? 1.5f : 1.f);
+    if (l.usable && !l.active && l.grow > 0.05f) {
+        drawList->AddPolyline(outline, n, poseAccent(0.8f * l.grow), ImDrawFlags_Closed, 1.5f);
+    }
+    const uint32_t grab = l.active ? poseColor(0xFFFFFF, 0.9f) : poseColor(0x000000, 0.35f * l.strength);
+    for (float o : { -2.5f, 2.5f }) {
+        drawList->AddLine(at + dir * o - side * (r * 0.55f), at + dir * o + side * (r * 0.55f), grab, 1.f);
+    }
+}
+
+// Two chevrons either side of a handle, pointing the ways it goes, and a
+// name by the outer one when given.
+void poseChevrons(ImDrawList* drawList, ImVec2 at, ImVec2 dir, float reach, uint32_t color, const char* label) noexcept
+{
+    const float len = std::sqrt(ImLengthSqr(dir));
+    if (len < 1e-4f) return;
+    const ImVec2 n = dir * (1.f / len);
+    const ImVec2 side(-n.y, n.x);
+    for (float s : { 1.f, -1.f }) {
+        const ImVec2 tip = at + n * (reach * s);
+        const ImVec2 back = tip - n * (5.f * s);
+        const ImVec2 wing[3] = { back + side * 4.5f, tip, back - side * 4.5f };
+        drawList->AddPolyline(wing, 3, poseColor(0x000000, 0.35f), 0, 3.5f);
+        drawList->AddPolyline(wing, 3, color, 0, 1.75f);
+    }
+    if (label) {
+        const ImVec2 size = ImGui::CalcTextSize(label);
+        const ImVec2 spot = at + n * (reach + 8.f) + side * 6.f;
+        drawList->AddText(spot - ImVec2(0.f, size.y * 0.5f) + ImVec2(1.f, 1.f), poseColor(0x000000, 0.6f), label);
+        drawList->AddText(spot - ImVec2(0.f, size.y * 0.5f), color, label);
+    }
+}
+
+// A rounded label: dark, translucent, a hairline edge, the main text bright
+// and an optional note after it in a quieter tone. Kept inside the window,
+// flipping to the other side of at when it would run off the right.
+void posePill(ImDrawList* drawList, ImVec2 at, const char* text, const char* note, bool beside) noexcept
+{
+    const ImVec2 main = ImGui::CalcTextSize(text);
+    const ImVec2 extra = note ? ImGui::CalcTextSize(note) : ImVec2(0.f, 0.f);
+    const float gap = note ? 16.f : 0.f;
+    const ImVec2 pad(11.f, 5.f);
+    const ImVec2 size(main.x + gap + extra.x + (pad.x * 2.f), main.y + (pad.y * 2.f));
+    ImVec2 min = at;
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    if (beside && min.x + size.x > viewport->Pos.x + viewport->Size.x - 4.f) {
+        min.x = at.x - 36.f - size.x;
+    }
+    const ImVec2 max = min + size;
+    const float round = size.y * 0.5f;
+    drawList->AddRectFilled(min + ImVec2(0.f, 2.f), max + ImVec2(0.f, 2.f), poseColor(0x000000, 0.25f), round);
+    drawList->AddRectFilled(min, max, poseColor(0x1C1C1E, 0.90f), round);
+    drawList->AddRect(min, max, poseColor(0xFFFFFF, 0.10f), round, 0, 1.f);
+    drawList->AddText(min + pad, poseColor(0xFFFFFF, 0.96f), text);
+    if (note) drawList->AddText(min + pad + ImVec2(main.x + gap, 0.f), poseColor(0xFFFFFF, 0.55f), note);
+}
+
+// The track that drives an axis, or nothing.
+std::shared_ptr<Funscript> poseScriptFor(int32_t axis) noexcept
+{
+    for (auto& script : OpenFunscripter::ptr->LoadedFunscripts()) {
+        if (AxisFromLabel(AxisLabel(script.get())) == axis) return script;
+    }
+    return nullptr;
+}
 
 bool poseHandleUsable(PoseHandle handle, const bool* hasTrack) noexcept
 {
@@ -4633,6 +4788,12 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
     if (PoseDragging != PoseHandle::None) {
         poseTookMouse = true;
         ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+        // Escape drops the pose: nothing is written, and the model goes back
+        // to what the scripts say.
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+            cancelPose(simId);
+            return;
+        }
         if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
             commitPose(hasTrack);
             PoseDragging = PoseHandle::None;
@@ -4696,6 +4857,19 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
             poseRingAngleAt(state, value, mouse, center, scale, &dist);
             if (dist > 6.f) continue;
         }
+        else if (handle == PoseHandle::Case) {
+            // Anywhere along the capsule drawn for it.
+            const ImVec2 at = poseAnchor(handle, state, value, center, scale);
+            float up[AxisCount];
+            for (int32_t i = 0; i < AxisCount; i += 1) up[i] = value[i];
+            up[0] = value[0] < 90.f ? value[0] + 10.f : value[0] - 10.f;
+            ImVec2 along = poseAnchor(handle, state, up, center, scale) - at;
+            const float len = std::sqrt(ImLengthSqr(along));
+            along = len > 1e-3f ? along * (1.f / len) : ImVec2(0.f, -1.f);
+            const float t = Util::Clamp(ImDot(mouse - at, along), -PoseCaseHalfLength, PoseCaseHalfLength);
+            dist = std::sqrt(ImLengthSqr(at + along * t - mouse));
+            if (dist > Reach) continue;
+        }
         else {
             dist = std::sqrt(ImLengthSqr(poseAnchor(handle, state, value, center, scale) - mouse));
             if (dist > Reach) continue;
@@ -4718,8 +4892,25 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
     if (tipTime > io.HoverDelayNormal) {
         OFS::ShowWrappedTooltip(usable
             ? (std::string(PoseHandleTips[(int32_t)hit])
-                + " Letting go adds a point at the playhead. Ctrl drags slowly, Ctrl+Shift snaps to 5.").c_str()
+                + " Letting go adds a point at the playhead; Escape cancels. Ctrl drags slowly, "
+                  "Ctrl+Shift snaps to 5. Double click to set it back to the middle.").c_str()
             : PoseHandleMissing[(int32_t)hit]);
+    }
+    if (usable && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+        // A double click sets the handle's axes back to the middle, 50, and
+        // writes that like a drag would: a quick way to level a tilt or
+        // straighten a twist.
+        PoseDragging = hit;
+        for (int32_t i = 0; i < AxisCount; i += 1) {
+            poseStart[i] = value[i];
+            poseOverride[i] = -1.f;
+        }
+        for (int32_t axis : PoseHandleAxes[(int32_t)hit]) {
+            if (axis >= 0 && hasTrack[axis]) poseOverride[axis] = 50.f;
+        }
+        commitPose(hasTrack);
+        PoseDragging = PoseHandle::None;
+        return;
     }
     if (usable && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
         ImGui::SetActiveID(simId, ImGui::GetCurrentWindowRead());
@@ -4748,12 +4939,7 @@ void ScriptSimulator::commitPose(const bool* hasTrack) noexcept
         if (axis < 0 || !hasTrack[axis] || poseOverride[axis] < 0.f) continue;
         const int32_t pos = (int32_t)std::round(poseOverride[axis]);
         if (pos == (int32_t)std::round(poseStart[axis])) continue;
-        for (auto& script : app->LoadedFunscripts()) {
-            if (AxisFromLabel(AxisLabel(script.get())) == axis) {
-                writes.emplace_back(script, pos);
-                break;
-            }
-        }
+        if (auto script = poseScriptFor(axis)) writes.emplace_back(script, pos);
     }
     for (int32_t i = 0; i < AxisCount; i += 1) poseOverride[i] = -1.f;
     if (writes.empty()) return;
@@ -4766,6 +4952,13 @@ void ScriptSimulator::commitPose(const bool* hasTrack) noexcept
     }
 }
 
+void ScriptSimulator::cancelPose(ImGuiID simId) noexcept
+{
+    PoseDragging = PoseHandle::None;
+    for (auto& v : poseOverride) v = -1.f;
+    if (ImGui::GetActiveID() == simId) ImGui::ClearActiveID();
+}
+
 void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState& state,
     const MultiAxisValues& axes, const bool* hasTrack, ImVec2 center, float scale) noexcept
 {
@@ -4774,42 +4967,62 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
         value[i] = poseOverride[i] >= 0.f ? poseOverride[i] : axes.value[i];
     }
 
-    auto colorFor = [&](PoseHandle handle) noexcept -> uint32_t {
-        if (!poseHandleUsable(handle, hasTrack)) return IM_COL32(0x70, 0x70, 0x70, 0x70);
-        if (PoseDragging == handle) return OFS_Sashimi::Role().AccentBright;
-        if (PoseHovered == handle) return OFS_Sashimi::Role().Accent;
-        return IM_COL32(0xE8, 0xE8, 0xE8, 0xD0);
+    // Faint while the mouse is away from the model, so the handles stay out
+    // of the way of the video, and at full strength as it comes near.
+    const ImVec2 mouse = ImGui::GetIO().MousePos;
+    constexpr float Near = 40.f;
+    const bool near = PoseDragging != PoseHandle::None
+        || (mouse.x >= FrameMin.x - Near && mouse.x <= FrameMax.x + Near
+            && mouse.y >= FrameMin.y - Near && mouse.y <= FrameMax.y + Near);
+    const float strength = near ? 1.f : 0.35f;
+
+    // Each handle grows a little under the mouse and while dragged, eased
+    // rather than snapping.
+    const float dt = ImGui::GetIO().DeltaTime;
+    for (int32_t h = 0; h < (int32_t)PoseHandle::Count; h += 1) {
+        const bool lit = PoseHovered == (PoseHandle)h || PoseDragging == (PoseHandle)h;
+        poseGrow[h] += ((lit ? 1.f : 0.f) - poseGrow[h]) * Util::Min(1.f, dt * 14.f);
+    }
+    auto look = [&](PoseHandle handle) noexcept {
+        PoseLook l;
+        l.usable = poseHandleUsable(handle, hasTrack);
+        l.active = PoseDragging == handle;
+        l.grow = poseGrow[(int32_t)handle];
+        l.strength = strength;
+        return l;
     };
-    const uint32_t shadow = IM_COL32(0x10, 0x10, 0x10, 0xB0);
 
     for (int32_t h = 0; h < (int32_t)PoseHandle::Count; h += 1) {
         PoseHandleScreen[h] = poseAnchor((PoseHandle)h, state, value, center, scale);
     }
 
-    // Twist ring, with a knob on the front so twisting shows. Drawn first,
-    // so the other handles sit on top of it.
+    // Twist ring: a fine line round the body, with a knob on the front that
+    // turns with it. Drawn first, so the other handles sit on top of it.
     {
-        const uint32_t color = colorFor(PoseHandle::Ring);
+        const PoseLook l = look(PoseHandle::Ring);
         ImVec2 points[PoseRingSamples];
         for (int32_t k = 0; k < PoseRingSamples; k += 1) {
             const float angle = ((float)k / (float)PoseRingSamples) * 2.f * (float)M_PI;
             points[k] = poseRingPoint(state, value, angle, center, scale);
         }
-        drawList->AddPolyline(points, PoseRingSamples, shadow, ImDrawFlags_Closed, 4.f);
-        drawList->AddPolyline(points, PoseRingSamples, color, ImDrawFlags_Closed, 2.f);
+        const uint32_t line = !l.usable ? poseColor(0x8C8C8C, 0.30f * strength)
+            : (l.active || l.grow > 0.5f) ? poseAccent(0.95f)
+            : poseColor(0xFFFFFF, 0.55f * strength);
+        drawList->AddPolyline(points, PoseRingSamples, poseColor(0x000000, 0.25f * strength), ImDrawFlags_Closed, 3.5f);
+        drawList->AddPolyline(points, PoseRingSamples, line, ImDrawFlags_Closed, 1.5f + l.grow * 0.5f);
         // On the front of the body, which faces the viewer at -z, turning
         // with it.
         const PoseFrame knobFrame = makePoseFrame(state, value);
         const ImVec2 knob = project(knobFrame.toWorld(Vec3{ 0.f, knobFrame.strokeOffset + PoseRingY, -PoseRingRadius }),
             center, scale);
         PoseHandleScreen[(int32_t)PoseHandle::Ring] = knob;
-        drawList->AddCircleFilled(knob, 5.f, shadow);
-        drawList->AddCircleFilled(knob, 4.f, color);
+        poseKnob(drawList, knob, 4.5f, l);
     }
 
-    // Case: a double arrow along the body at the grip.
+    // Case: a capsule grip lying along the body, with two grabber lines
+    // across it, the way a sheet's handle reads as something to pull.
     {
-        const uint32_t color = colorFor(PoseHandle::Case);
+        const PoseLook l = look(PoseHandle::Case);
         const ImVec2 at = PoseHandleScreen[(int32_t)PoseHandle::Case];
         float up[AxisCount];
         for (int32_t i = 0; i < AxisCount; i += 1) up[i] = value[i];
@@ -4821,18 +5034,13 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
         }
         const float len = std::sqrt(ImLengthSqr(along));
         const ImVec2 dir = len > 1e-3f ? along * (1.f / len) : ImVec2(0.f, -1.f);
-        const ImVec2 side(-dir.y, dir.x);
-        const ImVec2 a = at + dir * 13.f;
-        const ImVec2 b = at - dir * 13.f;
-        drawList->AddLine(a, b, shadow, 5.f);
-        drawList->AddLine(a, b, color, 2.f);
-        drawList->AddTriangleFilled(a + dir * 4.f, a - dir * 3.f + side * 5.f, a - dir * 3.f - side * 5.f, color);
-        drawList->AddTriangleFilled(b - dir * 4.f, b + dir * 3.f + side * 5.f, b + dir * 3.f - side * 5.f, color);
+        poseCapsule(drawList, at, dir, PoseCaseHalfLength, 4.5f, l);
     }
 
-    // Floor square: on the ground under the body, moving with surge and sway.
+    // Floor square: on the ground under the body, moving with surge and
+    // sway. A faint tile with a knob in the middle.
     {
-        const uint32_t color = colorFor(PoseHandle::Floor);
+        const PoseLook l = look(PoseHandle::Floor);
         const PoseFrame f = makePoseFrame(state, value);
         const float y = poseFloorY();
         const Vec3 c{ f.worldOffset.x, y, f.worldOffset.z };
@@ -4842,46 +5050,31 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
             project(f.camera(Vec3{ c.x + PoseFloorHalf, y, c.z + PoseFloorHalf }), center, scale),
             project(f.camera(Vec3{ c.x - PoseFloorHalf, y, c.z + PoseFloorHalf }), center, scale),
         };
-        drawList->AddPolyline(corners, 4, shadow, ImDrawFlags_Closed, 4.f);
-        drawList->AddPolyline(corners, 4, color, ImDrawFlags_Closed, 2.f);
-        drawList->AddCircleFilled(PoseHandleScreen[(int32_t)PoseHandle::Floor], 3.f, color);
+        const float a = l.usable ? strength : 0.4f * strength;
+        drawList->AddConvexPolyFilled(corners, 4, (l.active || l.grow > 0.5f) ? poseAccent(0.18f) : poseColor(0xFFFFFF, 0.08f * a));
+        drawList->AddPolyline(corners, 4, (l.active || l.grow > 0.5f) ? poseAccent(0.9f) : poseColor(0xFFFFFF, 0.45f * a),
+            ImDrawFlags_Closed, 1.5f);
+        poseKnob(drawList, PoseHandleScreen[(int32_t)PoseHandle::Floor], 4.5f, l);
     }
 
-    // Tip: a dot on the closed end.
-    {
-        const uint32_t color = colorFor(PoseHandle::Tip);
-        const ImVec2 at = PoseHandleScreen[(int32_t)PoseHandle::Tip];
-        drawList->AddCircleFilled(at, 7.f, shadow);
-        drawList->AddCircleFilled(at, 5.5f, color);
-    }
+    // Tip: the biggest knob, on the closed end, since it carries two axes.
+    poseKnob(drawList, PoseHandleScreen[(int32_t)PoseHandle::Tip], 6.f, look(PoseHandle::Tip));
 
     // Which way each axis goes, on the handle under the mouse or being
-    // dragged: a solid double arrow where the axis moves the handle on
-    // screen, and a fainter one, labelled, for an axis seen end on, which is
-    // dragged up and down instead, up being away from the viewer.
+    // dragged: chevrons where the axis moves the handle on screen, and for
+    // an axis seen end on, which is dragged up and down instead with up
+    // away from the viewer, softer ones with its name.
     const PoseHandle shown = PoseDragging != PoseHandle::None ? PoseDragging : PoseHovered;
     ImVec2 dirs[2] = { ImVec2(0.f, 0.f), ImVec2(0.f, 0.f) };
     bool endOn[2] = { false, false };
     if (shown != PoseHandle::None && poseHandleUsable(shown, hasTrack)) {
         const ImVec2 at = PoseHandleScreen[(int32_t)shown];
-        auto arrow = [&](ImVec2 dir, uint32_t color, const char* label) noexcept {
-            const float len = std::sqrt(ImLengthSqr(dir));
-            if (len < 1e-4f) return;
-            const ImVec2 n = dir * (1.f / len);
-            const ImVec2 side(-n.y, n.x);
-            const ImVec2 a = at + n * 22.f;
-            const ImVec2 b = at - n * 22.f;
-            drawList->AddLine(a, b, shadow, 4.f);
-            drawList->AddLine(a, b, color, 1.5f);
-            drawList->AddTriangleFilled(a + n * 3.f, a - n * 4.f + side * 4.f, a - n * 4.f - side * 4.f, color);
-            drawList->AddTriangleFilled(b - n * 3.f, b + n * 4.f + side * 4.f, b + n * 4.f - side * 4.f, color);
-            if (label) drawList->AddText(a + n * 6.f + side * 4.f, color, label);
-        };
+        const float reach = 18.f + 6.f * poseGrow[(int32_t)shown];
         if (shown == PoseHandle::Ring) {
             ImVec2 across;
             const float open = poseRingOpenness(state, value, center, scale, &across, nullptr);
             if (open < PoseRingOpenEnough && hasTrack[3]) {
-                arrow(across, OFS_Sashimi::Role().AccentBright, nullptr);
+                poseChevrons(drawList, at, across, reach, poseColor(0xFFFFFF, 0.9f), nullptr);
             }
         }
         else {
@@ -4889,34 +5082,46 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
             const auto& handleAxes = PoseHandleAxes[(int32_t)shown];
             for (int32_t k = 0; k < 2; k += 1) {
                 if (handleAxes[k] < 0) continue;
-                arrow(dirs[k], endOn[k] ? IM_COL32(0xF2, 0xA6, 0xC4, 0xC0) : OFS_Sashimi::Role().AccentBright,
-                    endOn[k] ? PoseAxisNames[handleAxes[k]] : nullptr);
+                poseChevrons(drawList, at, dirs[k], reach,
+                    endOn[k] ? poseAccent(0.85f) : poseColor(0xFFFFFF, 0.9f),
+                    endOn[k] ? PoseAxisLabels[handleAxes[k]] : nullptr);
             }
         }
     }
 
-    // While dragging, what is being set, by the mouse.
+    // While dragging, what is being set, by the mouse, as a pill: each axis
+    // and its value, and in a quieter tone whether a point already at the
+    // playhead is about to be replaced.
     if (PoseDragging != PoseHandle::None) {
         std::string text;
         const auto& handleAxes = PoseHandleAxes[(int32_t)PoseDragging];
         for (int32_t k = 0; k < 2; k += 1) {
             const int32_t axis = handleAxes[k];
             if (axis < 0 || !hasTrack[axis]) continue;
-            if (!text.empty()) text += "   ";
-            text += PoseAxisNames[axis];
+            if (!text.empty()) text += "  \xC2\xB7  ";
+            text += PoseAxisLabels[axis];
             text += " ";
             text += std::to_string((int32_t)std::round(value[axis]));
-            if (endOn[k]) text += " (up/down)";
         }
-        const ImVec2 size = ImGui::CalcTextSize(text.c_str());
-        ImVec2 at = ImGui::GetIO().MousePos + ImVec2(16.f, 12.f);
-        // To the left of the mouse instead where it would run off the window.
-        const ImGuiViewport* viewport = ImGui::GetMainViewport();
-        if (at.x + size.x + 8.f > viewport->Pos.x + viewport->Size.x) {
-            at.x = ImGui::GetIO().MousePos.x - 16.f - size.x;
+        std::string note;
+        for (int32_t k = 0; k < 2; k += 1) {
+            if (handleAxes[k] >= 0 && hasTrack[handleAxes[k]] && endOn[k]) {
+                note = std::string("drag up and down for ") + PoseAxisNamesLower[handleAxes[k]];
+            }
         }
-        drawList->AddRectFilled(at - ImVec2(5.f, 3.f), at + size + ImVec2(5.f, 3.f), IM_COL32(0x10, 0x10, 0x10, 0xD8), 4.f);
-        drawList->AddText(at, IM_COL32(0xF2, 0xF2, 0xF2, 0xFF), text.c_str());
+        auto app = OpenFunscripter::ptr;
+        const float time = app->player->CurrentTime();
+        const float frameTime = app->scripting->LogicalFrameTime();
+        for (int32_t axis : handleAxes) {
+            if (axis < 0 || !hasTrack[axis]) continue;
+            auto script = poseScriptFor(axis);
+            if (script && script->GetActionAtTime(time, frameTime) != nullptr) {
+                if (!note.empty()) note += ", ";
+                note += "replaces the point here";
+                break;
+            }
+        }
+        posePill(drawList, mouse + ImVec2(18.f, 14.f), text.c_str(), note.empty() ? nullptr : note.c_str(), true);
     }
 }
 
@@ -5327,6 +5532,7 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
 
     poseTookMouse = false;
     PoseHandlesShown = false;
+    PoseHintShown = false;
     if(state.ShowMultiAxis) {
         // Every loaded script feeds one degree of freedom of a single model.
         MultiAxisValues axes;
@@ -5382,9 +5588,7 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
         }
         else if (PoseDragging != PoseHandle::None) {
             // Played or switched off mid drag: the pose is dropped unwritten.
-            PoseDragging = PoseHandle::None;
-            for (auto& v : poseOverride) v = -1.f;
-            if (ImGui::GetActiveID() == simId) ImGui::ClearActiveID();
+            cancelPose(simId);
         }
         for (int32_t i = 0; i < (int32_t)Axis::Count; i += 1) {
             if (poseOverride[i] >= 0.f) {
@@ -5394,9 +5598,19 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
         }
 
         ModelDrawnValid = false;
+        posingThisFrame = posing;
         drawMultiAxisModel(frontDraw, state, axes, modelCenter, modelScale);
         if (posing) drawPoseHandles(frontDraw, state, axes, hasTrack, modelCenter, modelScale);
         PoseHandlesShown = posing;
+        // The handles go while playing, since the pose is written at the
+        // playhead. Say why, rather than have them simply vanish.
+        PoseHintShown = state.PoseHandles && !posing && app->LoadedProject->IsValid() && ModelDrawnValid;
+        if (PoseHintShown) {
+            const char* hint = "Pause to pose";
+            const float width = ImGui::CalcTextSize(hint).x + 22.f;
+            posePill(frontDraw, ImVec2(((ModelDrawnMin.x + ModelDrawnMax.x) - width) * 0.5f, ModelDrawnMax.y + 8.f),
+                hint, nullptr, false);
+        }
         if (ModelDrawnValid) {
             fitRelMin = (ModelDrawnMin - modelCenter) / modelScale;
             fitRelMax = (ModelDrawnMax - modelCenter) / modelScale;

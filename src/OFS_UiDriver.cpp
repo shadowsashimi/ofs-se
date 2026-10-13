@@ -946,6 +946,7 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
     }
     add("simulator_mode", std::to_string((int32_t)app->simulator.CurrentMode()));
     add("pose_shown", flag(app->simulator.PoseHandlesShown));
+    add("pose_hint", flag(app->simulator.PoseHintShown));
     add("pose_hovered", std::to_string((int32_t)app->simulator.PoseHovered));
     add("pose_dragging", std::to_string((int32_t)app->simulator.PoseDragging));
     {

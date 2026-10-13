@@ -75,6 +75,14 @@ release left
 wait 10
 expect actions:uitest.pitch 1
 
+note the case's grip can be taken anywhere along it, not only at its middle
+posehandle case 0 9
+wait 5
+expect pose_hovered 0
+posehandle case 0 -9
+wait 5
+expect pose_hovered 0
+
 note one undo takes the last pose, the pitch point, back out
 key ctrl+z
 wait 5
@@ -129,6 +137,34 @@ release left
 wait 10
 expect actions:uitest.twist 2
 
+note Escape mid drag drops the pose: nothing is written
+posehandle tip
+wait 5
+press left
+wait 3
+posehandle tip 25 0
+wait 3
+key escape
+wait 3
+expect pose_dragging -1
+release left
+wait 10
+expect actions:uitest.roll 1
+
+note a double click on the tip levels it: roll and pitch back to 50, written at the playhead
+seek 7
+wait 10
+posehandle tip
+wait 5
+tap
+wait 3
+tap
+wait 10
+state 06-levelled
+expect actions:uitest.roll 2
+expect actions:uitest.pitch 2
+shot 06-levelled
+
 note the floor square has no surge or sway track to write, so it does nothing
 posehandle floor
 wait 5
@@ -141,11 +177,14 @@ release left
 wait 10
 expect scripts 4
 
-note the handles are hidden while playing
+note the handles are hidden while playing, and the model says why
 play
 wait 20
 expect pose_shown 0
+expect pose_hint 1
+shot 07-pause-to-pose
 pause
 wait 10
 expect pose_shown 1
+expect pose_hint 0
 quit

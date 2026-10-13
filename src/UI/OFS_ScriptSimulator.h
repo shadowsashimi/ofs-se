@@ -228,6 +228,8 @@ public:
 	bool PoseHandlesShown = false;
 	PoseHandle PoseHovered = PoseHandle::None;
 	PoseHandle PoseDragging = PoseHandle::None;
+	// "Pause to pose" is showing under the model: handles on, but playing.
+	bool PoseHintShown = false;
 	// The pose being dragged to on an axis, or below zero when none is.
 	inline float PoseValue(int32_t axis) const noexcept { return poseOverride[axis]; }
 private:
@@ -238,14 +240,20 @@ private:
 	float poseOverride[(int32_t)Axis::Count] = { -1.f, -1.f, -1.f, -1.f, -1.f, -1.f };
 	ImVec2 poseLastMouse = ImVec2(0.f, 0.f);
 	float poseLastRingAngle = 0.f;
+	// How far each handle has grown under the mouse, eased, 0 to 1.
+	float poseGrow[(int32_t)PoseHandle::Count] = {};
 	// Whether a handle has the mouse this frame, which keeps the frame's own
 	// move and resize from taking it too.
 	bool poseTookMouse = false;
+	// The handles are up this frame, which the model's own twist marker
+	// makes way for.
+	bool posingThisFrame = false;
 	void updatePoseHandles(const struct SimulatorState& state, const MultiAxisValues& axes,
 		const bool* hasTrack, ImVec2 center, float scale, ImGuiID simId) noexcept;
 	void drawPoseHandles(struct ImDrawList* drawList, const struct SimulatorState& state,
 		const MultiAxisValues& axes, const bool* hasTrack, ImVec2 center, float scale) noexcept;
 	void commitPose(const bool* hasTrack) noexcept;
+	void cancelPose(ImGuiID simId) noexcept;
 public:
 	// What the tip holds up in the canal, fallen back onto it short of the
 	// cervix, in the same units as the pile.
