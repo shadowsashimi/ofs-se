@@ -1,0 +1,30 @@
+# A sound effect under a second long, as SFX packs have, opened on its own and
+# then a second one on top. The waveform is made for audio without asking,
+# and caching it must cope with how little there is.
+#! covers OFS-lib/state/states/WaveformState.h OFS-lib/UI/OFS_Waveform.* OFS-lib/UI/OFS_ScriptTimeline.* src/OpenFunscripter.cpp:autoWaveformForAudio
+#! media wav-short wav-tiny
+size 1600 900
+wait 30
+open $MEDIA
+wait 120
+expect project_valid 1
+expect audio_only 1
+waituntil duration >= 0.01 120
+wait 300
+expect waveform_busy 0
+state 01-loaded
+shot 01-loaded
+
+note play it through, past the end and round again
+play
+wait 120
+pause
+wait 10
+
+note open it again while it is still fresh, which reads the cached waveform
+open $MEDIA
+wait 300
+expect project_valid 1
+expect waveform_busy 0
+state 02-reopened
+quit

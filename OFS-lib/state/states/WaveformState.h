@@ -3,6 +3,7 @@
 #include "OFS_StateHandle.h"
 #include "OFS_BinarySerialization.h"
 
+#include <memory>
 #include <vector>
 #include <cstdint>
 
@@ -50,11 +51,15 @@ struct WaveformState
 
         UncompressedSize = size;
 
+        // Deflate can come out larger than what goes in, which a sound effect
+        // under a second long does, and sdeflate writes without checking. So
+        // the buffer is sized for the worst case rather than the input.
         std::vector<uint8_t> compressedBin;
-        compressedBin.resize(size);
+        compressedBin.resize(sdefl_bound((int)size));
 
-        sdefl ctx = {0};
-        auto compressedSize = sdeflate(&ctx, compressedBin.data(), BinSamples.data(), BinSamples.size(), 8);
+        // Most of a megabyte, so not on the stack.
+        auto ctx = std::make_unique<sdefl>();
+        auto compressedSize = sdeflate(ctx.get(), compressedBin.data(), BinSamples.data(), BinSamples.size(), 8);
         compressedBin.resize(compressedSize);
         BinSamples = std::move(compressedBin);
     }

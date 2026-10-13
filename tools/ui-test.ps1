@@ -73,6 +73,13 @@ $generated = [ordered]@{
     'm4a-cover' = @{ File = 'cover.m4a'; From = 'm4a'; Cover = $true }
     # The video under a name with dots of its own, as downloads often have.
     'dotted'    = @{ File = 'Site.COM - clip.mp4'; From = 'video' }
+    # Sound effects, as they come in SFX packs: under a second, uncompressed.
+    'wav-short' = @{ File = 'sfx-short.wav'; Args = @(
+        '-f', 'lavfi', '-i', "aevalsrc='0.8*sin(2*PI*880*t)*exp(-8*t)|0.8*sin(2*PI*660*t)*exp(-8*t)':s=44100:d=0.4",
+        '-c:a', 'pcm_s16le') }
+    'wav-tiny'  = @{ File = 'sfx-tiny.wav'; Args = @(
+        '-f', 'lavfi', '-i', "aevalsrc='0.8*sin(2*PI*880*t)':s=22050:d=0.05",
+        '-c:a', 'pcm_u8') }
 }
 
 function Get-GeneratedMedia([string] $name) {
