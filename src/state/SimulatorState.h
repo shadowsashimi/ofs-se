@@ -26,8 +26,9 @@ struct SimulatorState
     int32_t ExtraLinesCount = 0;
 
     // Replaces the flat bar with a 3D model of the stroker driven by every
-    // loaded axis at once.
-    bool ShowMultiAxis = false;
+    // loaded axis at once. The default: it shows every axis, where the bar
+    // shows one.
+    bool ShowMultiAxis = true;
     // Size of that model relative to the configured bar length.
     float ModelScale = 1.f;
     // Print the live value of each mapped axis next to the model.
@@ -64,8 +65,10 @@ struct SimulatorState
     bool LockedPosition = true;
     // Keep the simulator inside the video player, sized to it, following the
     // player as its window is moved or resized. Which side it sits against,
-    // 0 left, 1 centre, 2 right, and how tall, as a share of the player.
-    bool FitToPlayer = false;
+    // 0 left, 1 centre, 2 right, and how tall, as a share of the player. On to
+    // begin with, against the right, so the model starts somewhere sensible
+    // over the video whatever size the window is.
+    bool FitToPlayer = true;
     int32_t FitAnchor = 2;
     float FitSize = 0.9f;
 
