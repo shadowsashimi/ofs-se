@@ -63,6 +63,9 @@ struct SimulatorState
     // wherever it is drawn, and its default place overlaps the timeline, so a
     // new user's first attempts at placing a point moved the simulator.
     bool LockedPosition = true;
+    // Experimental: handles on the 3D model to pose it and write the pose as
+    // points. Off unless asked for.
+    bool PoseHandles = false;
     // Keep the simulator inside the video player, sized to it, following the
     // player as its window is moved or resized. Which side it sits against,
     // 0 left, 1 centre, 2 right, and how tall, as a share of the player. On to
@@ -129,4 +132,5 @@ REFL_TYPE(SimulatorState)
 	REFL_FIELD(CutawayCase)
 	REFL_FIELD(StrokeMin)
 	REFL_FIELD(StrokeMax)
+	REFL_FIELD(PoseHandles)
 REFL_END

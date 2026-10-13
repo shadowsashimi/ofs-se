@@ -37,6 +37,7 @@
 //   lanemove SECONDS POS     put the mouse at that time and position in the active lane
 //   pointmove I [DX DY]      put the mouse on point I of the active script, plus a pixel offset
 //   lanehead I check|eye|name  put the mouse on that part of lane I's header
+//   posehandle case|ring|tip|floor [DX DY]  put the mouse on a 3D pose handle, plus a pixel offset
 //   tap [left|right|middle]  click wherever the mouse is
 //   click X Y [left|right|middle]
 //   dclick X Y               double click
@@ -86,6 +87,7 @@ private:
         LaneMove,
         PointMove,
         LaneHead,
+        PoseHandle,
         MouseButton,
         Wheel,
         Key,

@@ -1,0 +1,151 @@
+# Posing the 3D model with handles (experimental): the case for stroke, the
+# ring for twist, the tip for roll and pitch, the floor square for surge and
+# sway. Letting go of a drag writes a point at the playhead on each axis that
+# moved, as one undo. Handles for axes with no track do nothing, and the
+# handles are hidden while playing. Add > OSR2 with twist is at 30 694, then
+# 41 555, at 1600x900.
+#! covers src/UI/OFS_ScriptSimulator.* src/state/SimulatorState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note twist, roll and pitch tracks, but no surge or sway
+click 30 694
+wait 10
+click 41 555
+wait 20
+expect script_axes stroke,twist,roll,pitch
+
+note off by default, and on from its setting
+expect pose_shown 0
+action toggle_pose_handles
+wait 10
+expect pose_shown 1
+shot 01-handles
+
+note drag the case up its length. The empty main track holds the model at
+note stroke 0, as the simulator always has, so the point lands above that
+posehandle case
+wait 5
+press left
+wait 3
+posehandle case 0 -15
+wait 3
+posehandle case 0 -15
+wait 3
+posehandle case 0 -15
+wait 3
+shot 02-stroke-dragging
+release left
+wait 10
+expect actions:uitest 1
+waituntil first_position >= 20 5
+
+note push the tip to the side: a roll point, and pitch left alone if it did not move
+posehandle tip
+wait 5
+press left
+wait 3
+posehandle tip 20 0
+wait 3
+posehandle tip 20 0
+wait 3
+shot 03-tilt-dragging
+release left
+wait 10
+expect actions:uitest.roll 1
+note seen from the front, pitch moves the tip towards the viewer, so a sideways drag leaves it alone
+expect actions:uitest.pitch 0
+
+note and up and down is pitch instead, up being away from the viewer
+posehandle tip
+wait 5
+press left
+wait 3
+posehandle tip 0 -20
+wait 3
+posehandle tip 0 -20
+wait 3
+shot 03b-pitch-end-on
+release left
+wait 10
+expect actions:uitest.pitch 1
+
+note one undo takes the last pose, the pitch point, back out
+key ctrl+z
+wait 5
+expect actions:uitest.pitch 0
+expect actions:uitest.roll 1
+key ctrl+y
+wait 5
+expect actions:uitest.pitch 1
+
+note the ring is edge on from straight in front, so it is dragged across:
+note right turns the front of the case to the right, raising twist
+posehandle ring
+wait 5
+press left
+wait 3
+posehandle ring 18 0
+wait 3
+posehandle ring 18 0
+wait 3
+release left
+wait 10
+expect actions:uitest.twist 1
+shot 04-posed
+lanehead 1 name
+tap
+wait 10
+expect active_title uitest.twist
+waituntil first_position >= 55 5
+lanehead 0 name
+tap
+wait 10
+
+note seen from above, the ring is followed round instead: Alt and drag
+note up raises the camera 0.3 degrees a pixel
+hold alt
+drag 1092 420 1092 300 10
+let alt
+wait 10
+waituntil camera_elevation >= 25 5
+seek 6
+wait 10
+posehandle ring
+wait 5
+press left
+wait 3
+posehandle ring 15 0
+wait 3
+posehandle ring 15 0
+wait 3
+shot 05-ring-from-above
+release left
+wait 10
+expect actions:uitest.twist 2
+
+note the floor square has no surge or sway track to write, so it does nothing
+posehandle floor
+wait 5
+press left
+wait 3
+posehandle floor 20 0
+wait 3
+expect pose_dragging -1
+release left
+wait 10
+expect scripts 4
+
+note the handles are hidden while playing
+play
+wait 20
+expect pose_shown 0
+pause
+wait 10
+expect pose_shown 1
+quit

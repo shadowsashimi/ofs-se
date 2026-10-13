@@ -209,6 +209,44 @@ public:
 	// drove it, or below zero to leave it to its script. Lets a test tilt the
 	// model with no roll or pitch script loaded.
 	float TestAxisOverride[(int32_t)Axis::Count] = { -1.f, -1.f, -1.f, -1.f, -1.f, -1.f };
+
+	// Posing the 3D model with handles, an experimental setting: the case for
+	// stroke, a ring for twist, the tip for roll and pitch, and a square on
+	// the floor for surge and sway. Dragging one previews the pose, and
+	// letting go puts a point at the playhead on each axis that moved.
+	enum class PoseHandle : int32_t
+	{
+		None = -1,
+		Case,
+		Ring,
+		Tip,
+		Floor,
+		Count
+	};
+	// Where each handle was drawn last frame, for the UI tests to aim at.
+	ImVec2 PoseHandleScreen[(int32_t)PoseHandle::Count];
+	bool PoseHandlesShown = false;
+	PoseHandle PoseHovered = PoseHandle::None;
+	PoseHandle PoseDragging = PoseHandle::None;
+	// The pose being dragged to on an axis, or below zero when none is.
+	inline float PoseValue(int32_t axis) const noexcept { return poseOverride[axis]; }
+private:
+	// The pose being dragged to: each axis as dragged, before any snapping,
+	// and where it started, so letting go writes only the axes that moved.
+	float poseRaw[(int32_t)Axis::Count] = {};
+	float poseStart[(int32_t)Axis::Count] = {};
+	float poseOverride[(int32_t)Axis::Count] = { -1.f, -1.f, -1.f, -1.f, -1.f, -1.f };
+	ImVec2 poseLastMouse = ImVec2(0.f, 0.f);
+	float poseLastRingAngle = 0.f;
+	// Whether a handle has the mouse this frame, which keeps the frame's own
+	// move and resize from taking it too.
+	bool poseTookMouse = false;
+	void updatePoseHandles(const struct SimulatorState& state, const MultiAxisValues& axes,
+		const bool* hasTrack, ImVec2 center, float scale, ImGuiID simId) noexcept;
+	void drawPoseHandles(struct ImDrawList* drawList, const struct SimulatorState& state,
+		const MultiAxisValues& axes, const bool* hasTrack, ImVec2 center, float scale) noexcept;
+	void commitPose(const bool* hasTrack) noexcept;
+public:
 	// What the tip holds up in the canal, fallen back onto it short of the
 	// cervix, in the same units as the pile.
 	float FinishCanalVolume = 0.f;

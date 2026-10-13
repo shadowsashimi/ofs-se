@@ -949,6 +949,17 @@ void OpenFunscripter::registerBindings()
                 false },
             "Switch the simulator between 2D and 3D", "Utility");
 
+        // The experimental pose handles, also on a checkbox in the
+        // simulator's settings.
+        keys->RegisterAction(
+            { "toggle_pose_handles",
+                [this]() {
+                    auto& simState = SimulatorState::State(simulator.StateHandle());
+                    simState.PoseHandles = !simState.PoseHandles;
+                },
+                false },
+            "Pose the 3D simulator with handles (experimental)", "Utility");
+
         // The 3D model's easter egg, also on a checkbox in its settings.
         keys->RegisterAction(
             { "toggle_simulator_finish",
