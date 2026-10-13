@@ -78,6 +78,11 @@ static std::string laneLabelFor(const std::vector<std::shared_ptr<Funscript>>& s
 	return title;
 }
 
+std::string ScriptTimeline::LaneLabel(const std::vector<std::shared_ptr<Funscript>>& scripts, int idx) noexcept
+{
+	return laneLabelFor(scripts, idx);
+}
+
 // An eye, for the button that hides a lane. Drawn rather than typed because
 // the word "hide" was the same size as the lane's name and got clicked by
 // mistake when the name was meant.
@@ -97,6 +102,11 @@ static void drawEye(ImDrawList* drawList, ImVec2 center, float size, uint32_t co
 	}
 	drawList->PathStroke(color, ImDrawFlags_Closed, 1.25f);
 	drawList->AddCircleFilled(center, size * 0.15f, color, 12);
+}
+
+void ScriptTimeline::DrawEye(ImDrawList* drawList, ImVec2 center, float size, uint32_t color) noexcept
+{
+	drawEye(drawList, center, size, color);
 }
 
 void ScriptTimeline::updateSelection(const OverlayDrawingCtx& ctx, bool clear) noexcept
@@ -167,7 +177,7 @@ void ScriptTimeline::DrawWaveformSettings() noexcept
 	ImGui::BeginDisabled(busy);
 	ImGui::Checkbox(TR(ENABLE_WAVEFORM), &ShowAudioWaveform);
 	ImGui::Checkbox("Beat ticks", &ShowBeatTicks);
-	OFS::Tooltip("Marks along the bottom of the lane where a hit lands, found from the "
+	OFS::Tooltip("Marks along the bottom of the track where a hit lands, found from the "
 				 "same audio as the waveform.");
 
 	{
@@ -677,6 +687,9 @@ void ScriptTimeline::ShowScriptPositions(
 			ImVec2(laneTargetRect.Max.x + headerGap + (headerBox * 1.35f), laneTargetRect.Max.y));
 		const ImRect laneNameRect(ImVec2(laneHideRect.Max.x + headerGap, headerOrigin.y),
 			ImVec2(laneHideRect.Max.x + headerGap + laneTitleSize.x + headerPad.x, headerOrigin.y + headerHeight));
+		Lanes[i].checkCenter = laneTargetRect.GetCenter();
+		Lanes[i].eyeCenter = laneHideRect.GetCenter();
+		Lanes[i].nameCenter = laneNameRect.GetCenter();
 		const bool laneCanHide = drawingCtx.drawnScriptCount > 1;
 		const ImRect laneLabelBounds(headerOrigin, laneNameRect.Max);
 		const bool laneLabelClicked = ImGui::IsMouseClicked(ImGuiMouseButton_Left)
@@ -740,7 +753,8 @@ void ScriptTimeline::ShowScriptPositions(
 					ImGui::PopItemFlag();
 					ImGui::SameLine();
 					ImGui::Checkbox(script->Title().c_str(), &script->Targeted);
-					OFS::Tooltip("Edited together with the active lane, the same as the tick box in its header.");
+					OFS::Tooltip("Checked tracks stay edited along with the track you're on, whichever that is. "
+								 "Same as the checkbox in the track header.");
 					ImGui::PopID();
 				}
 				ImGui::EndMenu();
@@ -779,7 +793,10 @@ void ScriptTimeline::ShowScriptPositions(
 		// Lane header, laid out above the click handling.
 		{
 			const bool isActiveLane = i == activeScriptIdx;
-			const bool isTargeted = isActiveLane || script->Targeted;
+			// The track you're on is always edited. Checked, a track stays
+			// edited after switching away from it.
+			const bool isChecked = script->Targeted;
+			const bool isEdited = isActiveLane || isChecked;
 			const ImVec2 savedCursor = ImGui::GetCursorScreenPos();
 			ImGui::PushID(i);
 
@@ -787,7 +804,7 @@ void ScriptTimeline::ShowScriptPositions(
 			ImGui::InvisibleButton("##laneTarget", laneTargetRect.GetSize());
 			const bool targetHovered = ImGui::IsItemHovered();
 			const bool targetTooltip = ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal);
-			if (ImGui::IsItemClicked(ImGuiMouseButton_Left) && !isActiveLane) {
+			if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
 				script->Targeted = !script->Targeted;
 			}
 
@@ -821,29 +838,39 @@ void ScriptTimeline::ShowScriptPositions(
 				isActiveLane ? OFS_Sashimi::Role().LaneActivePill : IM_COL32(0x10, 0x10, 0x10, 0xB8), pillRounding);
 			drawList->AddRect(laneLabelBounds.Min, laneLabelBounds.Max, IM_COL32(255, 255, 255, 0x14), pillRounding);
 
-			// Target tick box. The active lane is always a target, so its box
-			// is always ticked and does nothing when clicked.
+			// Edit checkbox. Checked: filled, with a bright mark. The track
+			// you're on when it isn't checked: empty, with a dim mark, since it
+			// is edited only while you're on it.
 			{
-				const bool lit = isTargeted;
-				const uint32_t boxFill = lit ? (isActiveLane ? OFS_Sashimi::Role().AccentDeep : OFS_Sashimi::Role().Accent)
+				const uint32_t boxFill = isChecked ? OFS_Sashimi::Role().Accent
 					: (targetHovered ? IM_COL32(0x3A, 0x3A, 0x3A, 0xFF) : IM_COL32(0x22, 0x22, 0x22, 0xFF));
-				const uint32_t boxEdge = lit ? OFS_Sashimi::Role().AccentBright
+				const uint32_t boxEdge = isChecked ? OFS_Sashimi::Role().AccentBright
 					: (targetHovered ? OFS_Sashimi::Grey80 : OFS_Sashimi::Grey50);
 				drawList->AddRectFilled(laneTargetRect.Min, laneTargetRect.Max, boxFill, 3.f);
 				drawList->AddRect(laneTargetRect.Min, laneTargetRect.Max, boxEdge, 3.f);
-				if (lit) {
+				if (isEdited) {
 					const float pad = headerBox * 0.2f;
 					ImGui::RenderCheckMark(drawList, laneTargetRect.Min + ImVec2(pad, pad),
-						IM_COL32(0xFF, 0xF0, 0xF6, 0xFF), headerBox - (pad * 2.f));
+						isChecked ? IM_COL32(0xFF, 0xF0, 0xF6, 0xFF) : OFS_Sashimi::Role().AccentDeep, headerBox - (pad * 2.f));
 				}
 				if (targetHovered) {
-					if (!isActiveLane) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+					ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 					if (targetTooltip) {
-						ImGui::SetTooltip("%s", isActiveLane
-							? "The active lane is always edited."
-							: (script->Targeted
-								? "Edited together with the active lane: points from the keyboard, drag selections, cut, copy and paste all act here too. Click to leave it out."
-								: "Click to edit this lane together with the active one: points from the keyboard, drag selections, cut, copy and paste will act here too."));
+						const char* tip;
+						if (isActiveLane && !isChecked) {
+							tip = "Edited because it's the track you're on. Check it to keep it edited when you switch to another track.";
+						}
+						else if (isActiveLane) {
+							tip = "Edited, and stays edited when you switch to another track. Click to edit it only while you're on it.";
+						}
+						else if (isChecked) {
+							tip = "Edited along with the track you're on: new points, moves, delete and paste happen here too. "
+								  "Click to stop editing it.";
+						}
+						else {
+							tip = "Not edited. Check it to edit it along with the track you're on.";
+						}
+						OFS::ShowWrappedTooltip(tip);
 					}
 				}
 			}
@@ -859,9 +886,9 @@ void ScriptTimeline::ShowScriptPositions(
 				}
 				drawEye(drawList, laneHideRect.GetCenter(), headerBox, eyeColor);
 				if (hideHovered && hideTooltip) {
-					ImGui::SetTooltip("%s", laneCanHide
-						? "Hide this lane. Bring it back from the right click menu, under Scripts."
-						: "The only lane showing, so it stays.");
+					OFS::ShowWrappedTooltip(laneCanHide
+						? "Hide this track. Bring it back from the Tracks panel."
+						: "The only track showing, so it stays.");
 				}
 			}
 
@@ -874,9 +901,12 @@ void ScriptTimeline::ShowScriptPositions(
 				if (!isActiveLane) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 				if (nameTooltip) {
 					const std::string& fullTitle = script->Title();
-					ImGui::SetTooltip("%s\n%s", fullTitle.empty() ? "(untitled)" : fullTitle.c_str(), isActiveLane
-						? "The active script. Keyboard edits and the menus act on this one."
-						: "Click to make this the active script.");
+					std::string tip = fullTitle.empty() ? "(untitled)" : fullTitle;
+					tip += "\n";
+					tip += isActiveLane
+						? "The track you're on. It's always edited, and Special functions and other one-track tools use it."
+						: "Click to switch to this track.";
+					OFS::ShowWrappedTooltip(tip.c_str());
 				}
 			}
 

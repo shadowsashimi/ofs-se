@@ -26,7 +26,8 @@ expect scripts 2
 expect active_index 0
 
 note clicking the second lane's name makes it active
-click 91 739
+lanehead 1 name
+tap
 wait 10
 state 02-second-active
 shot 02-second-active
@@ -34,7 +35,8 @@ expect active_index 1
 expect active_title uitest.twist
 
 note clicking the first lane's eye hides it, which is no longer active, and leaves the second active
-click 57 670
+lanehead 0 eye
+tap
 wait 10
 state 03-first-hidden
 shot 03-first-hidden

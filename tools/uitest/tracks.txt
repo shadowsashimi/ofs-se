@@ -1,0 +1,147 @@
+# The Tracks panel, docked left of the timeline: add an axis track from it,
+# check tracks for editing, switch tracks, hide and show them, and remove one
+# after confirming. At 1600x900 the rows are stroke 724, twist 750, roll 775,
+# with the drag grip at x 20, the eye at 46, the edit checkbox at 76, the name
+# at 110 and the remove cross at 186 (198 once two tracks fit and the
+# scrollbar goes). Add is at 30 694, and in its menu twist is at 61 729 and
+# roll at 57 753. The confirmation's Remove is at 610 500, Cancel 683 500.
+#! covers src/OpenFunscripter.cpp:ShowTracksWindow src/OpenFunscripter.cpp:addAxisTrack src/OpenFunscripter.cpp:removeTrack src/OpenFunscripter.cpp:removeTrackNow src/OpenFunscripter.cpp:drawRemoveTrackModal src/OpenFunscripter.cpp:setTrackShown src/OpenFunscripter.cpp:trackLoaded
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+shot 01-one-track
+expect scripts 1
+
+note Add > twist, then Add > roll
+click 30 694
+wait 10
+click 61 729
+wait 20
+click 30 694
+wait 10
+click 57 753
+wait 20
+expect scripts 3
+expect script_axes stroke,twist,roll
+expect active_index 0
+expect checked 0,0,0
+expect edited 1,0,0
+expect shown 1,1,1
+
+note drag roll above twist: the order changes, here and in the timeline, and the drag is not a click
+drag 20 775 20 745 8
+wait 10
+expect script_axes stroke,roll,twist
+expect active_index 0
+shot 01-reordered
+note dragging a name does nothing to the order: only the grip moves a track
+drag 110 750 110 775 8
+wait 10
+expect script_axes stroke,roll,twist
+expect active_index 0
+note the main track stays first: dragging twist above it moves it only to second
+drag 20 775 20 715 8
+wait 10
+expect script_axes stroke,twist,roll
+expect active_index 0
+
+note twist is already loaded, so Add offers it greyed out and a click adds nothing
+click 30 694
+wait 10
+click 61 729
+wait 20
+key escape
+wait 5
+expect scripts 3
+
+note check roll: two tracks edited
+click 76 775
+wait 10
+expect checked 0,0,1
+expect edited 1,0,1
+
+note clicking twist's name switches to it: twist is edited now, stroke isn't, roll stays checked
+click 110 750
+wait 10
+expect active_index 1
+expect checked 0,0,1
+expect edited 0,1,1
+state 02-switched
+shot 02-switched
+
+note hide roll with its eye, then show it again by clicking its name
+click 46 775
+wait 10
+expect shown 1,1,0
+expect active_index 1
+click 110 775
+wait 10
+expect shown 1,1,1
+expect active_index 2
+
+note hiding the current track moves to the first showing one
+click 46 775
+wait 10
+expect shown 1,1,0
+expect active_index 0
+click 46 775
+wait 10
+expect shown 1,1,1
+
+note checking the track you're on keeps it edited after switching away
+click 76 724
+wait 10
+expect active_index 0
+expect checked 1,0,1
+click 110 750
+wait 10
+expect active_index 1
+expect edited 1,1,1
+click 110 724
+wait 10
+expect active_index 0
+expect edited 1,0,1
+
+note remove twist: cancel first, then confirm; Escape cancels too
+click 186 750
+wait 10
+shot 03-confirm
+click 683 500
+wait 10
+expect scripts 3
+click 186 750
+wait 10
+key escape
+wait 10
+expect scripts 3
+click 186 750
+wait 10
+click 610 500
+wait 10
+expect scripts 2
+expect script_axes stroke,roll
+expect active_index 0
+expect edited 1,1
+state 04-removed
+shot 04-removed
+
+note removing the current track hands over to the one after it; Enter confirms
+click 198 724
+wait 10
+key enter
+wait 10
+expect scripts 1
+expect script_axes roll
+expect active_index 0
+expect edited 1
+
+note the last track cannot be removed
+click 198 724
+wait 10
+expect scripts 1
+shot 05-last
+quit

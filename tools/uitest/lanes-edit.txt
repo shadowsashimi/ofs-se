@@ -1,0 +1,139 @@
+# The track you're on is always edited, its checkbox showing a dim mark.
+# Checking a track keeps it edited after switching away from it. Points,
+# moves, shift clicks and drags then land in every edited track.
+#! covers OFS-lib/UI/OFS_ScriptTimeline.* src/OpenFunscripter.cpp:UpdateNewActiveScript src/OpenFunscripter.cpp:TargetedFunscripts src/OpenFunscripter.cpp:ScriptTimelineActionCreated src/OpenFunscripter.cpp:ScriptTimelineActionMoved src/OpenFunscripter.cpp:addEditActionTo src/OFS_ScriptingMode.cpp
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note Project > Add... > Shortcuts, for a second track
+click 89 13
+wait 5
+move 90 90
+wait 15
+move 320 90
+wait 20
+click 425 178
+wait 30
+expect scripts 2
+expect active_index 0
+note nothing checked: only the track you're on is edited
+expect checked 0,0
+expect edited 1,0
+
+note the tooltips over the checkboxes and the names wrap rather than run wide
+lanehead 0 check
+wait 60
+shot 00-check-tooltip-current
+lanehead 1 check
+wait 60
+shot 00-check-tooltip-other
+lanehead 0 name
+wait 60
+shot 00-name-tooltip
+lanehead 1 name
+wait 60
+shot 00-other-name-tooltip
+move 600 400
+wait 5
+
+note editing follows the track you switch to
+lanehead 1 name
+tap
+wait 10
+expect active_index 1
+expect edited 0,1
+lanehead 0 name
+tap
+wait 10
+expect active_index 0
+expect edited 1,0
+
+note checking the track you're on keeps it edited after switching away
+lanehead 0 check
+tap
+wait 10
+expect checked 1,0
+lanehead 1 name
+tap
+wait 10
+expect active_index 1
+expect edited 1,1
+shot 01-kept
+note unchecking it from the other track stops editing it
+lanehead 0 check
+tap
+wait 10
+expect checked 0,0
+expect edited 0,1
+lanehead 0 name
+tap
+wait 10
+expect edited 1,0
+
+note check the second track: a point from the keyboard lands in both
+lanehead 1 check
+tap
+wait 10
+expect checked 0,1
+expect edited 1,1
+seek 4
+wait 5
+action action_100
+wait 5
+expect actions 1
+lanehead 1 name
+tap
+wait 10
+expect actions 1
+lanehead 0 name
+tap
+wait 10
+
+note a shift click in an edited track lands in both
+hold shift
+lanemove 6 40
+tap
+let shift
+wait 10
+expect actions 2
+lanehead 1 name
+tap
+wait 10
+expect actions 2
+lanehead 0 name
+tap
+wait 10
+
+note dragging a selected point drags the other track's selection with it
+key ctrl+a
+wait 5
+expect selection 2
+seek 6
+wait 10
+state 02-before-drag
+pointmove 0
+hold shift
+press left
+wait 3
+lanemove 5 40
+wait 3
+lanemove 5 40
+wait 3
+release left
+let shift
+wait 10
+state 03-dragged
+waituntil first_time >= 4.98 5
+waituntil first_time <= 5.02 5
+lanehead 1 name
+tap
+wait 10
+note the second track's points moved by the same second, to the pixel
+waituntil first_time >= 4.98 5
+waituntil first_time <= 5.02 5
+quit

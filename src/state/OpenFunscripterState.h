@@ -49,6 +49,7 @@ struct OpenFunscripterState
     bool showScriptCheck = false;
     bool showDevices = false;
     bool showToolbar = true;
+    bool showTracks = true;
 
     inline static OpenFunscripterState& State(uint32_t stateHandle) noexcept
     {
@@ -81,4 +82,5 @@ REFL_TYPE(OpenFunscripterState)
     REFL_FIELD(showScriptCheck)
     REFL_FIELD(showDevices)
     REFL_FIELD(showToolbar)
+    REFL_FIELD(showTracks)
 REFL_END

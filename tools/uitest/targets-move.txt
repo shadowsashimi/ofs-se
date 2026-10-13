@@ -1,0 +1,132 @@
+# With a second lane ticked, Select All and the move keys act on both lanes,
+# so a multi-axis script can be shifted in time as one, and one undo puts
+# both back.
+#! covers OFS-lib/Funscript/Funscript.cpp:MoveSelectionTime OFS-lib/Funscript/Funscript.cpp:LimitSelectionTimeOffset src/OpenFunscripter.cpp:moveSelectionTime src/OpenFunscripter.cpp:moveSelectionPosition src/OpenFunscripter.cpp:selectAll src/OpenFunscripter.cpp:clearSelection src/OpenFunscripter.cpp:selectTime
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note Project > Add... > Shortcuts, for a second lane
+click 89 13
+wait 5
+move 90 90
+wait 15
+move 320 90
+wait 20
+click 425 178
+wait 30
+expect scripts 2
+expect active_index 0
+
+note tick the second lane's target box, then three points into both lanes
+lanehead 1 check
+tap
+wait 10
+seek 4
+wait 5
+action action_0
+seek 4.5
+wait 5
+action action_100
+seek 5
+wait 5
+action action_0
+wait 5
+expect actions 3
+expect first_time 4.000
+
+note Select All selects in both lanes
+key ctrl+a
+wait 5
+expect selection 3
+lanehead 1 name
+tap
+wait 10
+expect active_index 1
+expect selection 3
+lanehead 0 name
+tap
+wait 10
+expect active_index 0
+
+note moving right moves both lanes by the same step
+key shift+right
+wait 5
+key shift+right
+wait 5
+key shift+right
+wait 5
+state 01-moved
+expect first_time 4.100
+lanehead 1 name
+tap
+wait 10
+expect first_time 4.100
+lanehead 0 name
+tap
+wait 10
+
+note moving up moves both lanes too
+key shift+up
+wait 5
+expect positions 1,100,1
+lanehead 1 name
+tap
+wait 10
+expect positions 1,100,1
+lanehead 0 name
+tap
+wait 10
+
+note undo takes each move back in both lanes
+key ctrl+z
+wait 5
+key ctrl+z
+wait 5
+key ctrl+z
+wait 5
+key ctrl+z
+wait 5
+expect first_time 4.000
+expect positions 0,100,0
+lanehead 1 name
+tap
+wait 10
+expect first_time 4.000
+expect positions 0,100,0
+lanehead 0 name
+tap
+wait 10
+
+note Deselect All clears both lanes
+key ctrl+d
+wait 5
+expect selection 0
+lanehead 1 name
+tap
+wait 10
+expect selection 0
+
+note with the box unticked, moving leaves the other lane alone
+lanehead 0 name
+tap
+wait 10
+expect active_index 0
+lanehead 1 check
+tap
+wait 10
+state 02-unticked
+key ctrl+a
+wait 5
+key shift+right
+wait 5
+expect first_time 4.033
+lanehead 1 name
+tap
+wait 10
+expect first_time 4.000
+quit

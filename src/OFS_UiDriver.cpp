@@ -242,6 +242,16 @@ bool OFS_UiDriver::parse(const std::string& script, const std::string& media) no
             push(op);
             frames(2);
         }
+        else if (command == "lanehead") {
+            Op op;
+            op.type = OpType::LaneHead;
+            if (!(args >> op.n >> op.text) || (op.text != "check" && op.text != "eye" && op.text != "name")) {
+                fail("lanehead needs a lane number and check, eye or name");
+                continue;
+            }
+            push(op);
+            frames(2);
+        }
         else if (command == "pointmove") {
             Op op;
             op.type = OpType::PointMove;
@@ -602,6 +612,23 @@ void OFS_UiDriver::execute(const Op& op) noexcept
             io.AddMousePosEvent(mouseX, mouseY);
             break;
         }
+        case OpType::LaneHead: {
+            // Aimed from where the lane was drawn, so a test does not depend
+            // on what is docked beside the timeline.
+            const auto& lanes = app->scriptTimeline.Lanes;
+            if (op.n < 0 || op.n >= (int32_t)lanes.size() || lanes[op.n].canvasSize.x <= 0.f) {
+                log("line " + std::to_string(op.line) + ": FAIL lane " + std::to_string(op.n) + " is not on screen");
+                failed += 1;
+                break;
+            }
+            const auto& lane = lanes[op.n];
+            const ImVec2 target = op.text == "check" ? lane.checkCenter
+                : op.text == "eye" ? lane.eyeCenter : lane.nameCenter;
+            mouseX = target.x;
+            mouseY = target.y;
+            io.AddMousePosEvent(mouseX, mouseY);
+            break;
+        }
         case OpType::MouseButton:
             io.AddMouseButtonEvent(op.n, op.down);
             break;
@@ -784,6 +811,26 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
         add("script_axes", axes);
     }
     add("active_index", std::to_string(app->LoadedProject->ActiveIdx()));
+    // Each track's checkbox, and whether each is being edited, in order, so
+    // one expect checks them all. The track you're on is always edited.
+    {
+        std::string checked;
+        std::string edited;
+        for (auto& each : app->LoadedFunscripts()) {
+            if (!checked.empty()) checked += ",";
+            if (!edited.empty()) edited += ",";
+            checked += each->Targeted ? "1" : "0";
+            edited += app->IsEdited(each) ? "1" : "0";
+        }
+        add("checked", checked);
+        add("edited", edited);
+        std::string shown;
+        for (auto& each : app->LoadedFunscripts()) {
+            if (!shown.empty()) shown += ",";
+            shown += each->Enabled ? "1" : "0";
+        }
+        add("shown", shown);
+    }
 
     auto script = app->ActiveFunscript();
     add("active_title", script->Title());
@@ -792,6 +839,7 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
     // write out one by one.
     if (!script->Actions().empty()) {
         add("first_position", std::to_string((int32_t)script->Actions().front().pos));
+        add("first_time", number(script->Actions().front().atS));
         add("last_position", std::to_string((int32_t)script->Actions().back().pos));
     }
     // Every position in order on one line, so a whole stroke can be checked

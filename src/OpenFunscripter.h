@@ -1,4 +1,6 @@
 #pragma once
+
+#include <optional>
 #include "OFS_ScriptingMode.h"
 #include "OFS_KeybindingSystem.h"
 #include "OFS_Preferences.h"
@@ -96,8 +98,14 @@ private:
     // Where a mouse drag of points began: the point under the cursor, and the
     // selection it is carrying, both as they were before the first move.
     // Every move is placed relative to these, see FunscriptGroupMove.h.
+    // With several lanes edited, each lane's selection is carried along.
+    struct DragGroup
+    {
+        std::weak_ptr<Funscript> script;
+        FunscriptArray group;
+    };
     FunscriptAction dragGrabbed;
-    FunscriptArray dragGroup;
+    std::vector<DragGroup> dragGroups;
 
     void ScriptTimelineActionCreated(const FunscriptActionShouldCreateEvent* ev) noexcept;
     void ScriptTimelineActionMoved(const FunscriptActionShouldMoveEvent* ev) noexcept;
@@ -112,6 +120,20 @@ private:
 
     void cutSelection() noexcept;
     void copySelection() noexcept;
+    // These act on every edited lane, like the clipboard: on the selection
+    // where there is one, and otherwise on the point nearest the playhead.
+    bool targetsHaveSelection() noexcept;
+    // The first edited lane with a selection, which sets the step size.
+    std::shared_ptr<Funscript> selectionLead() noexcept;
+    void moveSelectionTime(bool forward) noexcept;
+    void moveSelectionPosition(int32_t delta) noexcept;
+    // Where the leading lane's point went, to follow it with the video.
+    std::optional<float> moveClosestTime(bool forward) noexcept;
+    void moveClosestPosition(int32_t delta) noexcept;
+    void moveClosestToPlayhead() noexcept;
+    void selectAll() noexcept;
+    void clearSelection() noexcept;
+    void selectTime(float start, float end) noexcept;
     void pasteSelection() noexcept;
     void pasteSelectionExact() noexcept;
     void equalizeSelection() noexcept;
@@ -130,8 +152,26 @@ private:
     void exportForDevice() noexcept;
     void updateTitle() noexcept;
 
-    void removeAction(FunscriptAction action) noexcept;
     void removeAction() noexcept;
+    // Into each of targets through the scripting mode, the mode stepping on
+    // once for all of them.
+    void addEditActionTo(const std::vector<std::shared_ptr<Funscript>>& targets, FunscriptAction action) noexcept;
+
+    // Tracks, as the Tracks panel and the Project menu both offer them.
+    // Adding skips a file the project already has; removing asks first and
+    // leaves the file on disk.
+    bool trackLoaded(const std::string& path) noexcept;
+    // The axis file beside the first track, e.g. video.twist.funscript.
+    std::string axisTrackPath(const char* axis) noexcept;
+    void addAxisTrack(const char* axis) noexcept;
+    void addNewTrackDialog() noexcept;
+    void loadTracksDialog() noexcept;
+    void removeTrack(int32_t idx) noexcept;
+    void removeTrackNow(const std::shared_ptr<Funscript>& script) noexcept;
+    void drawRemoveTrackModal() noexcept;
+    std::weak_ptr<Funscript> trackToRemove;
+    void setTrackShown(int32_t idx, bool shown) noexcept;
+    void ShowTracksWindow(bool* open) noexcept;
     void addEditAction(int pos) noexcept;
 
     void saveActiveScriptAs();
@@ -216,9 +256,10 @@ public:
 
     void UpdateNewActiveScript(uint32_t activeIndex) noexcept;
 
-    // The scripts an edit acts on: the active one first, then every other
-    // showing lane whose header is ticked.
+    // The tracks an edit acts on: the current one first, then every other
+    // showing track whose box is checked.
     std::vector<std::shared_ptr<Funscript>> TargetedFunscripts() noexcept;
+    bool IsEdited(const std::shared_ptr<Funscript>& script) noexcept;
 
     inline const FunscriptArray& FunscriptClipboard() const { return CopiedSelection; }
     // What was copied from each targeted script, so a segment lifted from

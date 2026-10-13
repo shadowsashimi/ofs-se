@@ -64,6 +64,10 @@ public:
 
     bool AddFunscript(const std::string& path) noexcept;
     void RemoveFunscript(int32_t idx) noexcept;
+    // Moves a track to another place in the order, keeping the current track
+    // current. The first track stays first: exports and devices take it as
+    // the main script, the stroke. False when nothing could move.
+    bool MoveFunscript(int32_t from, int32_t to) noexcept;
 
     void Update(float delta, bool idleMode) noexcept;
     void ShowProjectWindow(bool* open) noexcept;
@@ -79,6 +83,9 @@ public:
     // was asked for at creation rather than a file's.
     inline bool IsStandalone() const noexcept { return State().relativeMediaPath.empty(); }
     inline bool IsValid() const noexcept { return valid; }
+    // The order changed since the last save. No script's points did, so the
+    // scripts alone would not say there is anything to save.
+    bool orderChanged = false;
     inline const std::string& NotValidError() const noexcept { return notValidError; }
     inline ProjectState& State() const noexcept { return ProjectState::State(stateHandle); }
 

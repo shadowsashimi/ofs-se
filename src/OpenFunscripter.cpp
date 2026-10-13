@@ -38,9 +38,11 @@ OpenFunscripter* OpenFunscripter::ptr = nullptr;
 static constexpr const char* GlslVersion = "#version 330 core";
 
 static ImGuiID MainDockspaceID;
+static UndoContextScripts undoContextFor(const std::vector<std::shared_ptr<Funscript>>& targets) noexcept;
 static constexpr const char* StatisticsWindowId = "###STATISTICS";
 static constexpr const char* ActionEditorWindowId = "###ACTION_EDITOR";
 static constexpr const char* ToolbarWindowId = "Toolbar###TOOLBAR";
+static constexpr const char* TracksWindowId = "Tracks###TRACKS";
 
 static constexpr int DefaultWidth = 1920;
 static constexpr int DefaultHeight = 1080;
@@ -244,13 +246,24 @@ bool OpenFunscripter::Init(int argc, char* argv[])
     // shares their undo and shows their shortcut.
     scriptTimeline.OnOpenSettings = [this]() noexcept { preferences->OpenTimelineSection(); };
     scriptTimeline.DrawPointActionsMenu = [this]() noexcept {
-        auto script = ActiveFunscript();
-        const bool hasSelection = script->HasSelection();
-        if (hasSelection) {
-            ImGui::TextDisabled("%u selected in %s", script->SelectionSize(), script->Title().c_str());
+        // What the edits below will act on: the selection in every edited lane.
+        auto edited = TargetedFunscripts();
+        uint32_t selected = 0;
+        int lanesWithSelection = 0;
+        for (auto& script : edited) {
+            selected += script->SelectionSize();
+            if (script->HasSelection()) lanesWithSelection += 1;
+        }
+        const bool hasSelection = selected > 0;
+        if (edited.size() == 1) {
+            if (hasSelection) ImGui::TextDisabled("%u selected in %s", selected, edited.front()->Title().c_str());
+            else ImGui::TextDisabled("Nothing selected in %s", edited.front()->Title().c_str());
+        }
+        else if (hasSelection) {
+            ImGui::TextDisabled("%u selected in %d of %d edited lanes", selected, lanesWithSelection, (int)edited.size());
         }
         else {
-            ImGui::TextDisabled("Nothing selected in %s", script->Title().c_str());
+            ImGui::TextDisabled("Nothing selected in the %d edited lanes", (int)edited.size());
         }
 
         if (ImGui::MenuItem(TR(CUT), keys->GetBindingString("cut"), false, hasSelection)) cutSelection();
@@ -259,7 +272,9 @@ bool OpenFunscripter::Init(int argc, char* argv[])
         if (ImGui::MenuItem(TR(DELETE), keys->GetBindingString("remove_action"), false, hasSelection)) removeAction();
         ImGui::Separator();
 
-        if (ImGui::MenuItem(TR(INVERT), keys->GetBindingString("invert_actions"), false, hasSelection)) invertSelection();
+        // These work on one script, the current lane.
+        auto script = ActiveFunscript();
+        if (ImGui::MenuItem(TR(INVERT), keys->GetBindingString("invert_actions"), false, script->HasSelection())) invertSelection();
         if (ImGui::MenuItem(TR(EQUALIZE), keys->GetBindingString("equalize_actions"), false, script->SelectionSize() >= 3)) equalizeSelection();
         // Unlike the rest, isolate works on the point nearest the playhead
         // rather than on the selection, so the label has to say so.
@@ -410,6 +425,8 @@ void OpenFunscripter::setupDefaultLayout(bool force) noexcept
         ImGuiID opposite_node_id;
         auto dock_time_bottom_id = ImGui::DockBuilderSplitNode(dock_rest_id, ImGuiDir_Down, 0.1f, NULL, &dock_player_center_id);
         auto dock_positions_id = ImGui::DockBuilderSplitNode(dock_player_center_id, ImGuiDir_Down, 0.15f, NULL, &dock_player_center_id);
+        // The tracks beside the lanes they list.
+        auto dock_tracks_id = ImGui::DockBuilderSplitNode(dock_positions_id, ImGuiDir_Left, 0.14f, NULL, &dock_positions_id);
         auto dock_mode_right_id = ImGui::DockBuilderSplitNode(dock_player_center_id, ImGuiDir_Right, 0.15f, NULL, &dock_player_center_id);
         // The right column, bottom up. Mode is left the most room because it
         // carries each mode's and grid's settings, which the tempo grid's run
@@ -432,6 +449,7 @@ void OpenFunscripter::setupDefaultLayout(bool force) noexcept
         ImGui::DockBuilderDockWindow(OFS_VideoplayerWindow::WindowId, dock_player_center_id);
         ImGui::DockBuilderDockWindow(OFS_VideoplayerControls::TimeId, dock_time_bottom_id);
         ImGui::DockBuilderDockWindow(ScriptTimeline::WindowId, dock_positions_id);
+        ImGui::DockBuilderDockWindow(TracksWindowId, dock_tracks_id);
         ImGui::DockBuilderDockWindow(ScriptingMode::WindowId, dock_mode_right_id);
         ImGui::DockBuilderDockWindow(ScriptSimulator::WindowId, dock_simulator_right_id);
         // A tab beside statistics rather than a split of its own. Opened into
@@ -832,7 +850,7 @@ void OpenFunscripter::registerBindings()
         keys->RegisterAction(
             { "select_all",
                 [this]() {
-                    ActiveFunscript()->SelectAll();
+                    selectAll();
                 },
                 false },
             Tr::ACTION_SELECT_ALL, "Utility",
@@ -841,7 +859,7 @@ void OpenFunscripter::registerBindings()
         keys->RegisterAction(
             { "deselect_all",
                 [this]() {
-                    ActiveFunscript()->ClearSelection();
+                    clearSelection();
                 },
                 false },
             Tr::ACTION_DESELECT_ALL, "Utility",
@@ -850,7 +868,7 @@ void OpenFunscripter::registerBindings()
         keys->RegisterAction(
             { "select_all_left",
                 [this]() {
-                    ActiveFunscript()->SelectTime(0, player->CurrentTime());
+                    selectTime(0, player->CurrentTime());
                 },
                 false },
             Tr::ACTION_SELECT_ALL_LEFT, "Utility",
@@ -859,7 +877,7 @@ void OpenFunscripter::registerBindings()
         keys->RegisterAction(
             { "select_all_right",
                 [this]() {
-                    ActiveFunscript()->SelectTime(player->CurrentTime(), player->Duration());
+                    selectTime(player->CurrentTime(), player->Duration());
                 },
                 false },
             Tr::ACTION_SELECT_ALL_RIGHT, "Utility",
@@ -984,71 +1002,32 @@ void OpenFunscripter::registerBindings()
     }
 
     // MOVE LEFT/RIGHT
+    // In every edited lane: the selection where there is one, otherwise the
+    // point nearest the playhead.
     auto move_actions_horizontal = [](bool forward) {
         auto app = OpenFunscripter::ptr;
-
-        if (app->ActiveFunscript()->HasSelection()) {
-
-            auto time = forward
-                ? app->scripting->SteppingIntervalForward(app->ActiveFunscript()->Selection().front().atS)
-                : app->scripting->SteppingIntervalBackward(app->ActiveFunscript()->Selection().front().atS);
-
-            app->undoSystem->Snapshot(StateType::ACTIONS_MOVED, app->ActiveFunscript());
-            app->ActiveFunscript()->MoveSelectionTime(time, app->scripting->LogicalFrameTime());
+        if (app->targetsHaveSelection()) {
+            app->moveSelectionTime(forward);
         }
         else {
-            auto closest = ptr->ActiveFunscript()->GetClosestAction(app->player->CurrentTime());
-            if (closest != nullptr) {
-                auto time = forward
-                    ? app->scripting->SteppingIntervalForward(closest->atS)
-                    : app->scripting->SteppingIntervalBackward(closest->atS);
-
-                FunscriptAction moved(closest->atS + time, closest->pos);
-                auto closestInMoveRange = app->ActiveFunscript()->GetActionAtTime(moved.atS, app->scripting->LogicalFrameTime());
-                if (closestInMoveRange == nullptr
-                    || (forward && closestInMoveRange->atS < moved.atS)
-                    || (!forward && closestInMoveRange->atS > moved.atS)) {
-                    app->undoSystem->Snapshot(StateType::ACTIONS_MOVED, app->ActiveFunscript());
-                    app->ActiveFunscript()->EditAction(*closest, moved);
-                }
-            }
+            app->moveClosestTime(forward);
         }
     };
+    // The same, with the video following the leading lane's points.
     auto move_actions_horizontal_with_video = [](bool forward) {
         auto app = OpenFunscripter::ptr;
-        if (app->ActiveFunscript()->HasSelection()) {
-            auto time = forward
-                ? app->scripting->SteppingIntervalForward(app->ActiveFunscript()->Selection().front().atS)
-                : app->scripting->SteppingIntervalBackward(app->ActiveFunscript()->Selection().front().atS);
-
-            app->undoSystem->Snapshot(StateType::ACTIONS_MOVED, app->ActiveFunscript());
-            app->ActiveFunscript()->MoveSelectionTime(time, app->scripting->LogicalFrameTime());
-            auto closest = ptr->ActiveFunscript()->GetClosestActionSelection(app->player->CurrentTime());
+        if (auto lead = app->selectionLead()) {
+            app->moveSelectionTime(forward);
+            auto closest = lead->GetClosestActionSelection(app->player->CurrentTime());
             if (closest != nullptr) {
                 app->player->SetPositionExact(closest->atS);
             }
-            else {
-                app->player->SetPositionExact(app->ActiveFunscript()->Selection().front().atS);
+            else if (lead->HasSelection()) {
+                app->player->SetPositionExact(lead->Selection().front().atS);
             }
         }
-        else {
-            auto closest = app->ActiveFunscript()->GetClosestAction(ptr->player->CurrentTime());
-            if (closest != nullptr) {
-                auto time = forward
-                    ? app->scripting->SteppingIntervalForward(closest->atS)
-                    : app->scripting->SteppingIntervalBackward(closest->atS);
-
-                FunscriptAction moved(closest->atS + time, closest->pos);
-                auto closestInMoveRange = app->ActiveFunscript()->GetActionAtTime(moved.atS, app->scripting->LogicalFrameTime());
-
-                if (closestInMoveRange == nullptr
-                    || (forward && closestInMoveRange->atS < moved.atS)
-                    || (!forward && closestInMoveRange->atS > moved.atS)) {
-                    app->undoSystem->Snapshot(StateType::ACTIONS_MOVED, app->ActiveFunscript());
-                    app->ActiveFunscript()->EditAction(*closest, moved);
-                    app->player->SetPositionExact(moved.atS);
-                }
-            }
+        else if (auto movedTo = app->moveClosestTime(forward)) {
+            app->player->SetPositionExact(*movedTo);
         }
     };
 
@@ -1057,16 +1036,11 @@ void OpenFunscripter::registerBindings()
         keys->RegisterAction(
             { "move_actions_up_ten",
                 [this]() {
-                    if (ActiveFunscript()->HasSelection()) {
-                        undoSystem->Snapshot(StateType::ACTIONS_MOVED, ActiveFunscript());
-                        ActiveFunscript()->MoveSelectionPosition(10);
+                    if (targetsHaveSelection()) {
+                        moveSelectionPosition(10);
                     }
                     else {
-                        auto closest = ActiveFunscript()->GetClosestAction(player->CurrentTime());
-                        if (closest != nullptr) {
-                            undoSystem->Snapshot(StateType::ACTIONS_MOVED, ActiveFunscript());
-                            ActiveFunscript()->EditAction(*closest, FunscriptAction(closest->atS, Util::Clamp<int32_t>(closest->pos + 10, 0, 100)));
-                        }
+                        moveClosestPosition(10);
                     }
                 },
                 false },
@@ -1075,16 +1049,11 @@ void OpenFunscripter::registerBindings()
         keys->RegisterAction(
             { "move_actions_down_ten",
                 [this]() {
-                    if (ActiveFunscript()->HasSelection()) {
-                        undoSystem->Snapshot(StateType::ACTIONS_MOVED, ActiveFunscript());
-                        ActiveFunscript()->MoveSelectionPosition(-10);
+                    if (targetsHaveSelection()) {
+                        moveSelectionPosition(-10);
                     }
                     else {
-                        auto closest = ActiveFunscript()->GetClosestAction(player->CurrentTime());
-                        if (closest != nullptr) {
-                            undoSystem->Snapshot(StateType::ACTIONS_MOVED, ActiveFunscript());
-                            ActiveFunscript()->EditAction(*closest, FunscriptAction(closest->atS, Util::Clamp<int32_t>(closest->pos - 10, 0, 100)));
-                        }
+                        moveClosestPosition(-10);
                     }
                 },
                 false },
@@ -1093,16 +1062,11 @@ void OpenFunscripter::registerBindings()
         keys->RegisterAction(
             { "move_actions_up_five",
                 [this]() {
-                    if (ActiveFunscript()->HasSelection()) {
-                        undoSystem->Snapshot(StateType::ACTIONS_MOVED, ActiveFunscript());
-                        ActiveFunscript()->MoveSelectionPosition(5);
+                    if (targetsHaveSelection()) {
+                        moveSelectionPosition(5);
                     }
                     else {
-                        auto closest = ActiveFunscript()->GetClosestAction(player->CurrentTime());
-                        if (closest != nullptr) {
-                            undoSystem->Snapshot(StateType::ACTIONS_MOVED, ActiveFunscript());
-                            ActiveFunscript()->EditAction(*closest, FunscriptAction(closest->atS, Util::Clamp<int32_t>(closest->pos + 5, 0, 100)));
-                        }
+                        moveClosestPosition(5);
                     }
                 },
                 false },
@@ -1111,16 +1075,11 @@ void OpenFunscripter::registerBindings()
         keys->RegisterAction(
             { "move_actions_down_five",
                 [this]() {
-                    if (ActiveFunscript()->HasSelection()) {
-                        undoSystem->Snapshot(StateType::ACTIONS_MOVED, ActiveFunscript());
-                        ActiveFunscript()->MoveSelectionPosition(-5);
+                    if (targetsHaveSelection()) {
+                        moveSelectionPosition(-5);
                     }
                     else {
-                        auto closest = ActiveFunscript()->GetClosestAction(player->CurrentTime());
-                        if (closest != nullptr) {
-                            undoSystem->Snapshot(StateType::ACTIONS_MOVED, ActiveFunscript());
-                            ActiveFunscript()->EditAction(*closest, FunscriptAction(closest->atS, Util::Clamp<int32_t>(closest->pos - 5, 0, 100)));
-                        }
+                        moveClosestPosition(-5);
                     }
                 },
                 false },
@@ -1166,19 +1125,11 @@ void OpenFunscripter::registerBindings()
         keys->RegisterAction(
             { "move_actions_up",
                 [this]() {
-                    if (ActiveFunscript()->HasSelection()) {
-                        undoSystem->Snapshot(StateType::ACTIONS_MOVED, ActiveFunscript());
-                        ActiveFunscript()->MoveSelectionPosition(1);
+                    if (targetsHaveSelection()) {
+                        moveSelectionPosition(1);
                     }
                     else {
-                        auto closest = ActiveFunscript()->GetClosestAction(player->CurrentTime());
-                        if (closest != nullptr) {
-                            FunscriptAction moved(closest->atS, closest->pos + 1);
-                            if (moved.pos <= 100 && moved.pos >= 0) {
-                                undoSystem->Snapshot(StateType::ACTIONS_MOVED, ActiveFunscript());
-                                ActiveFunscript()->EditAction(*closest, moved);
-                            }
-                        }
+                        moveClosestPosition(1);
                     }
                 },
                 false },
@@ -1188,19 +1139,11 @@ void OpenFunscripter::registerBindings()
         keys->RegisterAction(
             { "move_actions_down",
                 [this]() {
-                    if (ActiveFunscript()->HasSelection()) {
-                        undoSystem->Snapshot(StateType::ACTIONS_MOVED, ActiveFunscript());
-                        ActiveFunscript()->MoveSelectionPosition(-1);
+                    if (targetsHaveSelection()) {
+                        moveSelectionPosition(-1);
                     }
                     else {
-                        auto closest = ActiveFunscript()->GetClosestAction(player->CurrentTime());
-                        if (closest != nullptr) {
-                            FunscriptAction moved(closest->atS, closest->pos - 1);
-                            if (moved.pos <= 100 && moved.pos >= 0) {
-                                undoSystem->Snapshot(StateType::ACTIONS_MOVED, ActiveFunscript());
-                                ActiveFunscript()->EditAction(*closest, moved);
-                            }
-                        }
+                        moveClosestPosition(-1);
                     }
                 },
                 false },
@@ -1210,11 +1153,7 @@ void OpenFunscripter::registerBindings()
         keys->RegisterAction(
             { "move_action_to_current_pos",
                 [this]() {
-                    auto closest = ActiveFunscript()->GetClosestAction(player->CurrentTime());
-                    if (closest != nullptr) {
-                        undoSystem->Snapshot(StateType::MOVE_ACTION_TO_CURRENT_POS, ActiveFunscript());
-                        ActiveFunscript()->EditAction(*closest, FunscriptAction(player->CurrentTime(), closest->pos));
-                    }
+                    moveClosestToPlayhead();
                 },
                 false },
             Tr::ACTION_MOVE_TO_CURRENT_POSITION, "Moving",
@@ -1377,7 +1316,7 @@ void OpenFunscripter::registerBindings()
                     else {
                         auto tmp = player->CurrentTime();
                         auto [min, max] = std::minmax<float>(scriptTimeline.selectionStart(), tmp);
-                        ActiveFunscript()->SelectTime(min, max);
+                        selectTime(min, max);
                         scriptTimeline.setStartSelection(-1);
                     }
                 },
@@ -1603,17 +1542,17 @@ void OpenFunscripter::ScriptTimelineActionClicked(const FunscriptActionClickedEv
 void OpenFunscripter::ScriptTimelineActionCreated(const FunscriptActionShouldCreateEvent* ev) noexcept
 {
     if (auto script = ev->script.lock()) {
-        undoSystem->Snapshot(StateType::ADD_ACTION, script);
-        // Through the scripting mode, like a point placed from the keyboard or
-        // the action editor. Placed straight into the script, a click ignored
-        // the mode entirely: Alternating never alternated and Auto peak never
-        // added its peak, though both say that is what a click does. The
-        // modes act on the active script, so a click in another lane still
-        // places exactly what was clicked.
-        if (script == ActiveFunscript()) {
-            scripting->AddEditAction(ev->newAction);
+        // A click in an edited lane places the point in every edited lane,
+        // as a key would, through the scripting mode: Alternating alternates
+        // and Auto peak adds its peak. A click in a lane that is not being
+        // edited places exactly what was clicked, there alone.
+        if (IsEdited(script)) {
+            auto targets = TargetedFunscripts();
+            undoSystem->Snapshot(StateType::ADD_ACTION, undoContextFor(targets));
+            addEditActionTo(targets, ev->newAction);
         }
         else {
+            undoSystem->Snapshot(StateType::ADD_ACTION, script);
             script->AddEditAction(ev->newAction, scripting->LogicalFrameTime());
         }
     }
@@ -1625,19 +1564,21 @@ void OpenFunscripter::ScriptTimelineActionMoved(const FunscriptActionShouldMoveE
     if (!script) return;
 
     if (ev->moveStarted) {
-        undoSystem->Snapshot(StateType::ACTIONS_MOVED, script);
+        // Dragging a point in an edited lane carries the selection of every
+        // edited lane along with it.
+        std::vector<std::shared_ptr<Funscript>> lanes;
+        if (IsEdited(script)) lanes = TargetedFunscripts();
+        else lanes.push_back(script);
+        UndoContextScripts snapshot;
+        dragGroups.clear();
+        for (auto& lane : lanes) {
+            if (lane != script && !lane->HasSelection()) continue;
+            dragGroups.push_back({ lane, lane->Selection() });
+            snapshot.push_back(lane);
+        }
+        undoSystem->Snapshot(StateType::ACTIONS_MOVED, std::move(snapshot));
         dragGrabbed = ev->action;
-        dragGroup = script->Selection();
         return;
-    }
-    if (dragGroup.empty()) return;
-
-    // The points staying put. The selection is the group wherever the last
-    // move left it, so taking it out leaves exactly the neighbours.
-    FunscriptArray others;
-    others.reserve(script->Actions().size());
-    for (auto action : script->Actions()) {
-        if (!script->IsSelected(action)) others.emplace_back_unsorted(action);
     }
 
     // One millisecond, the resolution a funscript is saved at. Closer than
@@ -1645,13 +1586,38 @@ void OpenFunscripter::ScriptTimelineActionMoved(const FunscriptActionShouldMoveE
     // stops the group short of a neighbour instead of refusing the move, which
     // is what used to delete a single point dropped onto an occupied slot.
     constexpr float MinGap = 0.001f;
-    const auto offset = FunscriptGroupMove::Clamp(others, dragGroup,
-        ev->action.atS - dragGrabbed.atS, ev->action.pos - dragGrabbed.pos, MinGap);
-    const auto moved = FunscriptGroupMove::Apply(dragGroup, offset);
+    const float wantTime = ev->action.atS - dragGrabbed.atS;
+    const int32_t wantPos = ev->action.pos - dragGrabbed.pos;
 
-    script->RemoveSelectedActions();
-    script->AddMultipleActions(moved);
-    script->SetSelection(moved);
+    // Each lane says how far it can go, and every lane goes the shortest of
+    // those, so the lanes move as one piece and keep their timing.
+    bool any = false;
+    FunscriptGroupMove::Offset offset{ wantTime, wantPos };
+    std::vector<FunscriptArray> staying(dragGroups.size());
+    for (size_t i = 0; i < dragGroups.size(); i += 1) {
+        auto lane = dragGroups[i].script.lock();
+        if (!lane || dragGroups[i].group.empty()) continue;
+        // The points staying put. The selection is the group wherever the
+        // last move left it, so taking it out leaves exactly the neighbours.
+        staying[i].reserve(lane->Actions().size());
+        for (auto action : lane->Actions()) {
+            if (!lane->IsSelected(action)) staying[i].emplace_back_unsorted(action);
+        }
+        auto allowed = FunscriptGroupMove::Clamp(staying[i], dragGroups[i].group, wantTime, wantPos, MinGap);
+        if (std::abs(allowed.time) < std::abs(offset.time)) offset.time = allowed.time;
+        if (std::abs(allowed.pos) < std::abs(offset.pos)) offset.pos = allowed.pos;
+        any = true;
+    }
+    if (!any) return;
+
+    for (auto& drag : dragGroups) {
+        auto lane = drag.script.lock();
+        if (!lane || drag.group.empty()) continue;
+        const auto moved = FunscriptGroupMove::Apply(drag.group, offset);
+        lane->RemoveSelectedActions();
+        lane->AddMultipleActions(moved);
+        lane->SetSelection(moved);
+    }
 }
 
 void OpenFunscripter::DragNDrop(const OFS_SDL_Event* ev) noexcept
@@ -1915,6 +1881,8 @@ void OpenFunscripter::Step() noexcept
                 LoadedProject->ActiveIdx());
 
             ShowStatisticsWindow(&ofsState.showStatistics);
+            ShowTracksWindow(&ofsState.showTracks);
+            drawRemoveTrackModal();
 
             if (ofsState.showActionEditor) {
                 ImGui::Begin(TR_ID(ActionEditorWindowId, Tr::ACTION_EDITOR), &ofsState.showActionEditor);
@@ -2318,27 +2286,32 @@ void OpenFunscripter::saveHeatmap(const char* path, int width, int height, bool 
     }
 }
 
-void OpenFunscripter::removeAction(FunscriptAction action) noexcept
-{
-    OFS_PROFILE(__FUNCTION__);
-    undoSystem->Snapshot(StateType::REMOVE_ACTION, ActiveFunscript());
-    ActiveFunscript()->RemoveAction(action);
-}
-
 std::vector<std::shared_ptr<Funscript>> OpenFunscripter::TargetedFunscripts() noexcept
 {
+    // The track you're on is always edited, and leads. Every other showing
+    // track whose box is checked is edited along with it, whichever track
+    // is current.
     std::vector<std::shared_ptr<Funscript>> targets;
-    targets.push_back(ActiveFunscript());
+    auto active = ActiveFunscript();
+    targets.push_back(active);
     for (auto& script : LoadedFunscripts()) {
-        if (script != ActiveFunscript() && script->Enabled && script->Targeted) {
+        if (script != active && script->Enabled && script->Targeted) {
             targets.push_back(script);
         }
     }
     return targets;
 }
 
+bool OpenFunscripter::IsEdited(const std::shared_ptr<Funscript>& script) noexcept
+{
+    for (auto& target : TargetedFunscripts()) {
+        if (target == script) return true;
+    }
+    return false;
+}
+
 // The scripts of an edit, as the undo system wants them, so one undo takes
-// back what one key did to every targeted lane.
+// back what one key did to every edited lane.
 static UndoContextScripts undoContextFor(const std::vector<std::shared_ptr<Funscript>>& targets) noexcept
 {
     UndoContextScripts scripts;
@@ -2347,24 +2320,59 @@ static UndoContextScripts undoContextFor(const std::vector<std::shared_ptr<Funsc
     return scripts;
 }
 
+bool OpenFunscripter::targetsHaveSelection() noexcept
+{
+    return selectionLead() != nullptr;
+}
+
+std::shared_ptr<Funscript> OpenFunscripter::selectionLead() noexcept
+{
+    for (auto& script : TargetedFunscripts()) {
+        if (script->HasSelection()) return script;
+    }
+    return nullptr;
+}
+
 void OpenFunscripter::removeAction() noexcept
 {
     OFS_PROFILE(__FUNCTION__);
-    if (ActiveFunscript()->HasSelection()) {
+    auto targets = TargetedFunscripts();
+    if (targetsHaveSelection()) {
         // A selection made by dragging across the timeline lands in every
-        // targeted lane, so deleting it clears them all.
-        auto targets = TargetedFunscripts();
+        // edited lane, so deleting it clears them all.
         undoSystem->Snapshot(StateType::REMOVE_SELECTION, undoContextFor(targets));
         for (auto& script : targets) {
             if (script->HasSelection()) script->RemoveSelectedActions();
         }
+        return;
     }
-    else {
-        auto action = ActiveFunscript()->GetClosestAction(player->CurrentTime());
-        if (action != nullptr) {
-            removeAction(*action); // snapshoted in here
-        }
+    // Nothing selected: the point nearest the playhead, in each edited lane.
+    std::vector<std::pair<std::shared_ptr<Funscript>, FunscriptAction>> removing;
+    for (auto& script : targets) {
+        auto closest = script->GetClosestAction(player->CurrentTime());
+        if (closest != nullptr) removing.emplace_back(script, *closest);
     }
+    if (removing.empty()) return;
+    UndoContextScripts scripts;
+    for (auto& [script, action] : removing) scripts.push_back(script);
+    undoSystem->Snapshot(StateType::REMOVE_ACTION, std::move(scripts));
+    for (auto& [script, action] : removing) script->RemoveAction(action);
+}
+
+void OpenFunscripter::addEditActionTo(const std::vector<std::shared_ptr<Funscript>>& targets, FunscriptAction action) noexcept
+{
+    OFS_PROFILE(__FUNCTION__);
+    // Every lane runs the same mode with the lane swapped in underneath, so
+    // Alternating alternates and Auto peak adds its peak in each one. The
+    // mode moves on to its next step once, after the last lane, so every
+    // lane gets the same step.
+    for (size_t i = 0; i < targets.size(); i += 1) {
+        ScriptingModeBase::TargetOverride = targets[i].get();
+        ScriptingModeBase::HoldState = i + 1 < targets.size();
+        scripting->AddEditAction(action);
+    }
+    ScriptingModeBase::TargetOverride = nullptr;
+    ScriptingModeBase::HoldState = false;
 }
 
 void OpenFunscripter::addEditAction(int pos) noexcept
@@ -2372,22 +2380,13 @@ void OpenFunscripter::addEditAction(int pos) noexcept
     OFS_PROFILE(__FUNCTION__);
     auto targets = TargetedFunscripts();
     undoSystem->Snapshot(StateType::ADD_EDIT_ACTIONS, undoContextFor(targets));
-    const FunscriptAction action(player->CurrentTime(), pos);
-    // The active script goes through the mode as it always did. Every other
-    // target runs the same mode with the target swapped in underneath, so
-    // Alternating alternates and Auto peak adds its peak in each lane.
-    scripting->AddEditAction(action);
-    for (size_t i = 1; i < targets.size(); i += 1) {
-        ScriptingModeBase::TargetOverride = targets[i].get();
-        scripting->AddEditAction(action);
-    }
-    ScriptingModeBase::TargetOverride = nullptr;
+    addEditActionTo(targets, FunscriptAction(player->CurrentTime(), pos));
 }
 
 void OpenFunscripter::cutSelection() noexcept
 {
     OFS_PROFILE(__FUNCTION__);
-    if (ActiveFunscript()->HasSelection()) {
+    if (targetsHaveSelection()) {
         copySelection();
         auto targets = TargetedFunscripts();
         undoSystem->Snapshot(StateType::CUT_SELECTION, undoContextFor(targets));
@@ -2400,28 +2399,506 @@ void OpenFunscripter::cutSelection() noexcept
 void OpenFunscripter::copySelection() noexcept
 {
     OFS_PROFILE(__FUNCTION__);
-    if (ActiveFunscript()->HasSelection()) {
-        CopiedSelection.clear();
-        CopiedTracks.clear();
-        for (auto action : ActiveFunscript()->Selection()) {
-            CopiedSelection.emplace(action);
+    auto lead = selectionLead();
+    if (lead == nullptr) return;
+    CopiedSelection.clear();
+    CopiedTracks.clear();
+    for (auto action : lead->Selection()) {
+        CopiedSelection.emplace(action);
+    }
+    // Each edited lane's selection is remembered with the lane it came from,
+    // so a paste puts every part back where it belongs.
+    for (auto& script : TargetedFunscripts()) {
+        if (!script->HasSelection()) continue;
+        CopiedTrack track;
+        track.script = script;
+        for (auto action : script->Selection()) track.actions.emplace(action);
+        CopiedTracks.push_back(std::move(track));
+    }
+}
+
+void OpenFunscripter::moveSelectionTime(bool forward) noexcept
+{
+    OFS_PROFILE(__FUNCTION__);
+    auto lead = selectionLead();
+    if (lead == nullptr) return;
+    auto targets = TargetedFunscripts();
+
+    // One step from the leading lane's selection, then cut down to what every
+    // lane has room for, so the lanes move together and stay in step.
+    const float from = lead->Selection().front().atS;
+    const float frameTime = scripting->LogicalFrameTime();
+    float time = forward
+        ? scripting->SteppingIntervalForward(from)
+        : scripting->SteppingIntervalBackward(from);
+    for (auto& script : targets) {
+        if (!script->HasSelection()) continue;
+        float limited = script->LimitSelectionTimeOffset(time, frameTime);
+        time = forward ? Util::Min(time, limited) : Util::Max(time, limited);
+    }
+
+    undoSystem->Snapshot(StateType::ACTIONS_MOVED, undoContextFor(targets));
+    for (auto& script : targets) {
+        if (script->HasSelection()) script->MoveSelectionTime(time, frameTime);
+    }
+}
+
+void OpenFunscripter::moveSelectionPosition(int32_t delta) noexcept
+{
+    OFS_PROFILE(__FUNCTION__);
+    if (!targetsHaveSelection()) return;
+    auto targets = TargetedFunscripts();
+    undoSystem->Snapshot(StateType::ACTIONS_MOVED, undoContextFor(targets));
+    for (auto& script : targets) {
+        if (script->HasSelection()) script->MoveSelectionPosition(delta);
+    }
+}
+
+// A point moved in each lane that has one to move, as one undo.
+struct ClosestEdit
+{
+    std::shared_ptr<Funscript> script;
+    FunscriptAction from;
+    FunscriptAction to;
+};
+
+static void applyClosestEdits(OpenFunscripter* app, StateType type, const std::vector<ClosestEdit>& edits) noexcept
+{
+    if (edits.empty()) return;
+    UndoContextScripts scripts;
+    for (auto& edit : edits) scripts.push_back(edit.script);
+    app->undoSystem->Snapshot(type, std::move(scripts));
+    for (auto& edit : edits) edit.script->EditAction(edit.from, edit.to);
+}
+
+std::optional<float> OpenFunscripter::moveClosestTime(bool forward) noexcept
+{
+    OFS_PROFILE(__FUNCTION__);
+    const float now = player->CurrentTime();
+    const float frameTime = scripting->LogicalFrameTime();
+    std::vector<ClosestEdit> edits;
+    for (auto& script : TargetedFunscripts()) {
+        auto closest = script->GetClosestAction(now);
+        if (closest == nullptr) continue;
+        auto time = forward
+            ? scripting->SteppingIntervalForward(closest->atS)
+            : scripting->SteppingIntervalBackward(closest->atS);
+        FunscriptAction moved(closest->atS + time, closest->pos);
+        // Not onto or past a neighbour.
+        auto inMoveRange = script->GetActionAtTime(moved.atS, frameTime);
+        if (inMoveRange == nullptr
+            || (forward && inMoveRange->atS < moved.atS)
+            || (!forward && inMoveRange->atS > moved.atS)) {
+            edits.push_back({ script, *closest, moved });
         }
-        // Each targeted lane's selection is remembered with the lane it came
-        // from, so a paste puts every part back where it belongs.
-        for (auto& script : TargetedFunscripts()) {
-            if (!script->HasSelection()) continue;
-            CopiedTrack track;
-            track.script = script;
-            for (auto action : script->Selection()) track.actions.emplace(action);
-            CopiedTracks.push_back(std::move(track));
+    }
+    applyClosestEdits(this, StateType::ACTIONS_MOVED, edits);
+    if (edits.empty()) return std::nullopt;
+    return edits.front().to.atS;
+}
+
+void OpenFunscripter::moveClosestPosition(int32_t delta) noexcept
+{
+    OFS_PROFILE(__FUNCTION__);
+    std::vector<ClosestEdit> edits;
+    for (auto& script : TargetedFunscripts()) {
+        auto closest = script->GetClosestAction(player->CurrentTime());
+        if (closest == nullptr) continue;
+        FunscriptAction moved(closest->atS, Util::Clamp<int32_t>(closest->pos + delta, 0, 100));
+        if (moved.pos != closest->pos) edits.push_back({ script, *closest, moved });
+    }
+    applyClosestEdits(this, StateType::ACTIONS_MOVED, edits);
+}
+
+void OpenFunscripter::moveClosestToPlayhead() noexcept
+{
+    OFS_PROFILE(__FUNCTION__);
+    const float now = player->CurrentTime();
+    std::vector<ClosestEdit> edits;
+    for (auto& script : TargetedFunscripts()) {
+        auto closest = script->GetClosestAction(now);
+        if (closest != nullptr) edits.push_back({ script, *closest, FunscriptAction(now, closest->pos) });
+    }
+    applyClosestEdits(this, StateType::MOVE_ACTION_TO_CURRENT_POS, edits);
+}
+
+void OpenFunscripter::selectAll() noexcept
+{
+    for (auto& script : TargetedFunscripts()) script->SelectAll();
+}
+
+void OpenFunscripter::clearSelection() noexcept
+{
+    for (auto& script : TargetedFunscripts()) script->ClearSelection();
+}
+
+void OpenFunscripter::selectTime(float start, float end) noexcept
+{
+    for (auto& script : TargetedFunscripts()) script->SelectTime(start, end);
+}
+
+bool OpenFunscripter::trackLoaded(const std::string& path) noexcept
+{
+    // By file name, as the Add menu always has: the same name in another
+    // folder would save over the one already loaded.
+    const auto filename = Util::PathFromString(path).filename().u8string();
+    for (auto& script : LoadedFunscripts()) {
+        if (Util::PathFromString(script->RelativePath()).filename().u8string() == filename) return true;
+    }
+    return false;
+}
+
+std::string OpenFunscripter::axisTrackPath(const char* axis) noexcept
+{
+    if (LoadedFunscripts().empty()) return std::string();
+    auto root = Util::PathFromString(LoadedProject->MakePathAbsolute(LoadedFunscripts()[0]->RelativePath()));
+    root.replace_extension(Util::Format(".%s.funscript", axis));
+    return root.u8string();
+}
+
+void OpenFunscripter::addAxisTrack(const char* axis) noexcept
+{
+    auto path = axisTrackPath(axis);
+    if (!path.empty() && !trackLoaded(path)) LoadedProject->AddFunscript(path);
+}
+
+void OpenFunscripter::addNewTrackDialog() noexcept
+{
+    auto& ofsState = OpenFunscripterState::State(stateHandle);
+    Util::SaveFileDialog(TR(ADD_NEW_FUNSCRIPT), ofsState.lastPath,
+        [](auto& result) noexcept {
+            auto app = OpenFunscripter::ptr;
+            if (!result.files.empty() && !app->trackLoaded(result.files[0])) {
+                app->LoadedProject->AddFunscript(result.files[0]);
+            }
+        },
+        { "Funscript", "*.funscript" });
+}
+
+void OpenFunscripter::loadTracksDialog() noexcept
+{
+    auto& ofsState = OpenFunscripterState::State(stateHandle);
+    Util::OpenFileDialog(TR(ADD_EXISTING_FUNSCRIPTS), ofsState.lastPath,
+        [](auto& result) noexcept {
+            auto app = OpenFunscripter::ptr;
+            for (auto& scriptPath : result.files) {
+                if (!app->trackLoaded(scriptPath)) app->LoadedProject->AddFunscript(scriptPath);
+            }
+        },
+        true, { "*.funscript" }, "Funscript");
+}
+
+void OpenFunscripter::removeTrack(int32_t idx) noexcept
+{
+    auto& scripts = LoadedFunscripts();
+    if (idx < 0 || idx >= (int32_t)scripts.size() || scripts.size() <= 1) return;
+    // Asked in drawRemoveTrackModal. Held by the track rather than its place
+    // in the list, since the list can change while the question is open.
+    trackToRemove = scripts[idx];
+}
+
+void OpenFunscripter::removeTrackNow(const std::shared_ptr<Funscript>& script) noexcept
+{
+    auto& scripts = LoadedFunscripts();
+    auto it = std::find(scripts.begin(), scripts.end(), script);
+    if (!script || it == scripts.end() || scripts.size() <= 1) return;
+
+    // The current track stays current. When it is the one removed, the track
+    // that takes its place in the list does, or the one before it at the end,
+    // and it is shown if it was hidden.
+    auto current = ActiveFunscript();
+    const int32_t removed = (int32_t)(it - scripts.begin());
+    LoadedProject->RemoveFunscript(removed);
+    int32_t next = 0;
+    if (current != script) {
+        next = (int32_t)(std::find(scripts.begin(), scripts.end(), current) - scripts.begin());
+    }
+    else {
+        next = Util::Min(removed, (int32_t)scripts.size() - 1);
+        scripts[next]->Enabled = true;
+    }
+    LoadedProject->SetActiveIdx(next);
+    updateTitle();
+    Status = Status | OFS_Status::OFS_GradientNeedsUpdate;
+}
+
+void OpenFunscripter::drawRemoveTrackModal() noexcept
+{
+    constexpr const char* PopupId = "Remove track?###REMOVE_TRACK";
+    auto script = trackToRemove.lock();
+    if (script && !ImGui::IsPopupOpen(PopupId)) ImGui::OpenPopup(PopupId);
+    if (!ImGui::BeginPopupModal(PopupId, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) return;
+
+    bool close = false;
+    if (script) {
+        ImGui::Text("Remove %s from the project?", script->Title().c_str());
+        ImGui::TextDisabled("The file stays on disk, but changes that weren't saved\n"
+                            "to it or exported are lost. This can't be undone.");
+        ImGui::Spacing();
+        // Enter removes and Escape cancels, as in a system dialog.
+        if (ImGui::Button("Remove") || ImGui::IsKeyPressed(ImGuiKey_Enter, false) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter, false)) {
+            removeTrackNow(script);
+            close = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel") || ImGui::IsKeyPressed(ImGuiKey_Escape, false)) close = true;
+    }
+    else {
+        close = true;
+    }
+    if (close) {
+        trackToRemove.reset();
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+}
+
+void OpenFunscripter::setTrackShown(int32_t idx, bool shown) noexcept
+{
+    auto& scripts = LoadedFunscripts();
+    if (idx < 0 || idx >= (int32_t)scripts.size()) return;
+    if (shown) {
+        scripts[idx]->Enabled = true;
+        return;
+    }
+    // One track always stays showing.
+    int32_t showing = 0;
+    for (auto& script : scripts) showing += script->Enabled ? 1 : 0;
+    if (!scripts[idx]->Enabled || showing <= 1) return;
+    scripts[idx]->Enabled = false;
+    // Hiding the current track moves to another that is showing, as the eye
+    // in the lane header does.
+    if (idx == (int32_t)LoadedProject->ActiveIdx()) {
+        for (int32_t other = 0; other < (int32_t)scripts.size(); other += 1) {
+            if (scripts[other]->Enabled) {
+                EV::Enqueue<ShouldChangeActiveScriptEvent>(other);
+                break;
+            }
         }
     }
 }
 
+// A tooltip on a control that may be disabled, which the usual one skips.
+static void trackTooltip(const char* tip) noexcept
+{
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal | ImGuiHoveredFlags_AllowWhenDisabled)) {
+        OFS::ShowWrappedTooltip(tip);
+    }
+}
+
+void OpenFunscripter::ShowTracksWindow(bool* open) noexcept
+{
+    if (!*open) return;
+    OFS_PROFILE(__FUNCTION__);
+
+    // Not in the layout it was saved with: put it left of the timeline, where
+    // the tracks it lists are, rather than floating over the video.
+    if (ImGui::FindWindowByName(TracksWindowId) == nullptr
+        && ImGui::FindWindowSettings(ImHashStr(TracksWindowId)) == nullptr) {
+        auto timeline = ImGui::FindWindowByName(ScriptTimeline::WindowId);
+        if (timeline != nullptr && timeline->DockId != 0) {
+            ImGuiID tracksId = 0, timelineId = 0;
+            ImGui::DockBuilderSplitNode(timeline->DockId, ImGuiDir_Left, 0.14f, &tracksId, &timelineId);
+            ImGui::DockBuilderDockWindow(TracksWindowId, tracksId);
+            ImGui::DockBuilderFinish(tracksId);
+        }
+    }
+
+    ImGui::Begin(TracksWindowId, open);
+    if (!LoadedProject->IsValid() || LoadedFunscripts().empty()) {
+        ImGui::TextDisabled("Open a video or a script to see its tracks.");
+        ImGui::End();
+        return;
+    }
+
+    auto& scripts = LoadedFunscripts();
+    const int32_t current = (int32_t)LoadedProject->ActiveIdx();
+
+    if (ImGui::Button("Add")) ImGui::OpenPopup("##addTrack");
+    trackTooltip("Add a track: an axis like twist or roll beside the main script, or a new file.");
+    ImGui::SameLine();
+    if (ImGui::Button("Load...")) loadTracksDialog();
+    trackTooltip("Load .funscript files as tracks.");
+    if (ImGui::BeginPopup("##addTrack")) {
+        ImGui::TextDisabled("Axis");
+        for (auto axis : Funscript::AxisNames) {
+            if (ImGui::MenuItem(axis, nullptr, false, !trackLoaded(axisTrackPath(axis)))) addAxisTrack(axis);
+        }
+        ImGui::Separator();
+        if (ImGui::MenuItem("New file...")) addNewTrackDialog();
+        ImGui::EndPopup();
+    }
+
+    int32_t showing = 0;
+    for (auto& script : scripts) showing += script->Enabled ? 1 : 0;
+
+    int32_t switchTo = -1;
+    // Dragging a row's grip reorders. Where each row sits, to tell which row
+    // the mouse is over while dragging.
+    int32_t dragging = -1;
+    std::vector<float> rowMiddles;
+    rowMiddles.reserve(scripts.size());
+    int32_t removeAt = -1;
+    // Compact rows, since the panel shares the height of the timeline and
+    // should show as many tracks as the timeline shows lanes.
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(ImGui::GetStyle().FramePadding.x, 2.f));
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(ImGui::GetStyle().CellPadding.x, 1.f));
+    const float box = ImGui::GetFrameHeight();
+    const float grip = box * 0.6f;
+    if (ImGui::BeginTable("##tracks", 5, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_PadOuterX)) {
+        ImGui::TableSetupColumn("##grip", ImGuiTableColumnFlags_WidthFixed, grip);
+        ImGui::TableSetupColumn("##shown", ImGuiTableColumnFlags_WidthFixed, box);
+        ImGui::TableSetupColumn("##edited", ImGuiTableColumnFlags_WidthFixed, box);
+        ImGui::TableSetupColumn("##name", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("##remove", ImGuiTableColumnFlags_WidthFixed, box);
+
+        for (int32_t i = 0; i < (int32_t)scripts.size(); i += 1) {
+            auto& script = scripts[i];
+            const bool isCurrent = i == current;
+            // By track rather than by row, so a row being dragged keeps hold
+            // of the mouse as it moves to another row.
+            ImGui::PushID(script.get());
+            ImGui::TableNextRow();
+
+            // Grip: drag it to change the order. Two columns of dots, the
+            // usual sign of something that can be dragged. The main track
+            // stays first, so it has none.
+            ImGui::TableNextColumn();
+            {
+                const ImVec2 pos = ImGui::GetCursorScreenPos();
+                ImGui::InvisibleButton("##grip", ImVec2(grip, box));
+                rowMiddles.push_back((ImGui::GetItemRectMin().y + ImGui::GetItemRectMax().y) * 0.5f);
+                if (i > 0) {
+                    const bool hovered = ImGui::IsItemHovered();
+                    const bool active = ImGui::IsItemActive();
+                    if (hovered || active) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+                    if (active && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 2.f)) dragging = i;
+                    const uint32_t color = active ? OFS_Sashimi::Role().AccentBright
+                        : (hovered ? OFS_Sashimi::Grey95 : OFS_Sashimi::Grey50);
+                    auto drawList = ImGui::GetWindowDrawList();
+                    const float dot = Util::Max(1.5f, box * 0.07f);
+                    const ImVec2 center = pos + ImVec2(grip * 0.5f, box * 0.5f);
+                    for (int32_t row = -1; row <= 1; row += 1) {
+                        for (int32_t col = 0; col < 2; col += 1) {
+                            drawList->AddCircleFilled(center + ImVec2((col == 0 ? -1.f : 1.f) * dot * 1.6f, row * dot * 3.2f), dot, color, 6);
+                        }
+                    }
+                    trackTooltip("Drag to change the order of the tracks, here and in the timeline.");
+                }
+                else {
+                    trackTooltip("The main track. It stays first: exports and devices treat it as the stroke.");
+                }
+            }
+
+            // Eye: shown in the timeline or not. One track always stays shown.
+            ImGui::TableNextColumn();
+            {
+                const bool canToggle = !script->Enabled || showing > 1;
+                const ImVec2 pos = ImGui::GetCursorScreenPos();
+                if (ImGui::InvisibleButton("##eye", ImVec2(box, box)) && canToggle) {
+                    setTrackShown(i, !script->Enabled);
+                }
+                const bool hovered = ImGui::IsItemHovered();
+                if (hovered && canToggle) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                auto drawList = ImGui::GetWindowDrawList();
+                const uint32_t color = !canToggle ? IM_COL32(0x4A, 0x4A, 0x4A, 0xFF)
+                    : script->Enabled ? (hovered ? OFS_Sashimi::Grey95 : OFS_Sashimi::Grey60)
+                    : (hovered ? OFS_Sashimi::Grey80 : IM_COL32(0x5A, 0x5A, 0x5A, 0xFF));
+                const ImVec2 center = pos + ImVec2(box * 0.5f, box * 0.5f);
+                ScriptTimeline::DrawEye(drawList, center, box * 0.75f, color);
+                if (!script->Enabled) {
+                    // Struck through while hidden.
+                    drawList->AddLine(center + ImVec2(-box * 0.3f, box * 0.3f), center + ImVec2(box * 0.3f, -box * 0.3f), color, 1.5f);
+                }
+                trackTooltip(!canToggle ? "The only track showing, so it stays."
+                    : script->Enabled ? "Shown in the timeline. Click to hide it."
+                    : "Hidden. Click to show it in the timeline.");
+            }
+
+            // Edit checkbox, as in the lane header: the track you're on shows a
+            // dim mark when it isn't checked, since it is edited only while
+            // you're on it. Hidden tracks aren't edited.
+            ImGui::TableNextColumn();
+            {
+                const bool dimMark = isCurrent && !script->Targeted;
+                bool shownChecked = script->Targeted || isCurrent;
+                ImGui::BeginDisabled(!script->Enabled);
+                if (dimMark) ImGui::PushStyleColor(ImGuiCol_CheckMark, OFS_Sashimi::Role().AccentDeep);
+                if (ImGui::Checkbox("##edit", &shownChecked)) script->Targeted = !script->Targeted;
+                if (dimMark) ImGui::PopStyleColor();
+                ImGui::EndDisabled();
+                trackTooltip(!script->Enabled ? "Hidden tracks aren't edited. Show it to edit it."
+                    : dimMark ? "Edited because it's the track you're on. Check it to keep it edited when you switch to another track."
+                    : (isCurrent ? "Edited, and stays edited when you switch to another track. Click to edit it only while you're on it."
+                    : script->Targeted ? "Edited along with the track you're on: new points, moves, delete and paste happen here too. Click to stop editing it."
+                    : "Not edited. Check it to edit it along with the track you're on."));
+            }
+
+            // Name: the current track is highlighted, and a click switches to
+            // a track, showing it first if it was hidden.
+            ImGui::TableNextColumn();
+            {
+                const auto label = ScriptTimeline::LaneLabel(scripts, i);
+                if (!script->Enabled) ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));
+                if (ImGui::Selectable(label.c_str(), isCurrent, ImGuiSelectableFlags_None, ImVec2(0.f, box)) && !isCurrent) {
+                    switchTo = i;
+                }
+                if (!script->Enabled) ImGui::PopStyleColor();
+                const std::string tip = script->Title() + "\n" + std::to_string(script->Actions().size()) + " points\n"
+                    + (isCurrent ? "The track you're on. It's always edited, and Special functions and other one-track tools use it."
+                        : "Click to switch to this track.");
+                trackTooltip(tip.c_str());
+            }
+
+            // Remove from the project. The last track stays.
+            ImGui::TableNextColumn();
+            {
+                const bool canRemove = scripts.size() > 1;
+                const ImVec2 pos = ImGui::GetCursorScreenPos();
+                if (ImGui::InvisibleButton("##remove", ImVec2(box, box)) && canRemove) removeAt = i;
+                const bool hovered = ImGui::IsItemHovered();
+                if (hovered && canRemove) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                const uint32_t color = !canRemove ? IM_COL32(0x4A, 0x4A, 0x4A, 0xFF)
+                    : (hovered ? OFS_Sashimi::Grey95 : OFS_Sashimi::Grey60);
+                const ImVec2 center = pos + ImVec2(box * 0.5f, box * 0.5f);
+                const float r = box * 0.18f;
+                auto drawList = ImGui::GetWindowDrawList();
+                drawList->AddLine(center + ImVec2(-r, -r), center + ImVec2(r, r), color, 1.5f);
+                drawList->AddLine(center + ImVec2(-r, r), center + ImVec2(r, -r), color, 1.5f);
+                trackTooltip(canRemove ? "Remove this track from the project. The file stays on disk."
+                    : "The only track, so it stays.");
+            }
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+    ImGui::PopStyleVar(2);
+
+    // Moved to the row the mouse is over, one row at a time as it crosses
+    // each row's middle. Never above the main track.
+    if (dragging > 0) {
+        ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeNS);
+        const float mouseY = ImGui::GetMousePos().y;
+        int32_t target = dragging;
+        if (target > 1 && mouseY < rowMiddles[target - 1]) target -= 1;
+        else if (target + 1 < (int32_t)rowMiddles.size() && mouseY > rowMiddles[target + 1]) target += 1;
+        if (target != dragging && LoadedProject->MoveFunscript(dragging, target)) {
+            updateTitle();
+        }
+    }
+
+    if (switchTo >= 0) {
+        setTrackShown(switchTo, true);
+        EV::Enqueue<ShouldChangeActiveScriptEvent>(switchTo);
+    }
+    if (removeAt >= 0) removeTrack(removeAt);
+    ImGui::End();
+}
+
 // The scripts a paste goes into, and which part goes where. Parts copied from
 // a lane that has since been removed are dropped. A clipboard from before the
-// lanes were tracked, or with only the active lane in it, pastes into the
-// active script exactly as it always did.
+// lanes were tracked, or with only one lane in it, pastes into the first
+// edited lane: the current one, when it is being edited.
 struct PasteTarget
 {
     std::shared_ptr<Funscript> script;
@@ -2439,7 +2916,7 @@ static std::vector<PasteTarget> pasteTargetsFor(OpenFunscripter* app) noexcept
     if (targets.size() <= 1) {
         targets.clear();
         if (!app->FunscriptClipboard().empty()) {
-            targets.push_back({ app->ActiveFunscript(), &app->FunscriptClipboard() });
+            targets.push_back({ app->TargetedFunscripts().front(), &app->FunscriptClipboard() });
         }
     }
     return targets;
@@ -2826,84 +3303,28 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
                 pickDifferentMedia();
             }
             if (ImGui::BeginMenu(TR(ADD_MENU), LoadedProject->IsValid())) {
-                auto fileAlreadyLoaded = [](const std::string& path) noexcept -> bool {
-                    auto app = OpenFunscripter::ptr;
-                    auto it = std::find_if(app->LoadedFunscripts().begin(), app->LoadedFunscripts().end(),
-                        [filename = Util::PathFromString(path).filename().u8string()](auto& script) {
-                            return Util::PathFromString(script->RelativePath()).filename().u8string() == filename;
-                        });
-                    return it != app->LoadedFunscripts().end();
-                };
-                auto addNewShortcut = [this, fileAlreadyLoaded](const char* axisExt) noexcept {
-                    if (ImGui::MenuItem(axisExt)) {
-                        std::string newScriptPath;
-                        {
-                            auto root = Util::PathFromString(
-                                LoadedProject->MakePathAbsolute(LoadedFunscripts()[0]->RelativePath()));
-                            root.replace_extension(Util::Format(".%s.funscript", axisExt));
-                            newScriptPath = root.u8string();
-                        }
-
-                        if (!fileAlreadyLoaded(newScriptPath)) {
-                            LoadedProject->AddFunscript(newScriptPath);
-                        }
-                    }
-                };
                 if (ImGui::BeginMenu(TR(ADD_SHORTCUTS))) {
                     for (auto axis : Funscript::AxisNames) {
-                        addNewShortcut(axis);
+                        if (ImGui::MenuItem(axis, nullptr, false, !trackLoaded(axisTrackPath(axis)))) {
+                            addAxisTrack(axis);
+                        }
                     }
                     ImGui::EndMenu();
                 }
                 if (ImGui::MenuItem(TR(ADD_NEW))) {
-                    Util::SaveFileDialog(TR(ADD_NEW_FUNSCRIPT), ofsState.lastPath,
-                        [fileAlreadyLoaded](auto& result) noexcept {
-                            if (result.files.size() > 0) {
-                                auto app = OpenFunscripter::ptr;
-                                if (!fileAlreadyLoaded(result.files[0])) {
-                                    app->LoadedProject->AddFunscript(result.files[0]);
-                                }
-                            }
-                        },
-                        { "Funscript", "*.funscript" });
+                    addNewTrackDialog();
                 }
                 if (ImGui::MenuItem(TR(ADD_EXISTING))) {
-                    Util::OpenFileDialog(
-                        TR(ADD_EXISTING_FUNSCRIPTS), ofsState.lastPath,
-                        [fileAlreadyLoaded](auto& result) noexcept {
-                            if (result.files.size() > 0) {
-                                for (auto& scriptPath : result.files) {
-                                    auto app = OpenFunscripter::ptr;
-                                    if (!fileAlreadyLoaded(scriptPath)) {
-                                        app->LoadedProject->AddFunscript(scriptPath);
-                                    }
-                                }
-                            }
-                        },
-                        true, { "*.funscript" }, "Funscript");
+                    loadTracksDialog();
                 }
                 ImGui::EndMenu();
             }
-            if (ImGui::BeginMenu(TR(REMOVE), !LoadedFunscripts().empty())) {
-                int unloadIndex = -1;
-                for (int i = 0; i < LoadedFunscripts().size(); i++) {
+            // The last track stays: there is always a script to edit.
+            if (ImGui::BeginMenu(TR(REMOVE), LoadedFunscripts().size() > 1)) {
+                for (int i = 0; i < (int)LoadedFunscripts().size(); i += 1) {
                     if (ImGui::MenuItem(LoadedFunscripts()[i]->Title().c_str())) {
-                        unloadIndex = i;
+                        removeTrack(i);
                     }
-                }
-                if (unloadIndex >= 0) {
-                    Util::YesNoCancelDialog(TR(REMOVE_SCRIPT),
-                        TR(REMOVE_SCRIPT_CONFIRM_MSG),
-                        [this, unloadIndex](Util::YesNoCancel result) {
-                            if (result == Util::YesNoCancel::Yes) {
-                                LoadedProject->RemoveFunscript(unloadIndex);
-                                auto activeIdx = LoadedProject->ActiveIdx();
-                                if (activeIdx > 0) {
-                                    activeIdx--;
-                                    UpdateNewActiveScript(activeIdx);
-                                }
-                            }
-                        });
                 }
                 ImGui::EndMenu();
             }
@@ -2919,10 +3340,10 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
                 this->Redo();
             }
             ImGui::Separator();
-            if (ImGui::MenuItem(TR(CUT), BINDING_STRING("cut"), false, ActiveFunscript()->HasSelection())) {
+            if (ImGui::MenuItem(TR(CUT), BINDING_STRING("cut"), false, targetsHaveSelection())) {
                 cutSelection();
             }
-            if (ImGui::MenuItem(TR(COPY), BINDING_STRING("copy"), false, ActiveFunscript()->HasSelection())) {
+            if (ImGui::MenuItem(TR(COPY), BINDING_STRING("copy"), false, targetsHaveSelection())) {
                 copySelection();
             }
             if (ImGui::MenuItem(TR(PASTE), BINDING_STRING("paste"), false, CopiedSelection.size() > 0)) {
@@ -2932,18 +3353,18 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
         }
         if (ImGui::BeginMenu(TR(SELECT))) {
             if (ImGui::MenuItem(TR(SELECT_ALL), BINDING_STRING("select_all"), false)) {
-                ActiveFunscript()->SelectAll();
+                selectAll();
             }
             if (ImGui::MenuItem(TR(DESELECT_ALL), BINDING_STRING("deselect_all"), false)) {
-                ActiveFunscript()->ClearSelection();
+                clearSelection();
             }
 
             if (ImGui::BeginMenu(TR(SPECIAL))) {
                 if (ImGui::MenuItem(TR(SELECT_ALL_LEFT), BINDING_STRING("select_all_left"), false)) {
-                    ActiveFunscript()->SelectTime(0, player->CurrentTime());
+                    selectTime(0, player->CurrentTime());
                 }
                 if (ImGui::MenuItem(TR(SELECT_ALL_RIGHT), BINDING_STRING("select_all_right"), false)) {
-                    ActiveFunscript()->SelectTime(player->CurrentTime(), player->Duration());
+                    selectTime(player->CurrentTime(), player->Duration());
                 }
                 ImGui::Separator();
                 static int32_t selectionPoint = -1;
@@ -2952,7 +3373,7 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
                         selectionPoint = player->CurrentTime();
                     }
                     else {
-                        ActiveFunscript()->SelectTime(player->CurrentTime(), selectionPoint);
+                        selectTime(player->CurrentTime(), selectionPoint);
                         selectionPoint = -1;
                     }
                 }
@@ -2961,7 +3382,7 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
                         selectionPoint = player->CurrentTime();
                     }
                     else {
-                        ActiveFunscript()->SelectTime(selectionPoint, player->CurrentTime());
+                        selectTime(selectionPoint, player->CurrentTime());
                         selectionPoint = -1;
                     }
                 }
@@ -3016,6 +3437,8 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
             OFS::Tooltip("Lists the strokes a device cannot follow, and slows them down.");
             if (ImGui::MenuItem("Devices", NULL, &ofsState.showDevices)) {}
             OFS::Tooltip("Plays the script on a real device through Intiface Central.");
+            if (ImGui::MenuItem("Tracks", NULL, &ofsState.showTracks)) {}
+            OFS::Tooltip("Every track in the project: show or hide it, choose which are edited, add, load and remove them.");
 
 
             ImGui::Separator();
@@ -3620,10 +4043,10 @@ void OpenFunscripter::ScriptTimelineSelectTime(const FunscriptShouldSelectTimeEv
     OFS_PROFILE(__FUNCTION__);
     if (auto script = ev->script.lock()) {
         script->SelectTime(ev->startTime, ev->endTime, ev->clearSelection);
-        // Dragging across the active lane selects the same span in every
-        // targeted lane, which is what makes copying a passage from several
+        // Dragging across an edited lane selects the same span in every
+        // edited lane, which is what makes copying a passage from several
         // channels a single drag rather than one per lane.
-        if (script == ActiveFunscript()) {
+        if (IsEdited(script)) {
             for (auto& target : TargetedFunscripts()) {
                 if (target != script) target->SelectTime(ev->startTime, ev->endTime, ev->clearSelection);
             }

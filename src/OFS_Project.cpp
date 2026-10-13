@@ -367,7 +367,23 @@ void OFS_Project::Save(const std::string& path, bool clearUnsavedChanges) noexce
         for (auto& script : Funscripts) {
             script->ClearUnsavedEdits();
         }
+        orderChanged = false;
     }
+}
+
+bool OFS_Project::MoveFunscript(int32_t from, int32_t to) noexcept
+{
+    const int32_t count = (int32_t)Funscripts.size();
+    if (from == to || from < 1 || to < 1 || from >= count || to >= count) return false;
+    auto current = ActiveScript();
+    auto moving = Funscripts[from];
+    Funscripts.erase(Funscripts.begin() + from);
+    Funscripts.insert(Funscripts.begin() + to, moving);
+    for (int32_t i = 0; i < count; i += 1) {
+        if (Funscripts[i] == current) SetActiveIdx(i);
+    }
+    orderChanged = true;
+    return true;
 }
 
 void OFS_Project::Update(float delta, bool idleMode) noexcept
@@ -382,6 +398,7 @@ void OFS_Project::Update(float delta, bool idleMode) noexcept
 bool OFS_Project::HasUnsavedEdits() noexcept
 {
     OFS_PROFILE(__FUNCTION__);
+    if (orderChanged) return true;
     for (auto& script : Funscripts) {
         if (script->HasUnsavedEdits()) {
             return true;

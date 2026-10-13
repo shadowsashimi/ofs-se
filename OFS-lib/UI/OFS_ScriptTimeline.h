@@ -81,6 +81,11 @@ public:
 	OFS_WaveformLOD Wave;
 	static constexpr const char* WindowId = "###POSITIONS";
 
+	// Shared with the Tracks panel, so a track looks and reads the same there
+	// as in its lane header.
+	static std::string LaneLabel(const std::vector<std::shared_ptr<Funscript>>& scripts, int idx) noexcept;
+	static void DrawEye(ImDrawList* drawList, ImVec2 center, float size, uint32_t color) noexcept;
+
 	// Drawn at the top of a lane's right click menu, above the view settings.
 	// The edits it offers belong to the app, which owns undo and the selection
 	// commands, so the timeline only provides the place for them.
@@ -98,6 +103,10 @@ public:
 		ImVec2 canvasSize = ImVec2(0.f, 0.f);
 		float offsetTime = 0.f;
 		float visibleTime = 0.f;
+		// The middle of each part of the lane's header.
+		ImVec2 checkCenter = ImVec2(0.f, 0.f);
+		ImVec2 eyeCenter = ImVec2(0.f, 0.f);
+		ImVec2 nameCenter = ImVec2(0.f, 0.f);
 	};
 	std::vector<LaneGeometry> Lanes;
 

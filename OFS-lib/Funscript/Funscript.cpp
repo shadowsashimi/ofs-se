@@ -595,6 +595,26 @@ void Funscript::moveActionsPosition(std::vector<FunscriptAction*> moving, int32_
 	notifyActionsChanged(true);
 }
 
+float Funscript::LimitSelectionTimeOffset(float timeOffset, float frameTime) noexcept
+{
+	// With everything selected there is nothing either side to run into.
+	if (!HasSelection() || data.Selection.size() == data.Actions.size()) return timeOffset;
+
+	if (timeOffset > 0) {
+		auto next = GetNextActionAhead(data.Selection.back().atS);
+		if (next != nullptr) {
+			timeOffset = std::min(timeOffset, (next->atS - frameTime) - data.Selection.back().atS);
+		}
+	}
+	else {
+		auto prev = GetPreviousActionBehind(data.Selection.front().atS);
+		if (prev != nullptr) {
+			timeOffset = std::max(timeOffset, (prev->atS + frameTime) - data.Selection.front().atS);
+		}
+	}
+	return timeOffset;
+}
+
 void Funscript::MoveSelectionTime(float timeOffset, float frameTime) noexcept
 {
 	OFS_PROFILE(__FUNCTION__);
@@ -607,24 +627,7 @@ void Funscript::MoveSelectionTime(float timeOffset, float frameTime) noexcept
 		return;
 	}
 
-	auto prev = GetPreviousActionBehind(data.Selection.front().atS);
-	auto next = GetNextActionAhead(data.Selection.back().atS);
-
-	auto min_bound = 0.f;
-	auto max_bound = std::numeric_limits<float>::max();
-
-	if (timeOffset > 0) {
-		if (next != nullptr) {
-			max_bound = next->atS - frameTime;
-			timeOffset = std::min(timeOffset, max_bound - data.Selection.back().atS);
-		}
-	}
-	else {
-		if (prev != nullptr) {
-			min_bound = prev->atS + frameTime;
-			timeOffset = std::max(timeOffset, min_bound - data.Selection.front().atS);
-		}
-	}
+	timeOffset = LimitSelectionTimeOffset(timeOffset, frameTime);
 
 	FunscriptArray newSelection;
 	newSelection.reserve(data.Selection.size());

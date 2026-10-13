@@ -125,6 +125,17 @@ namespace OFS {
 	// out as one line running off the side of the screen.
 	constexpr float TooltipWrapEm = 30.f;
 
+	// A tooltip shown now, wrapped like the others, for places that decide
+	// for themselves when to show it.
+	inline void ShowWrappedTooltip(const char* tip) noexcept
+	{
+		ImGui::BeginTooltip();
+		ImGui::PushTextWrapPos(ImGui::GetFontSize() * TooltipWrapEm);
+		ImGui::TextUnformatted(tip);
+		ImGui::PopTextWrapPos();
+		ImGui::EndTooltip();
+	}
+
 	inline void Tooltip(const char* tip) noexcept
 	{
 		// The normal delay rather than the short one: a tooltip that appears as

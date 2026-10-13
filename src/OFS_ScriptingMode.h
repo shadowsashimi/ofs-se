@@ -26,6 +26,10 @@ public:
     // While set, the modes edit this script instead of the active one, so an
     // edit aimed at several targeted lanes runs the mode once per lane.
     static Funscript* TargetOverride;
+    // While set, a mode with steps of its own, like Alternating, places this
+    // point without moving on to its next step, so every lane of one edit
+    // gets the same step.
+    static bool HoldState;
 
 public:
     ScriptingModeBase() noexcept {}

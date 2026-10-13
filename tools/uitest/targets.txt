@@ -23,7 +23,8 @@ expect scripts 2
 expect active_index 0
 
 note tick the second lane's target box
-click 32 739
+lanehead 1 check
+tap
 wait 10
 state 01-targeted
 shot 01-targeted
@@ -41,7 +42,8 @@ action action_0
 wait 5
 expect actions 3
 expect positions 0,100,0
-click 91 739
+lanehead 1 name
+tap
 wait 10
 expect active_index 1
 expect actions 3
@@ -51,7 +53,8 @@ note one undo takes the last point out of both lanes
 key ctrl+z
 wait 5
 expect actions 2
-click 91 670
+lanehead 0 name
+tap
 wait 10
 expect active_index 0
 expect actions 2
@@ -80,7 +83,8 @@ wait 10
 state 02-pasted
 shot 02-pasted
 expect actions 6
-click 91 739
+lanehead 1 name
+tap
 wait 10
 expect active_index 1
 expect actions 6
@@ -89,7 +93,8 @@ note one undo takes the paste out of both lanes
 key ctrl+z
 wait 5
 expect actions 3
-click 91 670
+lanehead 0 name
+tap
 wait 10
 expect actions 3
 
@@ -97,7 +102,8 @@ note delete clears the selection from both lanes
 key delete
 wait 5
 expect actions 0
-click 91 739
+lanehead 1 name
+tap
 wait 10
 expect actions 0
 quit

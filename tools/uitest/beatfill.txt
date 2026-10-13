@@ -17,7 +17,10 @@ seek 5
 wait 10
 expect audio_only 1
 
-note measure the tempo, which is what the fill writes against
+note measure the tempo, which is what the fill writes against. Detection waits
+note for the waveform audio makes as it opens, so the test does too: with
+note several runs at once it can still be busy here
+waituntil waveform_busy <= 0 900
 click 266 13
 wait 5
 click 300 238

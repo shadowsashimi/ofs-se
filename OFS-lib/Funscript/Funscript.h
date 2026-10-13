@@ -207,9 +207,9 @@ public:
 	static std::array<const char*, 9> AxisNames;
 
 	bool Enabled = true;
-	// Ticked in its lane header: edits made from the keyboard, and the
-	// clipboard, act on this script as well as the active one. The active
-	// script is always a target whether or not this is set.
+	// Checked in its lane header or the Tracks panel: edited along with the
+	// current track, and still edited after switching to another. The
+	// current track is edited either way; its box shows a dim check then.
 	bool Targeted = false;
 	std::unique_ptr<FunscriptUndoSystem> undoSystem;
 
@@ -280,6 +280,10 @@ public:
 	void SelectAll() noexcept;
 	void RemoveSelectedActions() noexcept;
 	void MoveSelectionTime(float time_offset, float frameTime) noexcept;
+	// How far the selection can move by time_offset without running into the
+	// points either side of it. Moving several scripts by the smallest of
+	// these keeps them in step.
+	float LimitSelectionTimeOffset(float time_offset, float frameTime) noexcept;
 	void MoveSelectionPosition(int32_t pos_offset) noexcept;
 	inline bool HasSelection() const noexcept { return !data.Selection.empty(); }
 	inline uint32_t SelectionSize() const noexcept { return data.Selection.size(); }

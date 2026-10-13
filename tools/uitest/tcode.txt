@@ -45,7 +45,8 @@ click 425 178
 wait 30
 expect scripts 2
 note its lane header makes it the one points land in
-click 91 739
+lanehead 1 name
+tap
 wait 10
 expect active_title uitest.twist
 hold shift

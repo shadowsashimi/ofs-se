@@ -20,6 +20,7 @@ void ScriptingModeBase::AddEditAction(FunscriptAction action) noexcept
 }
 
 Funscript* ScriptingModeBase::TargetOverride = nullptr;
+bool ScriptingModeBase::HoldState = false;
 
 inline Funscript& ScriptingModeBase::ctx() noexcept
 {
@@ -406,7 +407,7 @@ void AlternatingMode::AddEditAction(FunscriptAction action) noexcept
         }
     }
     ScriptingModeBase::AddEditAction(action);
-    if (!contextSensitive) {
+    if (!contextSensitive && !HoldState) {
         nextPosition = !nextPosition;
     }
 }
