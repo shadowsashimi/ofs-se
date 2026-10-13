@@ -41,7 +41,7 @@
 //   dclick X Y               double click
 //   drag X1 Y1 X2 Y2 [STEPS] press at the first point, move to the second, release
 //   press left|right|middle  / release left|right|middle
-//   wheel DY                 scroll at the mouse
+//   wheel DY [DX]            scroll at the mouse; fractions are a trackpad's small steps
 //   key CHORD                e.g. ctrl+z, shift+delete, space, f10
 //   hold shift|ctrl|alt      / let shift|ctrl|alt
 //   type TEXT                text input

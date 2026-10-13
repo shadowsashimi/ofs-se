@@ -1,0 +1,57 @@
+# A trackpad scrolls in small fractions of a notch. Over the lanes they zoom
+# smoothly, and two fingers sideways move through time, as Shift and a mouse
+# wheel do. A whole notch from a mouse still zooms a tenth and eases in.
+#! covers OFS-lib/UI/OFS_ScriptTimeline.cpp:mouseScroll OFS-lib/UI/OFS_ScriptTimeline.cpp:ShowScriptPositions OFS-lib/imgui_impl/imgui_impl_sdl.cpp OFS-lib/videoplayer/OFS_VideoplayerWindow.cpp:mouseScroll
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 30
+wait 10
+lanemove 30.0 50
+wait 5
+expect visible_time 5.00
+
+note ten small steps in, each a tenth of a notch, land at once with no easing
+wheel 0.1
+wheel 0.1
+wheel 0.1
+wheel 0.1
+wheel 0.1
+wheel 0.1
+wheel 0.1
+wheel 0.1
+wheel 0.1
+wheel 0.1
+state 01-pinched
+note 5 s less a hundredth each time is 4.52 s
+expect visible_time 4.52
+
+note two fingers sideways move the playhead by a tenth of what shows per notch
+wheel 0 0.5
+wait 10
+state 02-swiped
+waituntil player_time >= 30.21 60
+waituntil player_time <= 30.24 60
+wheel 0 -0.5
+wait 10
+waituntil player_time <= 30.01 60
+waituntil player_time >= 29.99 60
+
+note Shift and a mouse wheel move through time instead of zooming
+hold shift
+wheel 1
+let shift
+wait 10
+state 03-shift-wheel
+expect visible_time 4.52
+waituntil player_time >= 30.44 60
+waituntil player_time <= 30.47 60
+
+note a whole notch still zooms a tenth, eased in
+wheel 1
+wait 30
+waituntil visible_time <= 4.08 120
+waituntil visible_time >= 4.06 120
+quit

@@ -287,8 +287,10 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         }
         case SDL_MOUSEWHEEL:
         {
-            float wheel_x = (event->wheel.x > 0) ? 1.0f : (event->wheel.x < 0) ? -1.0f : 0.0f;
-            float wheel_y = (event->wheel.y > 0) ? 1.0f : (event->wheel.y < 0) ? -1.0f : 0.0f;
+            // The precise amounts, so a trackpad's fractions of a notch scroll
+            // smoothly instead of being dropped. A mouse notch is still 1.
+            float wheel_x = event->wheel.preciseX;
+            float wheel_y = event->wheel.preciseY;
             io.AddMouseWheelEvent(wheel_x, wheel_y);
             return true;
         }

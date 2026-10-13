@@ -50,6 +50,8 @@ private:
 	uint32_t visibleTimeUpdate = 0;
 	float nextVisisbleTime = 5.f;
 	float previousVisibleTime = 5.f;
+	// Seconds a sideways scroll has asked to move since the last frame.
+	float pendingPanTime = 0.f;
 
 	float visibleTime = 5.f;
 	float startSelectionTime = -1.f;

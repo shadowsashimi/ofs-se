@@ -63,12 +63,12 @@ void OFS_VideoplayerWindow::mouseScroll(const OFS_SDL_Event* ev) noexcept
 		const float oldScale = state.zoomFactor;
 		// apply zoom
 		if (state.activeMode == VideoMode::VrMode) {
-			state.vrZoom *= ((1+(ZoomMulti * scroll.y)));
+			state.vrZoom *= 1 + (ZoomMulti * scroll.preciseY);
 			state.vrZoom = Util::Clamp(state.vrZoom, 0.05f, 2.0f);
 			return;
 		}
 
-		state.zoomFactor *= 1 + (ZoomMulti * scroll.y);
+		state.zoomFactor *= 1 + (ZoomMulti * scroll.preciseY);
 		state.zoomFactor = Util::Clamp(state.zoomFactor, 0.0f, 10.f);
 
 		const float scaleChange = (state.zoomFactor - oldScale) * baseScaleFactor;

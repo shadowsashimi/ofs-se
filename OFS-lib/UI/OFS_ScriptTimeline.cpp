@@ -235,12 +235,43 @@ void ScriptTimeline::mouseScroll(const OFS_SDL_Event* ev) noexcept
 {
 	OFS_PROFILE(__FUNCTION__);
 	auto& wheel = ev->sdl.wheel;
-	constexpr float scrollPercent = 0.10f;
-	if (PositionsItemHovered) {
-		previousVisibleTime = visibleTime;
-		nextVisisbleTime *= 1 + (scrollPercent * -wheel.y);
+	if (!PositionsItemHovered) return;
+
+	// The precise amounts, not the whole notches: a trackpad sends many small
+	// fractions of a notch, which the whole numbers round away to nothing.
+	// A mouse wheel notch is 1 either way.
+	float zoom = wheel.preciseY;
+	float pan = wheel.preciseX;
+	// Shift turns the wheel sideways, as it does in most editors, so a mouse
+	// can move through time too. A pinch on a trackpad comes as Ctrl and the
+	// wheel, which zooms like the plain wheel does.
+	if (SDL_GetModState() & KMOD_SHIFT) {
+		pan += zoom;
+		zoom = 0.f;
+	}
+
+	if (zoom != 0.f) {
+		constexpr float zoomPerNotch = 0.10f;
+		nextVisisbleTime *= 1 + (zoomPerNotch * -zoom);
 		nextVisisbleTime = Util::Clamp(nextVisisbleTime, MinVisibleTime, MaxVisibleTime);
+		if (std::abs(zoom) < 1.f) {
+			// A trackpad: the steps come fast and small, so follow the fingers
+			// rather than easing after each one.
+			previousVisibleTime = nextVisisbleTime;
+			visibleTime = nextVisisbleTime;
+		}
+		else {
+			previousVisibleTime = visibleTime;
+		}
 		visibleTimeUpdate = SDL_GetTicks();
+	}
+
+	if (pan != 0.f) {
+		// A notch moves a tenth of what the lane shows, so it feels the same
+		// zoomed in or out. Gathered up and sought once a frame, since a
+		// trackpad sends several in one.
+		constexpr float panPerNotch = 0.10f;
+		pendingPanTime += pan * panPerNotch * visibleTime;
 	}
 }
 
@@ -461,6 +492,11 @@ void ScriptTimeline::ShowScriptPositions(
 	if (drawingCtx.totalDuration == 0.f) return;
 
 	if(IsSelecting) handleSelectionScrolling(drawingCtx);
+	if (pendingPanTime != 0.f) {
+		// Seeking moves the lanes, as a middle drag does.
+		EV::Enqueue<ShouldSetTimeEvent>(Util::Max(0.f, (float)player->CurrentTime() + pendingPanTime));
+		pendingPanTime = 0.f;
+	}
 	
 	ImGui::Begin(TR_ID(WindowId, Tr::POSITIONS));
 	drawingCtx.drawList = ImGui::GetWindowDrawList();

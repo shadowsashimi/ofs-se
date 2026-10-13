@@ -310,6 +310,7 @@ bool OFS_UiDriver::parse(const std::string& script, const std::string& media) no
             Op op;
             op.type = OpType::Wheel;
             if (!(args >> op.y)) { fail("wheel needs an amount"); continue; }
+            if (!(args >> op.x)) op.x = 0.f;
             push(op);
             frames(2);
         }
@@ -605,13 +606,17 @@ void OFS_UiDriver::execute(const Op& op) noexcept
             io.AddMouseButtonEvent(op.n, op.down);
             break;
         case OpType::Wheel:
-            io.AddMouseWheelEvent(0.f, op.y);
-            // The timeline zooms from the SDL wheel event, not from ImGui.
+            io.AddMouseWheelEvent(op.x, op.y);
+            // The timeline zooms from the SDL wheel event, not from ImGui. A
+            // fraction is what a trackpad sends: only the precise amount has it.
             {
                 SDL_Event ev;
                 SDL_zero(ev);
                 ev.type = SDL_MOUSEWHEEL;
+                ev.wheel.x = (Sint32)op.x;
                 ev.wheel.y = (Sint32)op.y;
+                ev.wheel.preciseX = op.x;
+                ev.wheel.preciseY = op.y;
                 SDL_PushEvent(&ev);
             }
             break;
