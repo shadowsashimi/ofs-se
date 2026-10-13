@@ -24,7 +24,8 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 
 - **Script to audio** - open an mp3, m4a, aac, ogg, opus, flac, wav, wma or
   aiff and script it against its waveform, which is drawn as soon as the file
-  opens. The waveform also stays in sync when zooming and panning.
+  opens. The waveform also stays in sync when zooming and panning, and short
+  sound effects, like the ones in SFX packs, open fine.
 - **Tempo detection** - measures BPM per chapter, splits a mix into tracks
   where the music changes, finds the downbeat, and treats dotted or triplet
   readings as the same tempo. A chapter's tempo can be counted double or half
@@ -48,9 +49,16 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 
 ### Editing
 
-- **Multi-lane timeline** - every loaded script gets its own lane, with a
-  short name, a tick box to edit it alongside the active script, and an eye
-  to hide it.
+- **Tracks** - every loaded script is a track with its own lane on the
+  timeline. The Tracks panel lists them: show or hide each one, add an axis
+  track like twist or roll in one click, or a machine's whole set at once,
+  load files, remove a track, and drag a track's grip to change the order.
+  The main track stays on top, since exports and devices treat it as the
+  stroke.
+- **Edit several tracks at once** - the track you're on is always edited.
+  Check other tracks and they're edited along with it, even after you switch
+  away: new points, Select All, the move keys, dragging points, delete and
+  the clipboard act on all of them, and the tracks stay in step.
 - **Selections** - drag a selection as one piece; extend, simplify and
   invert keep it selected; invert works on one or two points as well.
 - **Right click menu** on the timeline with the edits that apply to the
@@ -74,6 +82,8 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 
 - **OSR2 and SR6** over serial, wifi or Bluetooth, driving all six axes from
   their own scripts, with travel limits, a speed cap and an auto-home per axis.
+  Pick SSR1, OSR2 or SR6 (with or without twist) to turn on just the axes it
+  has.
 - **Intiface Central** - plays the script on anything Intiface supports.
 - Device playback is new and has not been tested on every device, firmware
   or connection, so the first Connect shows a note on trying it safely
@@ -105,6 +115,8 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
   with a sidebar.
 - Menus show each item's shortcut and close with Escape; the keys window is
   a table of actions and their bindings, and rebinding works again.
+- **Trackpads** - two fingers up and down zoom the timeline smoothly, and
+  sideways move through time. Shift with a mouse wheel does the same.
 
 ![Speed map](./data/speed-map.png)
 
@@ -115,6 +127,12 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 - A UI test driver: scripts in [`tools/uitest`](tools/uitest) drive the real
   app and check what comes out. `tools\ui-test-all.ps1` runs the ones that
   cover what changed.
+
+## How this was built
+
+I set the direction for this fork, tested every change, and made the design,
+safety and scope calls. Claude (Anthropic's AI) wrote most of the code under
+my direction, and the commits that it worked on say so.
 
 ## How to build
 
