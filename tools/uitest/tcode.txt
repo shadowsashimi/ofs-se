@@ -113,7 +113,7 @@ expect device_axes L0:500,L1:500,L2:500,R0:500,R1:500,R2:500,A1:500
 
 note the stroke axis limited to half the machine's travel: the script is
 note mapped into what is left, so its 90 arrives as 450 of 999 rather than 899
-dclick 663 656
+dclick 663 689
 wait 3
 key ctrl+a
 type 50

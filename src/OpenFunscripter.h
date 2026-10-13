@@ -260,6 +260,9 @@ public:
     // showing track whose box is checked.
     std::vector<std::shared_ptr<Funscript>> TargetedFunscripts() noexcept;
     bool IsEdited(const std::shared_ptr<Funscript>& script) noexcept;
+    // Adds a track for each axis one of TCodeMachines has that the project
+    // has none for yet.
+    void AddMachineTracks(int32_t machine) noexcept;
 
     inline const FunscriptArray& FunscriptClipboard() const { return CopiedSelection; }
     // What was copied from each targeted script, so a segment lifted from

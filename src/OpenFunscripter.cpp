@@ -12,6 +12,7 @@
 #include "OFS_Localization.h"
 
 #include "state/OpenFunscripterState.h"
+#include "api/OFS_TCodeMachines.h"
 #include "state/states/VideoplayerWindowState.h"
 #include "state/states/BaseOverlayState.h"
 #include "state/states/ChapterState.h"
@@ -2562,6 +2563,17 @@ void OpenFunscripter::addAxisTrack(const char* axis) noexcept
     if (!path.empty() && !trackLoaded(path)) LoadedProject->AddFunscript(path);
 }
 
+void OpenFunscripter::AddMachineTracks(int32_t machine) noexcept
+{
+    if (machine < 0 || machine >= TCodeMachineCount || !LoadedProject->IsValid()) return;
+    const auto& picked = TCodeMachines[machine];
+    for (int32_t i = 0; i < picked.axisCount; i += 1) {
+        // The main track is the stroke.
+        if (std::strcmp(picked.axes[i], "stroke") == 0) continue;
+        addAxisTrack(picked.axes[i]);
+    }
+}
+
 void OpenFunscripter::addNewTrackDialog() noexcept
 {
     auto& ofsState = OpenFunscripterState::State(stateHandle);
@@ -2720,6 +2732,19 @@ void OpenFunscripter::ShowTracksWindow(bool* open) noexcept
     if (ImGui::Button("Load...")) loadTracksDialog();
     trackTooltip("Load .funscript files as tracks.");
     if (ImGui::BeginPopup("##addTrack")) {
+        // A whole machine's worth of tracks at once, and the Devices panel
+        // set to send to it.
+        ImGui::TextDisabled("Machine");
+        for (int32_t m = 0; m < TCodeMachineCount; m += 1) {
+            if (ImGui::MenuItem(TCodeMachines[m].name)) {
+                AddMachineTracks(m);
+                deviceLink->UseMachine(m);
+            }
+            const std::string tip = std::string(TCodeMachines[m].tip)
+                + " Adds the tracks it needs that aren't here yet, and sets the Devices panel to send to it.";
+            trackTooltip(tip.c_str());
+        }
+        ImGui::Separator();
         ImGui::TextDisabled("Axis");
         for (auto axis : Funscript::AxisNames) {
             if (ImGui::MenuItem(axis, nullptr, false, !trackLoaded(axisTrackPath(axis)))) addAxisTrack(axis);

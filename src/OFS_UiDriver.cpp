@@ -978,6 +978,7 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
     add("device_moves", std::to_string(app->deviceLink->MovesSent()));
     add("device_channels", app->deviceLink->ChannelsSent());
     add("device_axes", app->deviceLink->AxisReport());
+    add("device_machine", std::to_string(app->deviceLink->CurrentMachine()));
     add("device_axes_home", flag(app->deviceLink->AllAxesHome()));
     add("device_stroke", std::to_string(app->deviceLink->StrokeValue()));
     if (app->scriptCheck->HasChecked()) {

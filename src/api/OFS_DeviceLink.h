@@ -114,6 +114,11 @@ public:
 
     void Connect() noexcept;
     void Disconnect() noexcept;
+    // Turns on the TCode axes of one of TCodeMachines, and turns off the rest.
+    void UseMachine(int32_t machine) noexcept;
+    // The machine whose axes are exactly the ones on, or -1 when they match
+    // none of them.
+    int32_t CurrentMachine() noexcept;
     void StartScanning() noexcept;
     // Sends a stop to every device, for the button and for pausing.
     void StopDevices() noexcept;

@@ -4,6 +4,7 @@
 #include "OFS_ImGui.h"
 #include "OFS_Profiling.h"
 #include "state/DeviceLinkState.h"
+#include "OFS_TCodeMachines.h"
 
 #include "civetweb.h"
 #include "imgui.h"
@@ -405,6 +406,74 @@ void OFS_DeviceLink::drawTCodeSettings() noexcept
                  "the firmware expects to be fed.");
 }
 
+static std::shared_ptr<Funscript> scriptForAxis(const std::string& wanted) noexcept;
+
+void OFS_DeviceLink::UseMachine(int32_t machine) noexcept
+{
+    if (machine < 0 || machine >= TCodeMachineCount) return;
+    ensureAxes();
+    auto& state = DeviceLinkState::State(stateHandle);
+    const auto& picked = TCodeMachines[machine];
+    for (auto& axis : state.axes) {
+        axis.enabled = false;
+        for (int32_t i = 0; i < picked.axisCount; i += 1) {
+            if (axis.script == picked.axes[i]) axis.enabled = true;
+        }
+    }
+}
+
+int32_t OFS_DeviceLink::CurrentMachine() noexcept
+{
+    ensureAxes();
+    const auto& state = DeviceLinkState::State(stateHandle);
+    for (int32_t m = 0; m < TCodeMachineCount; m += 1) {
+        const auto& machine = TCodeMachines[m];
+        bool same = true;
+        for (const auto& axis : state.axes) {
+            bool has = false;
+            for (int32_t i = 0; i < machine.axisCount; i += 1) {
+                if (axis.script == machine.axes[i]) has = true;
+            }
+            if (has != axis.enabled) same = false;
+        }
+        if (same) return m;
+    }
+    return -1;
+}
+
+// Which machine, as a starting point for the axis table below it: picking one
+// turns on its axes and no others, and offers to add the tracks it is missing.
+static void drawMachinePicker(OFS_DeviceLink* link) noexcept
+{
+    const int32_t current = link->CurrentMachine();
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 10.f);
+    if (ImGui::BeginCombo("Machine", current >= 0 ? TCodeMachines[current].name : "Custom")) {
+        for (int32_t m = 0; m < TCodeMachineCount; m += 1) {
+            if (ImGui::Selectable(TCodeMachines[m].name, m == current)) link->UseMachine(m);
+            OFS::Tooltip(TCodeMachines[m].tip);
+        }
+        ImGui::EndCombo();
+    }
+    OFS::Tooltip("Turns on the axes this machine has and turns off the rest. Limits stay as you set "
+                 "them. Turning axes on or off by hand makes it Custom.");
+
+    // The axes it has that the project has no track for yet.
+    if (current < 0) return;
+    auto app = OpenFunscripter::ptr;
+    if (!app->LoadedProject->IsValid()) return;
+    std::string missing;
+    const auto& machine = TCodeMachines[current];
+    for (int32_t i = 0; i < machine.axisCount; i += 1) {
+        if (scriptForAxis(machine.axes[i]) != nullptr) continue;
+        if (!missing.empty()) missing += ", ";
+        missing += machine.axes[i];
+    }
+    if (missing.empty()) return;
+    ImGui::SameLine();
+    if (ImGui::Button("Add its tracks")) app->AddMachineTracks(current);
+    OFS::TooltipFmt("Adds a track for each axis the project has none for yet: %s.", missing.c_str());
+}
+
 // One row per axis: what drives it, how far it may go, and how fast. The
 // limits are the difference between a script a machine can follow and one it
 // answers with a bang, so they are in front of you rather than in a submenu.
@@ -439,7 +508,7 @@ void OFS_DeviceLink::drawAxisTable() noexcept
         OFS::TooltipFmt("TCode %s, driven by the %s script. %s", axis.channel.c_str(),
             axis.script.c_str(),
             i == 0 ? "The project's first script is the stroke."
-                   : "Add one from Project > Add > Shortcuts.");
+                   : "Add one from Add in the Tracks panel.");
 
         ImGui::TableNextColumn();
         ImGui::SetNextItemWidth(-1.f);
@@ -621,6 +690,7 @@ void OFS_DeviceLink::DrawWindow(bool* open) noexcept
     }
     else {
         ImGui::TextDisabled("Axes");
+        drawMachinePicker(this);
         drawAxisTable();
 
         ImGui::Spacing();

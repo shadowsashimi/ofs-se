@@ -1,0 +1,42 @@
+# Machine presets. Add > a machine in the Tracks panel adds the tracks it has
+# that the project lacks, and sets the Devices panel to send to its axes and
+# no others. In the Add menu at 1600x900: SSR1 41 507, OSR2 41 531, OSR2 with
+# twist 41 555, SR6 41 579, SR6 with twist 41 603.
+#! covers src/api/OFS_TCodeMachines.h src/api/OFS_DeviceLink.cpp:UseMachine src/api/OFS_DeviceLink.cpp:CurrentMachine src/OpenFunscripter.cpp:AddMachineTracks src/OpenFunscripter.cpp:ShowTracksWindow
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+expect scripts 1
+note every axis is on to begin with, which is no machine in particular
+expect device_machine -1
+
+note Add > OSR2: roll and pitch tracks, and only stroke, roll and pitch sent
+click 30 694
+wait 10
+click 41 531
+wait 20
+expect scripts 3
+expect script_axes stroke,roll,pitch
+expect device_machine 1
+
+note Add > SR6 with twist on top of it adds only what is missing
+click 30 694
+wait 10
+click 41 603
+wait 20
+expect scripts 6
+expect script_axes stroke,roll,pitch,surge,sway,twist
+expect device_machine 4
+state 01-sr6
+shot 01-sr6
+
+note picking a machine with fewer axes adds nothing and turns the extra axes off
+click 30 694
+wait 10
+click 41 507
+wait 20
+expect scripts 6
+expect device_machine 0
+quit
