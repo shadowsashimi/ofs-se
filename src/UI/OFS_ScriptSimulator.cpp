@@ -36,7 +36,19 @@ inline static uint32_t GetColor(const ImColor& col, float opacity) noexcept
 
 void ScriptSimulator::Init() noexcept
 {
-    stateHandle = OFS_ProjectState<SimulatorState>::Register(SimulatorState::StateName);
+    // One setup for every project, kept with the app's settings. Projects
+    // used to carry their own, so every project made before the defaults
+    // changed opened on the old ones, and changes made in one project were
+    // not there in the next. Older project files still hold theirs; nothing
+    // reads it.
+    stateHandle = OFS_AppState<SimulatorState>::Register(SimulatorState::StateName);
+    // A config saved with Save config, which older builds kept to one side
+    // for new projects, becomes the setup, once.
+    auto& saved = SimulatorDefaultConfigState::StaticStateSlow();
+    if (saved.saved) {
+        SimulatorState::State(stateHandle) = saved.defaultState;
+        saved.saved = false;
+    }
     EV::Queue().appendListener(SDL_MOUSEMOTION,
         OFS_SDL_Event::HandleEvent(EVENT_SYSTEM_BIND(this, &ScriptSimulator::MouseMovement)));
 }
@@ -4554,29 +4566,9 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
         ImGui::PopItemWidth();
 
         ImGui::Spacing();
-        // The saved default is one config shared by every project, so loading
-        // and saving it is kept together with resetting, away from the
-        // everyday controls above.
-        if (rowButton(TR(LOAD_CONFIG), 0, 3)) {
-            auto& dState = SimulatorDefaultConfigState::StaticStateSlow();
-            state = dState.defaultState;
-        }
-        OFS::Tooltip("Replace these settings with the ones saved as the default.");
-        if (rowButton(TR(SAVE_CONFIG), 1, 3)) {
-            Util::YesNoCancelDialog(TR(SAVE_SIMULATOR_CONFIG),
-                TR(SAVE_SIMULATOR_CONFIG_MSG),
-                [this](Util::YesNoCancel result) {
-                    if(result == Util::YesNoCancel::Yes) {
-                        auto& dState = SimulatorDefaultConfigState::StaticStateSlow();
-                        auto& state = SimulatorState::State(stateHandle);
-                        dState.defaultState = state;
-                        dState.saved = true;
-                    }
-                }
-            );
-        }
-        OFS::Tooltip("Save these settings as the default that new projects start from.");
-        if (rowButton(TR(RESET_TO_DEFAULTS), 2, 3)) {
+        // These settings are the app's, shared by every project, so there is
+        // no config to save or load beside them.
+        if (rowButton(TR(RESET_TO_DEFAULTS), 0, 1)) {
             state = SimulatorState();
         }
         OFS::Tooltip("Go back to the settings OFS ships with.");

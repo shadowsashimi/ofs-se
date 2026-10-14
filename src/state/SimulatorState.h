@@ -71,17 +71,20 @@ struct SimulatorState
 
     inline static SimulatorState& State(uint32_t stateHandle) noexcept
     {
-        return OFS_ProjectState<SimulatorState>(stateHandle).Get();
+        return OFS_AppState<SimulatorState>(stateHandle).Get();
     }
 };
 
+// The default config older builds saved with Save config, back when each
+// project had its own simulator settings. Read once, to carry a saved one
+// over into the app's own simulator settings.
 struct SimulatorDefaultConfigState
 {
     static constexpr auto StateName = "SimulatorDefaultConfigState";
     SimulatorState defaultState;
-    // Whether Save config has ever been pressed. Older profiles carry a
-    // default state that nobody chose, the built in defaults of the day, and
-    // new projects should not be held to those.
+    // Whether Save config was pressed. Older profiles also carry a default
+    // that nobody chose, the built in defaults of the day, which is not
+    // carried over.
     bool saved = false;
 
     inline static SimulatorDefaultConfigState& StaticStateSlow() noexcept

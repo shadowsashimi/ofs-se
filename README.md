@@ -97,6 +97,8 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
   surge, sway, twist, roll and pitch, matching how a TCode machine moves.
 - Cutaway view, turnable camera, fit to the video, and a toggle back to the
   2D bars.
+- One simulator setup for every project, kept with your settings, instead of
+  a separate one saved in each project.
 - Axes are read from file names: `name.roll.funscript` is roll, and the
   script named after the video is the stroke. Video names with dots of their
   own, like `Site.com - clip.mp4`, work.

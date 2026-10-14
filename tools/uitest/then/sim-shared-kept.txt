@@ -1,0 +1,7 @@
+# Runs in the profile sim-shared.txt left: the simulator is still in 2D.
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+expect simulator_mode 0
+quit

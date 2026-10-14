@@ -72,5 +72,5 @@ wait 5
 click 300 70
 wait 10
 expect show_statistics 0
-wait 420
+waituntil settings_saved = 1
 kill

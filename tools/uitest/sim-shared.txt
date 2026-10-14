@@ -1,0 +1,23 @@
+# The simulator's settings are the app's, one setup for every project: a
+# change made with one project open is there with the next, and after a
+# restart. Toolbar at 1600x900: simulator 2D at 1489,43.
+#! covers src/state/SimulatorState.h src/UI/OFS_ScriptSimulator.cpp:Init
+#! then sim-shared-kept
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+expect simulator_mode 1
+expect sim_fit 1
+
+note switch to 2D with this project open
+click 1489 43
+wait 20
+expect simulator_mode 0
+
+note a new project keeps it
+newblank 60 $OUT/other.funscript
+wait 60
+expect simulator_mode 0
+waituntil settings_saved = 1
+kill

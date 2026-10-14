@@ -1016,6 +1016,9 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
             names += layout.name;
         }
         add("layouts", names);
+        // Whether the settings as they are now are on disk, for a test to
+        // wait for before ending the app as a crash would.
+        add("settings_saved", flag(OpenFunscripter::SettingsSaved()));
     }
     add("device_status", std::to_string((int32_t)app->deviceLink->CurrentStatus()));
     add("device_safety_note", flag(app->deviceLink->SafetyNoteOpen()));

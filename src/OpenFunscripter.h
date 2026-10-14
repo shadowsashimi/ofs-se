@@ -180,15 +180,14 @@ private:
     // before the dockspace is submitted. Done from the menu itself, in the
     // middle of a frame, the old Reset layout left the docking broken.
     std::optional<SavedLayout> pendingLayout;
+    // Whether state.ofs holds the settings as they are now.
+    static bool SettingsSaved() noexcept;
     bool pendingLayoutReset = false;
     bool showSaveLayout = false;
     std::string saveLayoutName;
     void showLayoutsMenu() noexcept;
     void showSaveLayoutPrompt() noexcept;
     void applyPendingLayout(bool frameStarted) noexcept;
-    // New projects start from the simulator settings saved with Save config,
-    // when there are any.
-    void applySimulatorDefaults() noexcept;
     // How long since the settings were last checked for changes to save.
     float stateSaveTimer = 0.f;
     void addEditAction(int pos) noexcept;

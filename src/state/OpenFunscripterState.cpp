@@ -23,11 +23,11 @@ void OpenFunscripterState::RegisterAll() noexcept
 	// settings are lost on every restart.
 	OFS_REGISTER_STATE(DeviceLinkState);
 	OFS_REGISTER_STATE(ScriptCheckState);
+	OFS_REGISTER_STATE(SimulatorState);
 
 	// Project state
 	OFS_REGISTER_STATE(TempoOverlayState);
 	OFS_REGISTER_STATE(ProjectState);
-	OFS_REGISTER_STATE(SimulatorState);
 }
 
 void OpenFunscripterState::addRecentFile(const RecentFile& recentFile) noexcept

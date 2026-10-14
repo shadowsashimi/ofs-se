@@ -132,6 +132,12 @@ static void SaveState(bool force) noexcept
     LastSavedState = std::move(stateBin);
 }
 
+bool OpenFunscripter::SettingsSaved() noexcept
+{
+    auto stateJson = OFS_StateManager::Get()->SerializeAppAll(true);
+    return Util::SerializeCBOR(stateJson) == LastSavedState;
+}
+
 static LayoutPanels panelsOf(const OpenFunscripterState& state) noexcept
 {
     LayoutPanels p;
@@ -2146,12 +2152,10 @@ void OpenFunscripter::openFile(const std::string& file) noexcept
             else if (fileExtension == Funscript::Extension) {
                 // It's a funscript it should be imported into a new project
                 LoadedProject->ImportFromFunscript(file);
-                applySimulatorDefaults();
             }
             else {
                 // Assume it's some kind of media file
                 LoadedProject->ImportFromMedia(file);
-                applySimulatorDefaults();
             }
 
             if (LoadedProject->IsValid()) {
@@ -2183,7 +2187,6 @@ void OpenFunscripter::startStandaloneProject(const std::string& file, float dura
         OFS_StateManager::Get()->ClearProjectAll();
 
         if (LoadedProject->CreateStandalone(file, durationSeconds)) {
-            applySimulatorDefaults();
             initProject();
             // Written out at once. A project with no media cannot be found
             // again from the file that was scripted, the way one opened from a
@@ -2195,13 +2198,6 @@ void OpenFunscripter::startStandaloneProject(const std::string& file, float dura
             Util::MessageBoxAlert("Failed to create script.", LoadedProject->NotValidError());
         }
     });
-}
-
-void OpenFunscripter::applySimulatorDefaults() noexcept
-{
-    const auto& defaults = SimulatorDefaultConfigState::StaticStateSlow();
-    if (!defaults.saved) return;
-    SimulatorState::State(simulator.StateHandle()) = defaults.defaultState;
 }
 
 void OpenFunscripter::applyPendingLayout(bool frameStarted) noexcept
