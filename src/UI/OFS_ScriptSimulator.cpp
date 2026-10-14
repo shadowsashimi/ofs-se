@@ -589,13 +589,133 @@ inline float rodThrobAlong(const RodThrob& t, float along) noexcept
 
 }
 
+namespace {
+
+// The model's proportions that the pose depends on, shared by the drawing and
+// the pose handles. See drawMultiAxisModel for what each one is.
+constexpr float ModelRadius = 0.30f;
+constexpr float ModelHalfLength = 0.88f;
+constexpr float ModelStrokeTravel = 0.60f;
+constexpr float ModelMaxTilt = 0.5236f;  // 30 degrees
+constexpr float ModelLateralTravel = 0.45f;
+constexpr float ModelLipSeatDepth = 0.070f;
+
+// Where the model is for one set of axis values and one camera: the body's
+// rotation and offsets, and the transforms built from them. Worked out in one
+// place so the drawing and the pose handles cannot disagree about where a part
+// of the model is.
+struct PoseFrame
+{
+    // Each axis mapped to -1..1, the stroke after its limits.
+    float stroke = 0.f, surge = 0.f, sway = 0.f, twist = 0.f, roll = 0.f, pitch = 0.f;
+    float twistAngle = 0.f, rollAngle = 0.f, pitchAngle = 0.f;
+    float strokeOffset = 0.f;
+    float pivotY = 0.f;
+    Vec3 worldOffset{ 0.f, 0.f, 0.f };
+    float cameraYaw = 0.f, cameraPitch = 0.f;
+
+    // Turned around the upright axis first, then raised, so turning keeps the
+    // model standing up on screen.
+    Vec3 camera(const Vec3& p) const noexcept
+    {
+        return rotateX(rotateY(p, cameraYaw), cameraPitch);
+    }
+    // The body's rotation without the camera.
+    Vec3 orientNoCamera(const Vec3& dir) const noexcept
+    {
+        Vec3 p = rotateY(dir, twistAngle);
+        p = rotateX(p, pitchAngle);
+        return rotateZ(p, rollAngle);
+    }
+    // Rotation with no translation. Directions have no pivot, so normals and
+    // the radial facing test use this directly.
+    Vec3 orient(const Vec3& dir) const noexcept
+    {
+        return camera(orientNoCamera(dir));
+    }
+    // Points swing about the pivot as well. Twist is about the body's own
+    // axis, which passes through the pivot, so it is unaffected either way.
+    Vec3 toWorld(const Vec3& local) const noexcept
+    {
+        Vec3 p{ local.x, local.y - pivotY, local.z };
+        p = orientNoCamera(p);
+        p.y += pivotY;
+        p = add(p, worldOffset);
+        return camera(p);
+    }
+    // Undoes the body's rotation, for putting the rod's upright axis into the
+    // frame the profile is described in.
+    Vec3 unrotate(const Vec3& v) const noexcept
+    {
+        Vec3 p = rotateZ(v, -rollAngle);
+        p = rotateX(p, -pitchAngle);
+        return rotateY(p, -twistAngle);
+    }
+};
+
+PoseFrame makePoseFrame(const SimulatorState& state, const float* value) noexcept
+{
+    PoseFrame f;
+    // The stroke limits squeeze the script's 0 to 100 into the travel the
+    // machine is set to, as its L0 range would.
+    const float strokeMin = (float)Util::Clamp(state.StrokeMin, 0, 100);
+    const float strokeMax = (float)Util::Clamp(state.StrokeMax, 0, 100);
+    f.stroke = centered(strokeMin + ((strokeMax - strokeMin) * (Util::Clamp(value[0], 0.f, 100.f) / 100.f)));
+    f.surge = centered(value[1]);
+    f.sway = centered(value[2]);
+    f.twist = centered(value[3]);
+    f.roll = centered(value[4]);
+    f.pitch = centered(value[5]);
+
+    // Which way each axis goes is the TCode specification's, since that is
+    // what the machine the model stands in for is obeying:
+    //
+    //   L0 stroke is positive up, L1 surge positive away from the user, and
+    //   L2 sway positive to the user's LEFT. R0 twist, R1 roll and R2 pitch
+    //   are positive by the right hand rule about L0, L1 and L2.
+    //
+    // The right hand rule about an axis pointing away from the user turns
+    // clockwise as the user sees it, so roll at 100 leans the top to the
+    // right; about the upright axis it turns counter clockwise seen from
+    // above, so twist at 100 brings the front round to the user's right.
+    //
+    // The signs live here alone. Everything downstream derives from these,
+    // unrotate and the fluid's idea of downhill included.
+    f.twistAngle = -f.twist * (float)M_PI;
+    f.rollAngle = -f.roll * ModelMaxTilt;
+    f.pitchAngle = f.pitch * ModelMaxTilt;
+
+    // Stroke moves the body along its own axis, so it is applied in model
+    // space before the tilt. A tilted stroker then strokes along its tilt.
+    f.strokeOffset = f.stroke * ModelStrokeTravel;
+    // Sway is positive to the user's left, which is -x on screen.
+    f.worldOffset = Vec3{ -f.sway * ModelLateralTravel, 0.f, f.surge * ModelLateralTravel };
+
+    // Camera elevation. At zero the model is seen straight on, which reads
+    // cleanest but leaves the orifice edge on and therefore invisible, since
+    // it sits in a downward facing surface. Raising it tips the underside into
+    // view at the cost of seeing less of the body.
+    f.cameraPitch = state.CameraElevation * ((float)M_PI / 180.f);
+    f.cameraYaw = state.CameraYaw * ((float)M_PI / 180.f);
+
+    // Pitch and roll pivot at the vulva rather than at the middle of the body.
+    // The vulva is where the rod enters, so swinging about it leaves that
+    // contact point roughly where it was and tips the case around it. Pivoting
+    // at the centre threw the opening through an arc, taking the apparent
+    // entry point of the rod with it.
+    f.pivotY = f.strokeOffset + (Profile[SlitRing].y * ModelHalfLength);
+    return f;
+}
+
+}
+
 void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorState& state,
     const MultiAxisValues& axes, ImVec2 center, float scale) noexcept
 {
     OFS_PROFILE(__FUNCTION__);
 
-    constexpr float Radius = 0.30f;
-    constexpr float HalfLength = 0.88f;
+    constexpr float Radius = ModelRadius;
+    constexpr float HalfLength = ModelHalfLength;
     // How far the body travels along its own axis over the full stroke range.
     // Derived from the depth of the bore rather than set by hand: half the bore
     // means the rod sits at the vulva at one end of the stroke and touches the
@@ -613,14 +733,14 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
     // be chosen independently: at the top of the stroke the rod ends up
     // (RodInsertDepth - 2 * StrokeTravel) deep, and this pairing leaves it just
     // barely engaged there while reaching well in at the bottom.
-    constexpr float StrokeTravel = 0.60f;
+    constexpr float StrokeTravel = ModelStrokeTravel;
     // Length of the visible shaft below the tip. Only needs to clear the vulva
     // of the case at the bottom of the stroke; longer than that just dangles
     // off the bottom of the window.
     // How far the lip travels past the top of the flare at the bottom of the
     // stroke. Seating it exactly on the top left the lip stopping level with a
     // cone it never touched, and a visible gap between the two.
-    constexpr float LipSeatDepth = 0.070f;
+    constexpr float LipSeatDepth = ModelLipSeatDepth;
     // The insertion depth less that overlap, so the two ends still line up by
     // construction: the tip sits at the vulva when the rod is all the way out,
     // and the lip is pressed onto the flare when it is all the way in.
@@ -788,107 +908,36 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
     // The lip rests on the cone rather than merging into it.
     constexpr float LipFootClearance = 0.010f;
     // Tilt limits, so a full swing stays readable instead of folding over.
-    constexpr float MaxTiltRadians = 0.5236f;  // 30 degrees
-    constexpr float LateralTravel = 0.45f;
+    constexpr float MaxTiltRadians = ModelMaxTilt;
+    constexpr float LateralTravel = ModelLateralTravel;
 
-    // The stroke limits squeeze the script's 0 to 100 into the travel the
-    // machine is set to, as its L0 range would.
-    const float strokeMin = (float)Util::Clamp(state.StrokeMin, 0, 100);
-    const float strokeMax = (float)Util::Clamp(state.StrokeMax, 0, 100);
-    const float stroke = centered(strokeMin
-        + ((strokeMax - strokeMin) * (Util::Clamp(axes.value[(int32_t)Axis::Stroke], 0.f, 100.f) / 100.f)));
-    const float surge = centered(axes.value[(int32_t)Axis::Surge]);
-    const float sway = centered(axes.value[(int32_t)Axis::Sway]);
-    const float twist = centered(axes.value[(int32_t)Axis::Twist]);
-    const float roll = centered(axes.value[(int32_t)Axis::Roll]);
-    const float pitch = centered(axes.value[(int32_t)Axis::Pitch]);
-
-    // Which way each axis goes is the TCode specification's, since that is
-    // what the machine the model stands in for is obeying:
-    //
-    //   L0 stroke is positive up, L1 surge positive away from the user, and
-    //   L2 sway positive to the user's LEFT. R0 twist, R1 roll and R2 pitch
-    //   are positive by the right hand rule about L0, L1 and L2.
-    //
-    // The right hand rule about an axis pointing away from the user turns
-    // clockwise as the user sees it, so roll at 100 leans the top to the
-    // right; about the upright axis it turns counter clockwise seen from
-    // above, so twist at 100 brings the front round to the user's right.
-    //
-    // The signs live here alone. Everything downstream derives from these,
-    // unrotate and the fluid's idea of downhill included.
-    const float twistAngle = -twist * (float)M_PI;
-    const float rollAngle = -roll * MaxTiltRadians;
-    const float pitchAngle = pitch * MaxTiltRadians;
-
-    // Stroke moves the body along its own axis, so it is applied in model space
-    // before the tilt. A tilted stroker then strokes along its tilt.
-    const float strokeOffset = stroke * StrokeTravel;
-    // Sway is positive to the user's left, which is -x on screen.
-    const Vec3 worldOffset{ -sway * LateralTravel, 0.f, surge * LateralTravel };
-
-    // Camera elevation. At zero the model is seen straight on, which reads
-    // cleanest but leaves the orifice edge on and therefore invisible, since it
-    // sits in a downward facing surface. Raising it tips the underside into
-    // view at the cost of seeing less of the body. Folded into orient() so
-    // normals get it too and the lighting stays consistent.
-    const float CameraPitch = state.CameraElevation * ((float)M_PI / 180.f);
-    const float CameraYaw = state.CameraYaw * ((float)M_PI / 180.f);
-    // Turned around the upright axis first, then raised, so turning keeps the
-    // model standing up on screen.
-    auto camera = [&](const Vec3& p) noexcept {
-        return rotateX(rotateY(p, CameraYaw), CameraPitch);
-    };
-    // Pitch and roll pivot at the vulva rather than at the middle of the body.
-    // The vulva is where the rod enters, so swinging about it leaves that
-    // contact point roughly where it was and tips the case around it. Pivoting
-    // at the centre threw the opening through an arc, taking the apparent entry
-    // point of the rod with it.
+    // The pose, worked out in makePoseFrame so the pose handles share it.
+    const PoseFrame frame = makePoseFrame(state, axes.value);
+    const float stroke = frame.stroke;
+    const float surge = frame.surge;
+    const float sway = frame.sway;
+    const float twist = frame.twist;
+    const float roll = frame.roll;
+    const float pitch = frame.pitch;
+    const float twistAngle = frame.twistAngle;
+    const float rollAngle = frame.rollAngle;
+    const float pitchAngle = frame.pitchAngle;
+    const float strokeOffset = frame.strokeOffset;
+    const Vec3 worldOffset = frame.worldOffset;
+    const float CameraPitch = frame.cameraPitch;
+    const float CameraYaw = frame.cameraYaw;
     const float vulvaY = Profile[SlitRing].y * HalfLength;
-    const float pivotY = strokeOffset + vulvaY;
+    const float pivotY = frame.pivotY;
 
-    // Rotation with no translation. Directions have no pivot, so normals and
-    // the radial facing test use this directly.
-    auto orient = [&](const Vec3& dir) noexcept {
-        Vec3 p = rotateY(dir, twistAngle);
-        p = rotateX(p, pitchAngle);
-        p = rotateZ(p, rollAngle);
-        return camera(p);
-    };
-    // Points swing about the pivot as well. Twist is about the body's own axis,
-    // which passes through the pivot, so it is unaffected either way.
-    auto toWorld = [&](const Vec3& local) noexcept {
-        Vec3 p{ local.x, local.y - pivotY, local.z };
-        p = rotateY(p, twistAngle);
-        p = rotateX(p, pitchAngle);
-        p = rotateZ(p, rollAngle);
-        p.y += pivotY;
-        p = add(p, worldOffset);
-        return camera(p);
-    };
-
+    auto camera = [&](const Vec3& p) noexcept { return frame.camera(p); };
+    auto orient = [&](const Vec3& dir) noexcept { return frame.orient(dir); };
+    auto toWorld = [&](const Vec3& local) noexcept { return frame.toWorld(local); };
     // The rod does not belong to the body. It is anchored at its own base and
     // stays upright while the sleeve tilts and slides over it, so it only ever
     // takes the camera.
-    auto toView = [&](const Vec3& world) noexcept {
-        return camera(world);
-    };
-
-    // The body's rotation without the camera, for reasoning about where things
-    // are relative to each other rather than on screen.
-    auto orientNoCamera = [&](const Vec3& dir) noexcept {
-        Vec3 p = rotateY(dir, twistAngle);
-        p = rotateX(p, pitchAngle);
-        return rotateZ(p, rollAngle);
-    };
-
-    // Undoes the body's rotation, for putting the rod's upright axis into the
-    // frame the profile is described in.
-    auto unrotate = [&](const Vec3& v) noexcept {
-        Vec3 p = rotateZ(v, -rollAngle);
-        p = rotateX(p, -pitchAngle);
-        return rotateY(p, -twistAngle);
-    };
+    auto toView = [&](const Vec3& world) noexcept { return frame.camera(world); };
+    auto orientNoCamera = [&](const Vec3& dir) noexcept { return frame.orientNoCamera(dir); };
+    auto unrotate = [&](const Vec3& v) noexcept { return frame.unrotate(v); };
 
     // ---- shading -----------------------------------------------------------
     // Key light over the viewer's shoulder, plus a specular term and a rim
@@ -2066,20 +2115,42 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
     // where the limits are, and names over the video were clutter. Stroke only marks its two
     // ends, and twist rings the top of the case with a mark at neutral and at
     // its limit, which for twist is half a turn either way.
+    //
+    // In the interface's own colours: grey, as structure is everywhere else,
+    // with a dark edge so it reads over a bright video, and the accent only
+    // on the axis a pose handle under the mouse or being dragged moves, the
+    // way a slider's track lights under its thumb.
     {
-        const ImU32 guide = GetColor(accent, state.GlobalOpacity * 0.95f);
-        const ImU32 guideFaint = GetColor(accent, state.GlobalOpacity * 0.55f);
+        const auto& role = OFS_Sashimi::Role();
+        auto tone = [&](uint32_t color, float alpha) noexcept -> ImU32 {
+            const uint32_t a = (uint32_t)(Util::Clamp(alpha * state.GlobalOpacity, 0.f, 1.f) * 255.f);
+            return (color & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
+        };
         const float thick = Util::Max(1.f, scale * 0.007f);
         const float tick = Util::Max(4.f, scale * 0.045f);
+        const ImU32 edge = IM_COL32(0, 0, 0, (int)(0x50 * state.GlobalOpacity));
+        auto guideFor = [&](Axis axis, bool strong) noexcept -> ImU32 {
+            if (poseLitAxis[(int32_t)axis]) return tone(role.AccentBright, strong ? 1.f : 0.85f);
+            return tone(OFS_Sashimi::Grey80, strong ? 0.85f : 0.5f);
+        };
+        // Every guide line goes down twice: a wider dark edge, then the line.
+        auto line = [&](ImVec2 a, ImVec2 b, ImU32 color, float width) noexcept {
+            drawList->AddLine(a, b, edge, width + 2.f);
+            drawList->AddLine(a, b, color, width);
+        };
+        auto polyline = [&](const ImVec2* points, int32_t count, ImU32 color, ImDrawFlags flags, float width) noexcept {
+            drawList->AddPolyline(points, count, edge, flags, width + 2.f);
+            drawList->AddPolyline(points, count, color, flags, width);
+        };
         float caseRadius = 0.f;
         for (const auto& profileRing : Profile) caseRadius = Util::Max(caseRadius, profileRing.r * Radius);
         const float topY = Profile[0].y * HalfLength;
         const float lipY = Profile[SlitRing].y * HalfLength;
 
-        auto tickAt = [&](ImVec2 at, ImVec2 along) noexcept {
+        auto tickAt = [&](ImVec2 at, ImVec2 along, ImU32 color) noexcept {
             const float length = SDL_sqrtf((along.x * along.x) + (along.y * along.y));
             ImVec2 across = length > 1e-3f ? ImVec2(-along.y / length, along.x / length) : ImVec2(1.f, 0.f);
-            drawList->AddLine(at - (across * tick), at + (across * tick), guide, thick * 1.6f);
+            line(at - (across * tick), at + (across * tick), color, thick * 1.6f);
         };
         auto sweep = [&](const Vec3& local, Axis axis) noexcept {
             if (!axes.mapped[(int32_t)axis]) return;
@@ -2090,9 +2161,9 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
                 v[(int32_t)axis] = -1.f + (2.f * (float)i / (float)Steps);
                 points[i] = poseToScreen(local, v[0], v[1], v[2], v[3], v[4], v[5]);
             }
-            drawList->AddPolyline(points, Steps + 1, guideFaint, 0, thick);
-            tickAt(points[0], points[1] - points[0]);
-            tickAt(points[Steps], points[Steps] - points[Steps - 1]);
+            polyline(points, Steps + 1, guideFor(axis, false), 0, thick);
+            tickAt(points[0], points[1] - points[0], guideFor(axis, true));
+            tickAt(points[Steps], points[Steps] - points[Steps - 1], guideFor(axis, true));
         };
 
         if (axes.mapped[(int32_t)Axis::Stroke]) {
@@ -2100,10 +2171,13 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
             const ImVec2 low = poseToScreen(top, -1.f, 0.f, 0.f, 0.f, 0.f, 0.f);
             const ImVec2 high = poseToScreen(top, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f);
             const ImVec2 flat(caseRadius * scale * 0.9f, 0.f);
-            drawList->AddLine(low - flat, low + flat, guide, thick * 1.6f);
-            drawList->AddLine(high - flat, high + flat, guide, thick * 1.6f);
+            line(low - flat, low + flat, guideFor(Axis::Stroke, true), thick * 1.6f);
+            line(high - flat, high + flat, guideFor(Axis::Stroke, true), thick * 1.6f);
         }
-        if (axes.mapped[(int32_t)Axis::Twist]) {
+        // While posing, the twist handle's own ring, with its knob turning on
+        // the body, says this better than a ring drawn at the neutral pose,
+        // which would sit apart from it as soon as the case tilts.
+        if (axes.mapped[(int32_t)Axis::Twist] && !posingThisFrame) {
             constexpr int32_t RingSteps = 32;
             ImVec2 points[RingSteps];
             const float ringRadius = caseRadius * 1.15f;
@@ -2111,14 +2185,14 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
                 const float angle = (2.f * (float)M_PI * (float)i) / (float)RingSteps;
                 points[i] = poseToScreen(Vec3{ SDL_cosf(angle) * ringRadius, topY, SDL_sinf(angle) * ringRadius }, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
             }
-            drawList->AddPolyline(points, RingSteps, guideFaint, ImDrawFlags_Closed, thick);
+            polyline(points, RingSteps, guideFor(Axis::Twist, false), ImDrawFlags_Closed, thick);
             // The front faces -z at neutral, and half a turn takes it to +z.
             const ImVec2 neutralIn = poseToScreen(Vec3{ 0.f, topY, -caseRadius * 1.02f }, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
             const ImVec2 neutralOut = poseToScreen(Vec3{ 0.f, topY, -caseRadius * 1.30f }, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
             const ImVec2 limitIn = poseToScreen(Vec3{ 0.f, topY, caseRadius * 1.02f }, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
             const ImVec2 limitOut = poseToScreen(Vec3{ 0.f, topY, caseRadius * 1.30f }, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
-            drawList->AddLine(neutralIn, neutralOut, guideFaint, thick * 1.6f);
-            drawList->AddLine(limitIn, limitOut, guide, thick * 1.6f);
+            line(neutralIn, neutralOut, guideFor(Axis::Twist, false), thick * 1.6f);
+            line(limitIn, limitOut, guideFor(Axis::Twist, true), thick * 1.6f);
         }
         sweep(Vec3{ 0.f, topY, 0.f }, Axis::Roll);
         sweep(Vec3{ 0.f, topY, 0.f }, Axis::Pitch);
@@ -3981,7 +4055,9 @@ constexpr float FallAcceleration = 4.5f;
         // away from it there is no direction on screen to show, so it becomes
         // a dot, filled facing the camera and hollow facing away. Drawn after
         // the model, so the case does not cover it when it lies over the case.
-        if(state.ShowTwistIndicator) {
+        // Not while posing: the twist ring's knob shows the same, and the two
+        // sat on top of each other at the tip.
+        if(state.ShowTwistIndicator && !posingThisFrame) {
             float caseRadius = 0.f;
             for (const auto& profileRing : Profile) caseRadius = Util::Max(caseRadius, profileRing.r * Radius);
             const float topY = Profile[0].y * HalfLength;
@@ -4299,6 +4375,822 @@ static bool simulatorCanTakeMouse(ImGuiID simId, bool refuseAlt) noexcept
     return true;
 }
 
+// ================================ Pose handles ==============================
+
+namespace {
+
+using PoseHandle = ScriptSimulator::PoseHandle;
+constexpr int32_t AxisCount = (int32_t)ScriptSimulator::Axis::Count;
+
+// Where the handles sit on the model, in the body's own units before the
+// stroke moves it, which every anchor adds as the drawing does: the tip on
+// the closed end, the case's grip partway up it, the twist ring around the
+// grip a little wider than the case, and the floor square under the body on
+// the ground the rod stands on.
+constexpr float PoseTipY = ModelHalfLength;
+constexpr float PoseGripY = 0.55f * ModelHalfLength;
+constexpr float PoseRingY = 0.30f * ModelHalfLength;
+constexpr float PoseRingRadius = 1.25f * ModelRadius;
+constexpr float PoseFloorY = -ModelStrokeTravel + ModelLipSeatDepth;  // plus the vulva's height, below
+constexpr float PoseFloorHalf = 0.13f;
+constexpr int32_t PoseRingSamples = 64;
+// Half the length of the case's grip on screen, in pixels.
+constexpr float PoseCaseHalfLength = 12.f;
+
+// Which axes each handle moves. -1 for none.
+constexpr int32_t PoseHandleAxes[(int32_t)PoseHandle::Count][2] = {
+    { 0, -1 },  // case: stroke
+    { 3, -1 },  // ring: twist
+    { 4, 5 },   // tip: roll, pitch
+    { 2, 1 },   // floor: sway, surge
+};
+
+float poseFloorY() noexcept
+{
+    return PoseFloorY + (Profile[SlitRing].y * ModelHalfLength);
+}
+
+// A handle's anchor, in front of the camera, for a set of axis values.
+Vec3 poseAnchorView(PoseHandle handle, const SimulatorState& state, const float* value) noexcept
+{
+    const PoseFrame f = makePoseFrame(state, value);
+    switch (handle) {
+    case PoseHandle::Case:
+        return f.toWorld(Vec3{ 0.f, f.strokeOffset + PoseGripY, 0.f });
+    case PoseHandle::Ring:
+        return f.toWorld(Vec3{ 0.f, f.strokeOffset + PoseRingY, 0.f });
+    case PoseHandle::Tip:
+        return f.toWorld(Vec3{ 0.f, f.strokeOffset + PoseTipY, 0.f });
+    case PoseHandle::Floor:
+        return f.camera(Vec3{ f.worldOffset.x, poseFloorY(), f.worldOffset.z });
+    default:
+        return Vec3{ 0.f, 0.f, 0.f };
+    }
+}
+
+// The same anchor on screen.
+ImVec2 poseAnchor(PoseHandle handle, const SimulatorState& state, const float* value,
+    ImVec2 center, float scale) noexcept
+{
+    return project(poseAnchorView(handle, state, value), center, scale);
+}
+
+// A point on the twist ring at an angle around the body, measured in the
+// world rather than on the body, so twisting does not move the angle a given
+// spot on screen reads as.
+ImVec2 poseRingPoint(const SimulatorState& state, const float* value, float angle,
+    ImVec2 center, float scale) noexcept
+{
+    float untwisted[AxisCount];
+    for (int32_t i = 0; i < AxisCount; i += 1) untwisted[i] = value[i];
+    untwisted[3] = 50.f;
+    const PoseFrame f = makePoseFrame(state, untwisted);
+    const Vec3 local = rotateY(Vec3{ PoseRingRadius, f.strokeOffset + PoseRingY, 0.f }, angle);
+    return project(f.toWorld(local), center, scale);
+}
+
+// The world angle of the spot on the ring nearest the mouse.
+float poseRingAngleAt(const SimulatorState& state, const float* value, ImVec2 mouse,
+    ImVec2 center, float scale, float* outDistance) noexcept
+{
+    float best = 0.f;
+    float bestDist = std::numeric_limits<float>::max();
+    for (int32_t k = 0; k < PoseRingSamples; k += 1) {
+        const float angle = ((float)k / (float)PoseRingSamples) * 2.f * (float)M_PI;
+        const ImVec2 p = poseRingPoint(state, value, angle, center, scale);
+        const float d = ImLengthSqr(p - mouse);
+        if (d < bestDist) {
+            bestDist = d;
+            best = angle;
+        }
+    }
+    if (outDistance) *outDistance = std::sqrt(bestDist);
+    return best;
+}
+
+// Which way on screen each of a handle's axes moves it, in pixels per unit of
+// 0..100, and whether that axis is end on from here.
+//
+// Each axis is nudged to see where it takes the handle. Most of the time that
+// is a direction on screen, and dragging that way moves the axis. But an axis
+// can move a handle almost straight towards or away from the camera: pitch
+// seen from the front, roll from the side, surge from in front. Followed
+// literally, the faint movement left on screen turns a small drag into a
+// huge jump, or leaks into an axis that was never meant to move. So an axis
+// that moves the handle far less than its partner does, or hardly at all,
+// is end on, and is given the screen direction its partner does not use,
+// with up meaning away from the viewer. Both axes stay within reach from any
+// angle, and each drag moves the axis it looks like it should.
+void poseAxisDirections(PoseHandle handle, const SimulatorState& state, const float* value,
+    const bool* usable, ImVec2 center, float scale, ImVec2* outDir, bool* outEndOn,
+    ImVec2* outRaw = nullptr) noexcept
+{
+    const auto& axes = PoseHandleAxes[(int32_t)handle];
+    ImVec2 j[2] = { ImVec2(0.f, 0.f), ImVec2(0.f, 0.f) };
+    float away[2] = { 0.f, 0.f };
+    float sens[2] = { 0.f, 0.f };
+    bool on[2] = { false, false };
+    constexpr float Nudge = 1.f;
+    for (int32_t k = 0; k < 2; k += 1) {
+        outDir[k] = ImVec2(0.f, 0.f);
+        outEndOn[k] = false;
+        const int32_t axis = axes[k];
+        if (axis < 0 || !usable[axis]) continue;
+        float plus[AxisCount];
+        float minus[AxisCount];
+        for (int32_t i = 0; i < AxisCount; i += 1) plus[i] = minus[i] = value[i];
+        plus[axis] = Util::Min(100.f, value[axis] + Nudge);
+        minus[axis] = Util::Max(0.f, value[axis] - Nudge);
+        const float span = plus[axis] - minus[axis];
+        const Vec3 viewPlus = poseAnchorView(handle, state, plus);
+        const Vec3 viewMinus = poseAnchorView(handle, state, minus);
+        j[k] = (project(viewPlus, center, scale) - project(viewMinus, center, scale)) * (1.f / span);
+        away[k] = (viewPlus.z - viewMinus.z) / span;
+        sens[k] = std::sqrt(ImLengthSqr(j[k]));
+        on[k] = true;
+    }
+
+    const float strongest = Util::Max(sens[0], sens[1]);
+    // About what a full tilt or a full stroke moves a handle by, per unit, for
+    // an end on axis that has no partner to borrow a speed from.
+    const float fallback = 0.008f * scale;
+    bool seen[2];
+    for (int32_t k = 0; k < 2; k += 1) {
+        seen[k] = on[k] && sens[k] >= 0.3f && sens[k] >= 0.35f * strongest;
+        if (outRaw) outRaw[k] = j[k];
+    }
+    for (int32_t k = 0; k < 2; k += 1) {
+        if (!on[k]) continue;
+        if (seen[k]) {
+            outDir[k] = j[k];
+            continue;
+        }
+        outEndOn[k] = true;
+        const int32_t other = 1 - k;
+        ImVec2 free(0.f, -1.f);
+        float speed = fallback;
+        if (seen[other]) {
+            // Whichever of across and up the screen the partner does not
+            // mostly use. A screen axis rather than square to the partner,
+            // since the partner's direction swings as it moves (a roll
+            // swings the tip down as well as across), and a drag straight
+            // across would otherwise creep into this axis.
+            free = std::abs(j[other].x) >= std::abs(j[other].y) ? ImVec2(0.f, -1.f) : ImVec2(1.f, 0.f);
+            speed = sens[other];
+        }
+        else if (on[other] && k == 0) {
+            // Both end on: across for the first, up and down for the second.
+            free = ImVec2(1.f, 0.f);
+        }
+        // Up is away from the viewer.
+        outDir[k] = free * (away[k] >= 0.f ? speed : -speed);
+    }
+}
+
+// How far each of a handle's axes has to move, in 0..100 units, for its
+// anchor to follow the mouse by delta on screen, along the given directions.
+void poseSolve(const ImVec2* d, const bool* endOn, ImVec2 delta, float* outChange) noexcept
+{
+    const bool on0 = ImLengthSqr(d[0]) > 0.f;
+    const bool on1 = ImLengthSqr(d[1]) > 0.f;
+    outChange[0] = outChange[1] = 0.f;
+    if (on0 && on1 && (endOn[0] || endOn[1])) {
+        // One end on: each axis takes its own screen axis and nothing else,
+        // so a drag across never moves the axis dragged up and down.
+        for (int32_t k = 0; k < 2; k += 1) {
+            if (endOn[k]) {
+                outChange[k] = ImDot(delta, d[k]) / ImDot(d[k], d[k]);
+            }
+            else if (std::abs(d[k].x) >= std::abs(d[k].y)) {
+                outChange[k] = delta.x / d[k].x;
+            }
+            else {
+                outChange[k] = delta.y / d[k].y;
+            }
+        }
+    }
+    else if (on0 && on1) {
+        // Least squares, with damping in proportion to how far the axes move
+        // the handle, so two that move it nearly the same way do not fight.
+        const float a0 = ImDot(d[0], d[0]);
+        const float c0 = ImDot(d[1], d[1]);
+        const float damp = 0.05f * Util::Max(a0, c0);
+        const float a = a0 + damp;
+        const float b = ImDot(d[0], d[1]);
+        const float c = c0 + damp;
+        const float r0 = ImDot(d[0], delta);
+        const float r1 = ImDot(d[1], delta);
+        const float det = (a * c) - (b * b);
+        if (std::abs(det) > 1e-9f) {
+            outChange[0] = ((c * r0) - (b * r1)) / det;
+            outChange[1] = ((a * r1) - (b * r0)) / det;
+        }
+    }
+    else if (on0) {
+        outChange[0] = ImDot(d[0], delta) / ImDot(d[0], d[0]);
+    }
+    else if (on1) {
+        outChange[1] = ImDot(d[1], delta) / ImDot(d[1], d[1]);
+    }
+}
+
+// How open the twist ring is on screen, its narrow way across over its wide
+// way, and its wide direction and half width. Seen edge on, near level with
+// the camera, it is a line, and where the mouse is around it cannot be told.
+float poseRingOpenness(const SimulatorState& state, const float* value, ImVec2 center, float scale,
+    ImVec2* outAcross, float* outHalfWidth) noexcept
+{
+    ImVec2 widest[2] = { ImVec2(0.f, 0.f), ImVec2(0.f, 0.f) };
+    float widestLen = 0.f;
+    ImVec2 points[PoseRingSamples];
+    for (int32_t k = 0; k < PoseRingSamples; k += 1) {
+        points[k] = poseRingPoint(state, value, ((float)k / (float)PoseRingSamples) * 2.f * (float)M_PI, center, scale);
+    }
+    for (int32_t k = 0; k < PoseRingSamples / 2; k += 1) {
+        const ImVec2 a = points[k];
+        const ImVec2 b = points[k + (PoseRingSamples / 2)];
+        const float len = std::sqrt(ImLengthSqr(b - a));
+        if (len > widestLen) {
+            widestLen = len;
+            widest[0] = a;
+            widest[1] = b;
+        }
+    }
+    float narrowLen = std::numeric_limits<float>::max();
+    for (int32_t k = 0; k < PoseRingSamples / 2; k += 1) {
+        narrowLen = Util::Min(narrowLen, std::sqrt(ImLengthSqr(points[k + (PoseRingSamples / 2)] - points[k])));
+    }
+    ImVec2 across = widestLen > 1e-3f ? (widest[1] - widest[0]) * (1.f / widestLen) : ImVec2(1.f, 0.f);
+    if (across.x < 0.f) across = across * -1.f;
+    if (outAcross) *outAcross = across;
+    if (outHalfWidth) *outHalfWidth = Util::Max(1.f, widestLen * 0.5f);
+    return widestLen > 1e-3f ? narrowLen / widestLen : 0.f;
+}
+
+// Below this the ring is near enough edge on to be dragged across instead
+// of around.
+constexpr float PoseRingOpenEnough = 0.25f;
+
+const char* PoseHandleTips[(int32_t)PoseHandle::Count] = {
+    "Stroke: drag the case along its length.",
+    "Twist: drag around the ring.",
+    "Roll and pitch: push the tip the way the case should lean.",
+    "Surge and sway: slide the square across the floor.",
+};
+const char* PoseHandleMissing[(int32_t)PoseHandle::Count] = {
+    "Stroke needs the main track.",
+    "No twist track. Add one from Add in the Tracks panel.",
+    "No roll or pitch track. Add them from Add in the Tracks panel.",
+    "No surge or sway track. Add them from Add in the Tracks panel.",
+};
+
+const char* PoseAxisLabels[AxisCount] = { "Stroke", "Surge", "Sway", "Twist", "Roll", "Pitch" };
+const char* PoseAxisNamesLower[AxisCount] = { "stroke", "surge", "sway", "twist", "roll", "pitch" };
+
+// ---- The handles' look ------------------------------------------------------
+// In the interface's own style, from its colour roles so it follows the theme:
+// knobs are small squares like the lanes' tick boxes, dark with a hairline at
+// rest, edged in the accent under the mouse and filled with it while dragged.
+// Corners follow the rounded or square setting. Labels are the lanes' name
+// pills.
+
+uint32_t poseColor(uint32_t color, float alpha) noexcept
+{
+    const uint32_t a = (uint32_t)(Util::Clamp(alpha, 0.f, 1.f) * (float)((color >> IM_COL32_A_SHIFT) & 0xFF));
+    return (color & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
+}
+
+float poseRounding(float size) noexcept
+{
+    return ImGui::GetStyle().FrameRounding > 0.f ? Util::Min(3.f, size * 0.3f) : 0.f;
+}
+
+struct PoseLook
+{
+    bool usable = true;
+    bool active = false;
+    // 0 at rest to 1 under the mouse.
+    float grow = 0.f;
+    // Less while the mouse is away from the model.
+    float strength = 1.f;
+};
+
+// The fill, edge and edge width of a handle in a given state.
+struct PoseInk
+{
+    uint32_t fill;
+    uint32_t edge;
+    float width;
+};
+
+PoseInk poseInk(const PoseLook& l) noexcept
+{
+    const auto& role = OFS_Sashimi::Role();
+    if (!l.usable) {
+        return { poseColor(role.OffFill, 0.55f * l.strength), poseColor(role.Divider, 0.6f * l.strength), 1.f };
+    }
+    if (l.active) return { role.OnFillHi, role.OnBorder, 1.5f };
+    if (l.grow > 0.5f) return { poseColor(role.OffFillHi, 0.95f), role.AccentBright, 1.5f };
+    return { poseColor(role.OffFill, 0.92f * l.strength), poseColor(role.Outline, l.strength), 1.f };
+}
+
+// A square knob centred on at.
+void poseKnob(ImDrawList* drawList, ImVec2 at, float size, const PoseLook& l) noexcept
+{
+    const float half = size * 0.5f * (1.f + (0.2f * l.grow));
+    const PoseInk ink = poseInk(l);
+    const float round = poseRounding(half * 2.f);
+    const ImVec2 min = at - ImVec2(half, half);
+    const ImVec2 max = at + ImVec2(half, half);
+    drawList->AddRectFilled(min + ImVec2(0.f, 1.f), max + ImVec2(0.f, 1.f), poseColor(IM_COL32_BLACK, 0.35f * l.strength), round);
+    drawList->AddRectFilled(min, max, ink.fill, round);
+    drawList->AddRect(min, max, ink.edge, round, 0, ink.width);
+    if (l.active) {
+        drawList->AddRectFilled(at - ImVec2(1.5f, 1.5f), at + ImVec2(1.5f, 1.5f), OFS_Sashimi::Role().AccentPale, 1.f);
+    }
+}
+
+// The case's grip: a bar lying along dir, with two short lines across it.
+void poseGrip(ImDrawList* drawList, ImVec2 at, ImVec2 dir, float halfLength, float halfWidth,
+    const PoseLook& l) noexcept
+{
+    const float grow = 1.f + (0.15f * l.grow);
+    const ImVec2 along = dir * (halfLength * grow);
+    const ImVec2 side = ImVec2(-dir.y, dir.x) * (halfWidth * grow);
+    const ImVec2 corners[4] = { at + along + side, at + along - side, at - along - side, at - along + side };
+    const PoseInk ink = poseInk(l);
+    ImVec2 shadowed[4];
+    for (int32_t i = 0; i < 4; i += 1) shadowed[i] = corners[i] + ImVec2(0.f, 1.f);
+    drawList->AddConvexPolyFilled(shadowed, 4, poseColor(IM_COL32_BLACK, 0.35f * l.strength));
+    drawList->AddConvexPolyFilled(corners, 4, ink.fill);
+    drawList->AddPolyline(corners, 4, ink.edge, ImDrawFlags_Closed, ink.width);
+    const auto& role = OFS_Sashimi::Role();
+    const uint32_t grab = l.active ? role.AccentPale : poseColor(OFS_Sashimi::Grey80, l.usable ? l.strength : 0.4f);
+    for (float o : { -2.5f, 2.5f }) {
+        drawList->AddLine(at + dir * o - side * 0.55f, at + dir * o + side * 0.55f, grab, 1.f);
+    }
+}
+
+// Two chevrons either side of a handle, pointing the ways it goes, and a
+// name by the outer one when given.
+void poseChevrons(ImDrawList* drawList, ImVec2 at, ImVec2 dir, float reach, uint32_t color, const char* label) noexcept
+{
+    const float len = std::sqrt(ImLengthSqr(dir));
+    if (len < 1e-4f) return;
+    const ImVec2 n = dir * (1.f / len);
+    const ImVec2 side(-n.y, n.x);
+    for (float s : { 1.f, -1.f }) {
+        const ImVec2 tip = at + n * (reach * s);
+        const ImVec2 back = tip - n * (4.f * s);
+        const ImVec2 wing[3] = { back + side * 4.f, tip, back - side * 4.f };
+        drawList->AddPolyline(wing, 3, poseColor(IM_COL32_BLACK, 0.45f), 0, 3.5f);
+        drawList->AddPolyline(wing, 3, color, 0, 1.5f);
+    }
+    if (label) {
+        const ImVec2 size = ImGui::CalcTextSize(label);
+        const ImVec2 spot = at + n * (reach + 8.f) + side * 6.f - ImVec2(0.f, size.y * 0.5f);
+        drawList->AddText(spot + ImVec2(1.f, 1.f), poseColor(IM_COL32_BLACK, 0.7f), label);
+        drawList->AddText(spot, color, label);
+    }
+}
+
+// A label like a lane's name pill: dark and translucent behind, a faint
+// hairline, primary text, and an optional note after it in the faint text
+// colour. Kept inside the window, flipping to the other side of at when it
+// would run off the right.
+void posePill(ImDrawList* drawList, ImVec2 at, const char* text, const char* note, bool beside) noexcept
+{
+    const ImVec2 main = ImGui::CalcTextSize(text);
+    const ImVec2 extra = note ? ImGui::CalcTextSize(note) : ImVec2(0.f, 0.f);
+    const float gap = note ? 14.f : 0.f;
+    const ImVec2 pad(9.f, 4.f);
+    const ImVec2 size(main.x + gap + extra.x + (pad.x * 2.f), main.y + (pad.y * 2.f));
+    ImVec2 min = at;
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    if (beside && min.x + size.x > viewport->Pos.x + viewport->Size.x - 4.f) {
+        min.x = at.x - 36.f - size.x;
+    }
+    const ImVec2 max = min + size;
+    const float round = ImGui::GetStyle().FrameRounding > 0.f ? size.y * 0.5f : 0.f;
+    drawList->AddRectFilled(min, max, IM_COL32(0x10, 0x10, 0x10, 0xE0), round);
+    drawList->AddRect(min, max, IM_COL32(255, 255, 255, 0x14), round);
+    drawList->AddText(min + pad, OFS_Sashimi::Grey95, text);
+    if (note) drawList->AddText(min + pad + ImVec2(main.x + gap, 0.f), OFS_Sashimi::Role().TextFaint, note);
+}
+
+// The track that drives an axis, or nothing.
+std::shared_ptr<Funscript> poseScriptFor(int32_t axis) noexcept
+{
+    for (auto& script : OpenFunscripter::ptr->LoadedFunscripts()) {
+        if (AxisFromLabel(AxisLabel(script.get())) == axis) return script;
+    }
+    return nullptr;
+}
+
+bool poseHandleUsable(PoseHandle handle, const bool* hasTrack) noexcept
+{
+    for (int32_t axis : PoseHandleAxes[(int32_t)handle]) {
+        if (axis >= 0 && hasTrack[axis]) return true;
+    }
+    return false;
+}
+
+}
+
+// The directions a handle's axes are dragged in. While dragging, each axis
+// keeps the mode it had when the handle was taken: an axis that started end
+// on stays up and down for the whole drag, however far it comes round to
+// face the viewer. Deciding afresh every frame, pitch dragged up from the
+// front tilted far enough to be seen, turned into "follow the tip", and was
+// pulled back down by the same drag, so it stuck at about 80. An axis that
+// started in view follows where it moves the handle now, but never slower
+// than a quarter of its speed at the start, so it cannot leap as it turns
+// end on.
+void ScriptSimulator::poseDirections(PoseHandle handle, const SimulatorState& state, const float* value,
+    const bool* hasTrack, ImVec2 center, float scale, ImVec2* outDir, bool* outEndOn) noexcept
+{
+    ImVec2 raw[2];
+    poseAxisDirections(handle, state, value, hasTrack, center, scale, outDir, outEndOn, raw);
+    if (handle != PoseDragging) return;
+    for (int32_t k = 0; k < 2; k += 1) {
+        outEndOn[k] = poseModeEndOn[k];
+        if (poseModeEndOn[k]) {
+            outDir[k] = poseModeDir[k];
+            continue;
+        }
+        if (ImLengthSqr(poseModeDir[k]) <= 0.f) {
+            outDir[k] = ImVec2(0.f, 0.f);
+            continue;
+        }
+        const float least = 0.25f * std::sqrt(ImLengthSqr(poseModeDir[k]));
+        const float now = std::sqrt(ImLengthSqr(raw[k]));
+        outDir[k] = now >= least ? raw[k]
+            : now > 1e-4f ? raw[k] * (least / now)
+            : poseModeDir[k] * 0.25f;
+    }
+}
+
+void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const MultiAxisValues& axes,
+    const bool* hasTrack, ImVec2 center, float scale, ImGuiID simId) noexcept
+{
+    poseTookMouse = false;
+    PoseHovered = PoseHandle::None;
+    const auto& io = ImGui::GetIO();
+    const ImVec2 mouse = io.MousePos;
+
+    // Values as the model shows them, with any pose being dragged.
+    float value[AxisCount];
+    for (int32_t i = 0; i < AxisCount; i += 1) {
+        value[i] = poseOverride[i] >= 0.f ? poseOverride[i] : axes.value[i];
+    }
+
+    if (PoseDragging != PoseHandle::None) {
+        poseTookMouse = true;
+        ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+        // Escape drops the pose: nothing is written, and the model goes back
+        // to what the scripts say.
+        if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+            cancelPose(simId);
+            return;
+        }
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+            commitPose(hasTrack);
+            PoseDragging = PoseHandle::None;
+            if (ImGui::GetActiveID() == simId) ImGui::ClearActiveID();
+            return;
+        }
+        // Ctrl drags at a quarter of the speed, and Ctrl and Shift snap to 5.
+        const float speed = io.KeyCtrl ? 0.25f : 1.f;
+        const bool snap = io.KeyCtrl && io.KeyShift;
+        const auto& handleAxes = PoseHandleAxes[(int32_t)PoseDragging];
+        if (PoseDragging == PoseHandle::Ring) {
+            ImVec2 across;
+            float halfWidth = 1.f;
+            const float open = poseRingOpenness(state, value, center, scale, &across, &halfWidth);
+            const float angle = poseRingAngleAt(state, value, mouse, center, scale, nullptr);
+            if (open >= PoseRingOpenEnough) {
+                float turn = angle - poseLastRingAngle;
+                while (turn > (float)M_PI) turn -= 2.f * (float)M_PI;
+                while (turn < -(float)M_PI) turn += 2.f * (float)M_PI;
+                // A full turn of the ring is the twist's whole range, and twist
+                // turns the body the other way to the angle as measured here.
+                poseRaw[3] -= (turn / (float)M_PI) * 50.f * speed;
+            }
+            else {
+                // Edge on: dragged across, like the near side of a dial, so
+                // dragging right turns the front of the case to the right.
+                const float turn = ImDot(mouse - poseLastMouse, across) / halfWidth;
+                poseRaw[3] += (turn / (float)M_PI) * 50.f * speed;
+            }
+            poseLastRingAngle = angle;
+        }
+        else {
+            ImVec2 dirs[2];
+            bool endOn[2];
+            poseDirections(PoseDragging, state, value, hasTrack, center, scale, dirs, endOn);
+            float change[2];
+            poseSolve(dirs, endOn, mouse - poseLastMouse, change);
+            for (int32_t k = 0; k < 2; k += 1) {
+                if (handleAxes[k] >= 0) poseRaw[handleAxes[k]] += change[k] * speed;
+            }
+        }
+        poseLastMouse = mouse;
+        for (int32_t axis : handleAxes) {
+            if (axis < 0 || !hasTrack[axis]) continue;
+            poseRaw[axis] = Util::Clamp(poseRaw[axis], 0.f, 100.f);
+            poseOverride[axis] = snap ? std::round(poseRaw[axis] / 5.f) * 5.f : poseRaw[axis];
+        }
+        return;
+    }
+
+    // Shift alone is left to the timeline, as the simulator always has; Ctrl
+    // and Shift together are this drag's snapping.
+    if (!(io.KeyShift && io.KeyCtrl) && !simulatorCanTakeMouse(simId, true)) return;
+    if (io.KeyShift && io.KeyCtrl && GImGui->OpenPopupStack.Size > 0) return;
+
+    // Nearest first: the tip and the floor square are small and sit over the
+    // case and the ring, so they win where they overlap.
+    constexpr float Reach = 10.f;
+    PoseHandle hit = PoseHandle::None;
+    const PoseHandle order[] = { PoseHandle::Tip, PoseHandle::Floor, PoseHandle::Ring, PoseHandle::Case };
+    for (PoseHandle handle : order) {
+        float dist = 0.f;
+        if (handle == PoseHandle::Ring) {
+            poseRingAngleAt(state, value, mouse, center, scale, &dist);
+            if (dist > 6.f) continue;
+        }
+        else if (handle == PoseHandle::Case) {
+            // Anywhere along the capsule drawn for it.
+            const ImVec2 at = poseAnchor(handle, state, value, center, scale);
+            float up[AxisCount];
+            for (int32_t i = 0; i < AxisCount; i += 1) up[i] = value[i];
+            up[0] = value[0] < 90.f ? value[0] + 10.f : value[0] - 10.f;
+            ImVec2 along = poseAnchor(handle, state, up, center, scale) - at;
+            const float len = std::sqrt(ImLengthSqr(along));
+            along = len > 1e-3f ? along * (1.f / len) : ImVec2(0.f, -1.f);
+            const float t = Util::Clamp(ImDot(mouse - at, along), -PoseCaseHalfLength, PoseCaseHalfLength);
+            dist = std::sqrt(ImLengthSqr(at + along * t - mouse));
+            if (dist > Reach) continue;
+        }
+        else {
+            dist = std::sqrt(ImLengthSqr(poseAnchor(handle, state, value, center, scale) - mouse));
+            if (dist > Reach) continue;
+        }
+        hit = handle;
+        break;
+    }
+    if (hit == PoseHandle::None) return;
+
+    PoseHovered = hit;
+    poseTookMouse = true;
+    ImGui::SetHoveredID(ImGui::GetCurrentWindowRead()->ID);
+    const bool usable = poseHandleUsable(hit, hasTrack);
+    if (usable) ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+    // The usual tooltip delay, timed here since the handles are not items.
+    static PoseHandle tipFor = PoseHandle::None;
+    static float tipTime = 0.f;
+    tipTime = hit == tipFor ? tipTime + io.DeltaTime : 0.f;
+    tipFor = hit;
+    if (tipTime > io.HoverDelayNormal) {
+        OFS::ShowWrappedTooltip(usable
+            ? (std::string(PoseHandleTips[(int32_t)hit])
+                + " Letting go adds a point at the playhead; Escape cancels. Ctrl drags slowly, "
+                  "Ctrl+Shift snaps to 5. Double click to set it back to the middle.").c_str()
+            : PoseHandleMissing[(int32_t)hit]);
+    }
+    if (usable && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+        // A double click sets the handle's axes back to the middle, 50, and
+        // writes that like a drag would: a quick way to level a tilt or
+        // straighten a twist.
+        PoseDragging = hit;
+        for (int32_t i = 0; i < AxisCount; i += 1) {
+            poseStart[i] = value[i];
+            poseOverride[i] = -1.f;
+        }
+        for (int32_t axis : PoseHandleAxes[(int32_t)hit]) {
+            if (axis >= 0 && hasTrack[axis]) poseOverride[axis] = 50.f;
+        }
+        commitPose(hasTrack);
+        PoseDragging = PoseHandle::None;
+        return;
+    }
+    if (usable && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+        ImGui::SetActiveID(simId, ImGui::GetCurrentWindowRead());
+        PoseDragging = hit;
+        poseLastMouse = mouse;
+        for (int32_t i = 0; i < AxisCount; i += 1) {
+            poseRaw[i] = value[i];
+            poseStart[i] = value[i];
+            poseOverride[i] = -1.f;
+        }
+        if (hit == PoseHandle::Ring) {
+            poseLastRingAngle = poseRingAngleAt(state, value, mouse, center, scale, nullptr);
+        }
+        else {
+            poseAxisDirections(hit, state, value, hasTrack, center, scale, poseModeDir, poseModeEndOn);
+        }
+    }
+}
+
+void ScriptSimulator::commitPose(const bool* hasTrack) noexcept
+{
+    auto app = OpenFunscripter::ptr;
+    const float time = app->player->CurrentTime();
+    const float frameTime = app->scripting->LogicalFrameTime();
+
+    // The script driving each axis that moved.
+    std::vector<std::pair<std::shared_ptr<Funscript>, int32_t>> writes;
+    for (int32_t axis : PoseHandleAxes[(int32_t)PoseDragging]) {
+        if (axis < 0 || !hasTrack[axis] || poseOverride[axis] < 0.f) continue;
+        const int32_t pos = (int32_t)std::round(poseOverride[axis]);
+        if (pos == (int32_t)std::round(poseStart[axis])) continue;
+        if (auto script = poseScriptFor(axis)) writes.emplace_back(script, pos);
+    }
+    for (int32_t i = 0; i < AxisCount; i += 1) poseOverride[i] = -1.f;
+    if (writes.empty()) return;
+
+    UndoContextScripts scripts;
+    for (auto& [script, pos] : writes) scripts.push_back(script);
+    app->undoSystem->Snapshot(StateType::ADD_EDIT_ACTIONS, std::move(scripts));
+    for (auto& [script, pos] : writes) {
+        script->AddEditAction(FunscriptAction(time, pos), frameTime);
+    }
+}
+
+void ScriptSimulator::cancelPose(ImGuiID simId) noexcept
+{
+    PoseDragging = PoseHandle::None;
+    for (auto& v : poseOverride) v = -1.f;
+    if (ImGui::GetActiveID() == simId) ImGui::ClearActiveID();
+}
+
+void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState& state,
+    const MultiAxisValues& axes, const bool* hasTrack, ImVec2 center, float scale) noexcept
+{
+    float value[AxisCount];
+    for (int32_t i = 0; i < AxisCount; i += 1) {
+        value[i] = poseOverride[i] >= 0.f ? poseOverride[i] : axes.value[i];
+    }
+
+    // Faint while the mouse is away from the model, so the handles stay out
+    // of the way of the video, and at full strength as it comes near.
+    const ImVec2 mouse = ImGui::GetIO().MousePos;
+    constexpr float Near = 40.f;
+    const bool near = PoseDragging != PoseHandle::None
+        || (mouse.x >= FrameMin.x - Near && mouse.x <= FrameMax.x + Near
+            && mouse.y >= FrameMin.y - Near && mouse.y <= FrameMax.y + Near);
+    const float strength = near ? 1.f : 0.35f;
+
+    // Each handle grows a little under the mouse and while dragged, eased
+    // rather than snapping.
+    const float dt = ImGui::GetIO().DeltaTime;
+    for (int32_t h = 0; h < (int32_t)PoseHandle::Count; h += 1) {
+        const bool lit = PoseHovered == (PoseHandle)h || PoseDragging == (PoseHandle)h;
+        poseGrow[h] += ((lit ? 1.f : 0.f) - poseGrow[h]) * Util::Min(1.f, dt * 14.f);
+    }
+    auto look = [&](PoseHandle handle) noexcept {
+        PoseLook l;
+        l.usable = poseHandleUsable(handle, hasTrack);
+        l.active = PoseDragging == handle;
+        l.grow = poseGrow[(int32_t)handle];
+        l.strength = strength;
+        return l;
+    };
+
+    for (int32_t h = 0; h < (int32_t)PoseHandle::Count; h += 1) {
+        PoseHandleScreen[h] = poseAnchor((PoseHandle)h, state, value, center, scale);
+    }
+
+    // Twist ring: a fine line round the body, with a knob on the front that
+    // turns with it. Drawn first, so the other handles sit on top of it.
+    {
+        const PoseLook l = look(PoseHandle::Ring);
+        ImVec2 points[PoseRingSamples];
+        for (int32_t k = 0; k < PoseRingSamples; k += 1) {
+            const float angle = ((float)k / (float)PoseRingSamples) * 2.f * (float)M_PI;
+            points[k] = poseRingPoint(state, value, angle, center, scale);
+        }
+        const auto& role = OFS_Sashimi::Role();
+        const uint32_t line = !l.usable ? poseColor(role.Divider, 0.6f * strength)
+            : (l.active || l.grow > 0.5f) ? role.AccentBright
+            : poseColor(OFS_Sashimi::Grey80, 0.6f * strength);
+        drawList->AddPolyline(points, PoseRingSamples, poseColor(IM_COL32_BLACK, 0.3f * strength), ImDrawFlags_Closed, 3.5f);
+        drawList->AddPolyline(points, PoseRingSamples, line, ImDrawFlags_Closed, 1.5f);
+        // On the front of the body, which faces the viewer at -z, turning
+        // with it.
+        const PoseFrame knobFrame = makePoseFrame(state, value);
+        const ImVec2 knob = project(knobFrame.toWorld(Vec3{ 0.f, knobFrame.strokeOffset + PoseRingY, -PoseRingRadius }),
+            center, scale);
+        PoseHandleScreen[(int32_t)PoseHandle::Ring] = knob;
+        poseKnob(drawList, knob, 8.f, l);
+    }
+
+    // Case: a grip lying along the body, with two lines across it.
+    {
+        const PoseLook l = look(PoseHandle::Case);
+        const ImVec2 at = PoseHandleScreen[(int32_t)PoseHandle::Case];
+        float up[AxisCount];
+        for (int32_t i = 0; i < AxisCount; i += 1) up[i] = value[i];
+        up[0] = Util::Min(100.f, value[0] + 10.f);
+        ImVec2 along = poseAnchor(PoseHandle::Case, state, up, center, scale) - at;
+        if (ImLengthSqr(along) < 1e-4f) {
+            up[0] = Util::Max(0.f, value[0] - 10.f);
+            along = at - poseAnchor(PoseHandle::Case, state, up, center, scale);
+        }
+        const float len = std::sqrt(ImLengthSqr(along));
+        const ImVec2 dir = len > 1e-3f ? along * (1.f / len) : ImVec2(0.f, -1.f);
+        poseGrip(drawList, at, dir, PoseCaseHalfLength, 4.f, l);
+    }
+
+    // Floor square: on the ground under the body, moving with surge and
+    // sway. A faint tile with a knob in the middle.
+    {
+        const PoseLook l = look(PoseHandle::Floor);
+        const PoseFrame f = makePoseFrame(state, value);
+        const float y = poseFloorY();
+        const Vec3 c{ f.worldOffset.x, y, f.worldOffset.z };
+        ImVec2 corners[4] = {
+            project(f.camera(Vec3{ c.x - PoseFloorHalf, y, c.z - PoseFloorHalf }), center, scale),
+            project(f.camera(Vec3{ c.x + PoseFloorHalf, y, c.z - PoseFloorHalf }), center, scale),
+            project(f.camera(Vec3{ c.x + PoseFloorHalf, y, c.z + PoseFloorHalf }), center, scale),
+            project(f.camera(Vec3{ c.x - PoseFloorHalf, y, c.z + PoseFloorHalf }), center, scale),
+        };
+        const auto& role = OFS_Sashimi::Role();
+        const float a = l.usable ? strength : 0.5f * strength;
+        const bool lit = l.usable && (l.active || l.grow > 0.5f);
+        drawList->AddConvexPolyFilled(corners, 4, lit ? role.OnFill : poseColor(role.OffFill, 0.45f * a));
+        drawList->AddPolyline(corners, 4, lit ? role.OnBorder : poseColor(role.Outline, a), ImDrawFlags_Closed, 1.f);
+        poseKnob(drawList, PoseHandleScreen[(int32_t)PoseHandle::Floor], 8.f, l);
+    }
+
+    // Tip: the biggest knob, on the closed end, since it carries two axes.
+    poseKnob(drawList, PoseHandleScreen[(int32_t)PoseHandle::Tip], 11.f, look(PoseHandle::Tip));
+
+    // Which way each axis goes, on the handle under the mouse or being
+    // dragged: chevrons where the axis moves the handle on screen, and for
+    // an axis seen end on, which is dragged up and down instead with up
+    // away from the viewer, softer ones with its name.
+    const PoseHandle shown = PoseDragging != PoseHandle::None ? PoseDragging : PoseHovered;
+    ImVec2 dirs[2] = { ImVec2(0.f, 0.f), ImVec2(0.f, 0.f) };
+    bool endOn[2] = { false, false };
+    if (shown != PoseHandle::None && poseHandleUsable(shown, hasTrack)) {
+        const ImVec2 at = PoseHandleScreen[(int32_t)shown];
+        const float reach = 18.f + 6.f * poseGrow[(int32_t)shown];
+        if (shown == PoseHandle::Ring) {
+            ImVec2 across;
+            const float open = poseRingOpenness(state, value, center, scale, &across, nullptr);
+            if (open < PoseRingOpenEnough && hasTrack[3]) {
+                poseChevrons(drawList, at, across, reach, OFS_Sashimi::Grey95, nullptr);
+            }
+        }
+        else {
+            poseDirections(shown, state, value, hasTrack, center, scale, dirs, endOn);
+            const auto& handleAxes = PoseHandleAxes[(int32_t)shown];
+            for (int32_t k = 0; k < 2; k += 1) {
+                if (handleAxes[k] < 0) continue;
+                poseChevrons(drawList, at, dirs[k], reach,
+                    endOn[k] ? OFS_Sashimi::Role().AccentPale : OFS_Sashimi::Grey95,
+                    endOn[k] ? PoseAxisLabels[handleAxes[k]] : nullptr);
+            }
+        }
+    }
+
+    // While dragging, what is being set, by the mouse, as a pill: each axis
+    // and its value, and in a quieter tone whether a point already at the
+    // playhead is about to be replaced.
+    if (PoseDragging != PoseHandle::None) {
+        std::string text;
+        const auto& handleAxes = PoseHandleAxes[(int32_t)PoseDragging];
+        for (int32_t k = 0; k < 2; k += 1) {
+            const int32_t axis = handleAxes[k];
+            if (axis < 0 || !hasTrack[axis]) continue;
+            if (!text.empty()) text += "  \xC2\xB7  ";
+            text += PoseAxisLabels[axis];
+            text += " ";
+            text += std::to_string((int32_t)std::round(value[axis]));
+        }
+        std::string note;
+        for (int32_t k = 0; k < 2; k += 1) {
+            if (handleAxes[k] >= 0 && hasTrack[handleAxes[k]] && endOn[k]) {
+                note = std::string("drag up and down for ") + PoseAxisNamesLower[handleAxes[k]];
+            }
+        }
+        auto app = OpenFunscripter::ptr;
+        const float time = app->player->CurrentTime();
+        const float frameTime = app->scripting->LogicalFrameTime();
+        for (int32_t axis : handleAxes) {
+            if (axis < 0 || !hasTrack[axis]) continue;
+            auto script = poseScriptFor(axis);
+            if (script && script->GetActionAtTime(time, frameTime) != nullptr) {
+                if (!note.empty()) note += ", ";
+                note += "replaces the point here";
+                break;
+            }
+        }
+        posePill(drawList, mouse + ImVec2(18.f, 14.f), text.c_str(), note.empty() ? nullptr : note.c_str(), true);
+    }
+}
+
 void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& activeScript, float currentTime, bool splineMode) noexcept
 {
     if (!*open) return;
@@ -4481,6 +5373,11 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
         OFS::Tooltip("Where the model is at stroke 100, as a share of its full travel. "
                      "Like the L0 upper limit of a machine.");
 
+        ImGui::Checkbox("Pose with handles (experimental)", &state.PoseHandles);
+        OFS::Tooltip("Handles on the model to pose it while paused: drag the case for stroke, the ring for "
+                     "twist, the tip for roll and pitch, and the square on the floor for surge and sway. "
+                     "Letting go adds a point at the playhead to each axis you moved. Ctrl drags slowly, "
+                     "Ctrl+Shift snaps to steps of 5. Experimental, so it may change.");
         ImGui::Checkbox("Cutaway case", &state.CutawayCase);
         OFS::Tooltip("Remove the near half of the case so the sleeve inside is visible.");
         ImGui::Checkbox("Highlight ring", &state.ShowRim);
@@ -4680,6 +5577,9 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
     const ImVec2 modelCenter = barP2 + (Normalize(barP1 - barP2) * (distance / 2.f));
     const float modelScale = Util::Max(1e-3f, (distance / 2.f) * Util::Clamp(state.ModelScale, 0.1f, 4.f));
 
+    poseTookMouse = false;
+    PoseHandlesShown = false;
+    PoseHintShown = false;
     if(state.ShowMultiAxis) {
         // Every loaded script feeds one degree of freedom of a single model.
         MultiAxisValues axes;
@@ -4714,8 +5614,57 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
             }
         }
 
+        // Posing with handles, when asked for, and only while paused: the
+        // pose is written at the playhead, which playback would run away from.
+        bool hasTrack[(int32_t)Axis::Count] = {};
+        for (const auto& script : scripts) {
+            const int32_t axisIdx = AxisFromLabel(AxisLabel(script.get()));
+            if (axisIdx >= 0) hasTrack[axisIdx] = true;
+        }
+        const bool posing = state.PoseHandles && app->LoadedProject->IsValid() && app->player->IsPaused();
+        if (posing) {
+            // Every axis with a track counts as driven while posing, empty or
+            // not. The frame the model is fitted by takes in the full swing of
+            // each driven axis, so otherwise the first drag on an empty axis
+            // grew the frame and Fit to video moved the model out from under
+            // the mouse.
+            for (int32_t i = 0; i < (int32_t)Axis::Count; i += 1) {
+                if (hasTrack[i]) axes.mapped[i] = true;
+            }
+            updatePoseHandles(state, axes, hasTrack, modelCenter, modelScale, simId);
+        }
+        else if (PoseDragging != PoseHandle::None) {
+            // Played or switched off mid drag: the pose is dropped unwritten.
+            cancelPose(simId);
+        }
+        for (int32_t i = 0; i < (int32_t)Axis::Count; i += 1) {
+            if (poseOverride[i] >= 0.f) {
+                axes.value[i] = poseOverride[i];
+                axes.mapped[i] = true;
+            }
+        }
+
         ModelDrawnValid = false;
+        posingThisFrame = posing;
+        for (auto& lit : poseLitAxis) lit = false;
+        const PoseHandle litHandle = PoseDragging != PoseHandle::None ? PoseDragging : PoseHovered;
+        if (posing && litHandle != PoseHandle::None) {
+            for (int32_t axis : PoseHandleAxes[(int32_t)litHandle]) {
+                if (axis >= 0 && hasTrack[axis]) poseLitAxis[axis] = true;
+            }
+        }
         drawMultiAxisModel(frontDraw, state, axes, modelCenter, modelScale);
+        if (posing) drawPoseHandles(frontDraw, state, axes, hasTrack, modelCenter, modelScale);
+        PoseHandlesShown = posing;
+        // The handles go while playing, since the pose is written at the
+        // playhead. Say why, rather than have them simply vanish.
+        PoseHintShown = state.PoseHandles && !posing && app->LoadedProject->IsValid() && ModelDrawnValid;
+        if (PoseHintShown) {
+            const char* hint = "Pause to pose";
+            const float width = ImGui::CalcTextSize(hint).x + 22.f;
+            posePill(frontDraw, ImVec2(((ModelDrawnMin.x + ModelDrawnMax.x) - width) * 0.5f, ModelDrawnMax.y + 8.f),
+                hint, nullptr, false);
+        }
         if (ModelDrawnValid) {
             fitRelMin = (ModelDrawnMin - modelCenter) / modelScale;
             fitRelMax = (ModelDrawnMax - modelCenter) / modelScale;
@@ -4778,7 +5727,7 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
         orbiting = false;
     }
 
-    if (!state.LockedPosition)
+    if (!state.LockedPosition && !poseTookMouse)
     {
         const ImVec2 mouse = ImGui::GetMousePos();
 

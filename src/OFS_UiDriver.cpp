@@ -248,6 +248,13 @@ bool OFS_UiDriver::parse(const std::string& script, const std::string& media) no
             mouseMove(x, y);
             frames(2);
         }
+        else if (command == "moveby") {
+            Op op;
+            op.type = OpType::MouseBy;
+            if (!(args >> op.x >> op.y)) { fail("moveby needs DX DY"); continue; }
+            push(op);
+            frames(1);
+        }
         else if (command == "lanemove") {
             Op op;
             op.type = OpType::LaneMove;
@@ -262,6 +269,14 @@ bool OFS_UiDriver::parse(const std::string& script, const std::string& media) no
                 fail("lanehead needs a lane number and check, eye or name");
                 continue;
             }
+            push(op);
+            frames(2);
+        }
+        else if (command == "posehandle") {
+            Op op;
+            op.type = OpType::PoseHandle;
+            if (!(args >> op.text)) { fail("posehandle needs case, ring, tip or floor"); continue; }
+            if (!(args >> op.x >> op.y)) { op.x = 0.f; op.y = 0.f; }
             push(op);
             frames(2);
         }
@@ -592,6 +607,11 @@ void OFS_UiDriver::execute(const Op& op) noexcept
             mouseY = op.y;
             io.AddMousePosEvent(mouseX, mouseY);
             break;
+        case OpType::MouseBy:
+            mouseX += op.x;
+            mouseY += op.y;
+            io.AddMousePosEvent(mouseX, mouseY);
+            break;
         case OpType::LaneMove:
         case OpType::PointMove: {
             const auto& lanes = app->scriptTimeline.Lanes;
@@ -639,6 +659,25 @@ void OFS_UiDriver::execute(const Op& op) noexcept
 
             mouseX = targetX;
             mouseY = targetY;
+            io.AddMousePosEvent(mouseX, mouseY);
+            break;
+        }
+        case OpType::PoseHandle: {
+            // Aimed at where the handle was drawn last frame, so a drag can
+            // follow a handle as it moves by aiming at it again.
+            const char* names[] = { "case", "ring", "tip", "floor" };
+            int32_t idx = -1;
+            for (int32_t i = 0; i < 4; i += 1) {
+                if (op.text == names[i]) idx = i;
+            }
+            if (idx < 0 || !app->simulator.PoseHandlesShown) {
+                log("line " + std::to_string(op.line) + ": FAIL no pose handle " + op.text + " on screen");
+                failed += 1;
+                break;
+            }
+            const ImVec2 target = app->simulator.PoseHandleScreen[idx];
+            mouseX = target.x + op.x;
+            mouseY = target.y + op.y;
             io.AddMousePosEvent(mouseX, mouseY);
             break;
         }
@@ -955,6 +994,29 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
         }
     }
     add("simulator_mode", std::to_string((int32_t)app->simulator.CurrentMode()));
+    add("pose_shown", flag(app->simulator.PoseHandlesShown));
+    add("pose_hint", flag(app->simulator.PoseHintShown));
+    add("pose_hovered", std::to_string((int32_t)app->simulator.PoseHovered));
+    add("pose_dragging", std::to_string((int32_t)app->simulator.PoseDragging));
+    {
+        std::string pose;
+        for (int32_t i = 0; i < 6; i += 1) {
+            if (!pose.empty()) pose += ",";
+            pose += number(app->simulator.PoseValue(i), "%.0f");
+        }
+        add("pose_values", pose);
+        const char* names[] = { "stroke", "surge", "sway", "twist", "roll", "pitch" };
+        for (int32_t i = 0; i < 6; i += 1) {
+            add((std::string("pose_value:") + names[i]).c_str(), number(app->simulator.PoseValue(i), "%.0f"));
+        }
+    }
+    {
+        const char* names[] = { "case", "ring", "tip", "floor" };
+        for (int32_t i = 0; i < 4; i += 1) {
+            const ImVec2 at = app->simulator.PoseHandleScreen[i];
+            add((std::string("pose_at:") + names[i]).c_str(), number(at.x, "%.0f") + "," + number(at.y, "%.0f"));
+        }
+    }
     {
         const auto& sim = SimulatorState::State(app->simulator.StateHandle());
         add("sim_locked", flag(sim.LockedPosition));
@@ -1064,6 +1126,7 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
             positions += std::to_string(action.pos);
         }
         add(("positions:" + each->Title()).c_str(), positions);
+        add(("actions:" + each->Title()).c_str(), std::to_string(each->Actions().size()));
     }
     // Enough points to check an edit landed where it should, without the dump
     // becoming the size of a long script.
