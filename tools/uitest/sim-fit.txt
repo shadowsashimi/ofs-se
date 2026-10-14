@@ -11,6 +11,17 @@ wait 120
 pause
 wait 10
 
+note fresh profiles now start in 3D, fitted to the video; this test is
+note written against the old start, 2D and centred, so it puts that back:
+note Fit to video off at 1334,622, Center at 1449,591, then 2D on the toolbar
+click 1334 622
+wait 10
+click 1449 591
+wait 10
+click 1489 43
+wait 30
+expect sim_p1 595,171
+
 note unlock it
 click 1360 591
 wait 10
@@ -36,8 +47,8 @@ expect sim_fit 1
 state 03-fit-2d
 shot 03-fit-2d
 note against the right edge of the picture, x 1161, not of the player's window
-expect sim_p1 1072,122
-expect sim_p2 1072,580
+expect sim_p1 1072,96
+expect sim_p2 1072,606
 
 note 3D is fitted too, floor and wall included, to the player's window rather
 note than the picture: it is a scene of its own, not laid over the video
@@ -45,12 +56,12 @@ click 1560 43
 wait 30
 state 04-fit-3d
 shot 04-fit-3d
-expect sim_frame 990,123,1278,577
+expect sim_frame 956,96,1278,603
 
 note moving it by hand, from the middle of its frame, turns fitting off
 drag 1132 350 1032 350 10
 wait 10
 state 05-by-hand
 expect sim_fit 0
-expect sim_p1 1034,201
+expect sim_p1 1017,184
 quit

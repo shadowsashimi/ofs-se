@@ -10,6 +10,17 @@ wait 120
 pause
 wait 10
 
+note fresh profiles now start in 3D, fitted to the video; this test is
+note written against the old start, 2D and centred, so it puts that back:
+note Fit to video off at 1334,622, Center at 1449,591, then 2D on the toolbar
+click 1334 622
+wait 10
+click 1449 591
+wait 10
+click 1489 43
+wait 30
+expect sim_p1 595,171
+
 note unlock it
 click 1360 579
 wait 10
