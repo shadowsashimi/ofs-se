@@ -4433,6 +4433,97 @@ Vec3 poseAnchorView(PoseHandle handle, const SimulatorState& state, const float*
     }
 }
 
+// A handle's anchor in the world, before the camera: x across, y up, z away
+// from the user.
+Vec3 poseAnchorWorld(PoseHandle handle, const SimulatorState& state, const float* value) noexcept
+{
+    const PoseFrame f = makePoseFrame(state, value);
+    switch (handle) {
+    case PoseHandle::Tip:
+        return f.toWorldNoCamera(Vec3{ 0.f, f.strokeOffset + PoseTipY, 0.f });
+    case PoseHandle::Floor:
+        return Vec3{ f.worldOffset.x, poseFloorY(), f.worldOffset.z };
+    default:
+        return f.toWorldNoCamera(Vec3{ 0.f, 0.f, 0.f });
+    }
+}
+
+// The tip and the floor square both move across the floor: the tip leans
+// over it with roll and pitch, the square slides on it with sway and surge.
+// They are dragged the same way whichever way the camera looks: across the
+// screen moves the handle across the screen, and up the screen moves it away
+// from the viewer, down toward. Each axis is measured by how it moves the
+// handle in those terms, plus, for the tip, how far down the screen it sinks
+// as it leans, and the drag is shared between the two to match. Without the
+// sinking, following the tip down the arc of a roll read as pulling it
+// toward the viewer, and wrote a pitch point nobody meant.
+//
+// They used to follow where each axis moved the handle on screen. From the
+// front that is across for one axis and toward the viewer for the other,
+// easily told apart; from three quarters both move it mostly across, at
+// angles a few degrees apart, so a drag across was split between them and
+// they pulled against each other.
+void poseLean(PoseHandle handle, const SimulatorState& state, const float* value, const bool* usable,
+    ImVec2 delta, ImVec2 center, float scale, float* outChange) noexcept
+{
+    outChange[0] = outChange[1] = 0.f;
+    const PoseFrame f = makePoseFrame(state, value);
+    const Vec3 at = poseAnchorWorld(handle, state, value);
+    auto screenAt = [&](const Vec3& w) noexcept { return project(f.camera(w), center, scale); };
+
+    // Across the screen, measured on the floor at the handle: the floor
+    // direction that moves the handle furthest right, and how far per unit.
+    constexpr float Step = 0.01f;
+    const ImVec2 here = screenAt(at);
+    const float gx = (screenAt(Vec3{ at.x + Step, at.y, at.z }).x - here.x) / Step;
+    const float gz = (screenAt(Vec3{ at.x, at.y, at.z + Step }).x - here.x) / Step;
+    const float pixels = std::sqrt((gx * gx) + (gz * gz));
+    if (pixels < 1e-3f) return;
+    const float rightX = gx / pixels, rightZ = gz / pixels;
+    // Away from the viewer: square to that on the floor, the way that takes
+    // the handle further from the camera.
+    float awayX = -rightZ, awayZ = rightX;
+    if (f.camera(Vec3{ at.x + awayX, at.y, at.z + awayZ }).z < f.camera(at).z) {
+        awayX = -awayX;
+        awayZ = -awayZ;
+    }
+    // Up the screen per unit of height, at the handle.
+    const float rise = (screenAt(Vec3{ at.x, at.y + Step, at.z }).y - here.y) / Step;
+
+    // How each axis moves the handle, per unit: across the screen, and down
+    // it, going away counting as up.
+    const auto& axes = PoseHandleAxes[(int32_t)handle];
+    float across[2] = { 0.f, 0.f }, down[2] = { 0.f, 0.f };
+    bool on[2] = { false, false };
+    for (int32_t k = 0; k < 2; k += 1) {
+        const int32_t axis = axes[k];
+        if (axis < 0 || !usable[axis]) continue;
+        float plus[AxisCount], minus[AxisCount];
+        for (int32_t i = 0; i < AxisCount; i += 1) plus[i] = minus[i] = value[i];
+        plus[axis] = Util::Min(100.f, value[axis] + 1.f);
+        minus[axis] = Util::Max(0.f, value[axis] - 1.f);
+        const float span = plus[axis] - minus[axis];
+        const Vec3 a = poseAnchorWorld(handle, state, plus);
+        const Vec3 b = poseAnchorWorld(handle, state, minus);
+        const float dx = (a.x - b.x) / span, dy = (a.y - b.y) / span, dz = (a.z - b.z) / span;
+        across[k] = ((rightX * dx) + (rightZ * dz)) * pixels;
+        down[k] = (rise * dy) - (((awayX * dx) + (awayZ * dz)) * pixels);
+        on[k] = (across[k] * across[k]) + (down[k] * down[k]) > 1e-8f;
+    }
+    if (on[0] && on[1]) {
+        const float det = (across[0] * down[1]) - (across[1] * down[0]);
+        if (std::abs(det) > 1e-6f) {
+            outChange[0] = ((delta.x * down[1]) - (across[1] * delta.y)) / det;
+            outChange[1] = ((across[0] * delta.y) - (delta.x * down[0])) / det;
+            return;
+        }
+    }
+    for (int32_t k = 0; k < 2; k += 1) {
+        if (!on[k]) continue;
+        outChange[k] = ((across[k] * delta.x) + (down[k] * delta.y)) / ((across[k] * across[k]) + (down[k] * down[k]));
+    }
+}
+
 // The same anchor on screen.
 ImVec2 poseAnchor(PoseHandle handle, const SimulatorState& state, const float* value,
     ImVec2 center, float scale) noexcept
@@ -4889,6 +4980,13 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
             }
             poseLastRingAngle = angle;
         }
+        else if (PoseDragging == PoseHandle::Tip || PoseDragging == PoseHandle::Floor) {
+            float change[2];
+            poseLean(PoseDragging, state, value, hasTrack, mouse - poseLastMouse, center, scale, change);
+            for (int32_t k = 0; k < 2; k += 1) {
+                if (handleAxes[k] >= 0) poseRaw[handleAxes[k]] += change[k] * speed;
+            }
+        }
         else {
             ImVec2 dirs[2];
             bool endOn[2];
@@ -5235,6 +5333,10 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
                 poseChevrons(drawList, at, across, reach, OFS_Sashimi::Grey95, nullptr);
             }
         }
+        else if (shown == PoseHandle::Tip || shown == PoseHandle::Floor) {
+            poseChevrons(drawList, at, ImVec2(1.f, 0.f), reach, OFS_Sashimi::Grey95, nullptr);
+            poseChevrons(drawList, at, ImVec2(0.f, -1.f), reach, OFS_Sashimi::Role().AccentPale, "away");
+        }
         else {
             poseDirections(shown, state, value, hasTrack, center, scale, dirs, endOn);
             const auto& handleAxes = PoseHandleAxes[(int32_t)shown];
@@ -5428,14 +5530,13 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
         {
             static constexpr const char* labels[3] = { "Front", "3/4", "Side" };
             static constexpr const char* tips[3] = {
-                "From the front, a little above so the floor shows. Roll and sway read best.",
+                "From the front, straight on. Roll and sway read best.",
                 "From three quarters, a little above: every axis can be seen, pitch and surge included.",
                 "From the side. Pitch and surge read best.",
             };
             static constexpr float yaws[3] = { 0.f, 35.f, 90.f };
-            // Not quite level for the front: level, the floor is edge on and
-            // so is the arrow on it that says where the front is.
-            static constexpr float heights[3] = { 12.f, 20.f, 10.f };
+            // The front is level, as the model starts out.
+            static constexpr float heights[3] = { 0.f, 20.f, 10.f };
             int32_t current = -1;
             for (int32_t i = 0; i < 3; i += 1) {
                 if (std::abs(state.CameraYaw - yaws[i]) < 0.5f && std::abs(state.CameraElevation - heights[i]) < 0.5f) current = i;

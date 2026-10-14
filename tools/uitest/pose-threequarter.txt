@@ -1,0 +1,56 @@
+# The tip seen from three quarters (yaw 35, height 20). Across the screen
+# takes the tip across the screen, which from this side is roll and pitch
+# together; up the screen takes it away from the viewer, which is pitch. The
+# camera is turned by Alt and a drag over the model. Add > OSR2 with twist is
+# at 30 694, then 41 555, at 1600x900.
+#! covers src/UI/OFS_ScriptSimulator.cpp:poseLean src/UI/OFS_ScriptSimulator.cpp:updatePoseHandles
+size 1600 900
+layout classic
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+click 30 694
+wait 10
+click 41 555
+wait 20
+action toggle_pose_handles
+wait 10
+hold alt
+drag 1070 420 983 353 12
+let alt
+wait 10
+expect camera_yaw 35
+expect camera_elevation 20
+
+note across: both lean, the tip going right
+posehandle tip
+wait 5
+press left
+wait 3
+posehandle tip 15 0
+wait 3
+posehandle tip 15 0
+wait 3
+posehandle tip 15 0
+wait 5
+waituntil pose_value:roll >= 58 5
+waituntil pose_value:pitch >= 55 5
+shot 01-across
+release left
+wait 10
+
+note up: away from the viewer, pitch more than roll
+posehandle tip
+wait 5
+press left
+wait 3
+posehandle tip 0 -30
+wait 5
+waituntil pose_value:pitch >= 64 5
+shot 02-up
+release left
+wait 10
+quit
