@@ -4570,6 +4570,7 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
                         auto& dState = SimulatorDefaultConfigState::StaticStateSlow();
                         auto& state = SimulatorState::State(stateHandle);
                         dState.defaultState = state;
+                        dState.saved = true;
                     }
                 }
             );

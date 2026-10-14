@@ -1,0 +1,76 @@
+# Saves a layout under a name, loads it back, resets to the default layout,
+# then ends as a crash would, a few seconds after a last change. The follow up
+# script starts the app again in the same profile to see what it kept.
+# View menu rows at 1600x900: Statistics 70, Layouts 426. With one layout
+# saved, the Layouts submenu has it at 426, Save current layout at 456, and
+# Reset to default layout at 510.
+#! covers src/OpenFunscripter.cpp:showLayoutsMenu src/OpenFunscripter.cpp:showSaveLayoutPrompt src/OpenFunscripter.cpp:applyPendingLayout src/OpenFunscripter.cpp:SaveState src/state/OpenFunscripterState.h
+#! then layouts-kept
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+expect layouts 
+expect show_statistics 1
+
+note close statistics, then save that as Wide
+click 266 13
+wait 5
+click 300 70
+wait 10
+expect show_statistics 0
+click 266 13
+wait 5
+move 300 426
+wait 20
+shot 01-layouts-menu
+click 700 456
+wait 10
+shot 02-save-prompt
+key ctrl+a
+type Wide
+key enter
+wait 10
+expect layouts Wide
+
+note open statistics again, then load Wide, which closes it
+click 266 13
+wait 5
+click 300 70
+wait 10
+expect show_statistics 1
+click 266 13
+wait 5
+move 300 426
+wait 20
+shot 03-layouts-saved
+click 700 426
+wait 20
+expect show_statistics 0
+shot 04-loaded
+
+note open the action editor, then reset, which closes it and opens statistics
+click 266 13
+wait 5
+click 300 166
+wait 10
+expect show_action_editor 1
+click 266 13
+wait 5
+move 300 426
+wait 20
+click 700 510
+wait 30
+expect show_action_editor 0
+expect show_statistics 1
+shot 05-reset
+windows 05-reset
+
+note close statistics, wait for the settings to be saved, and end without the app's own shutdown
+click 266 13
+wait 5
+click 300 70
+wait 10
+expect show_statistics 0
+wait 420
+kill

@@ -21,6 +21,9 @@
                            long; only run with -Sweeps or -All
       #! server <name>     run tools\<name>.ps1 alongside the app, for a
                            script that needs something to talk to
+      #! then <name>       once the script passes, run tools\uitest\then\<name>.txt
+                           in the profile it left, to check what the app kept;
+                           results go to <run>-then
 
     A few files change what every script sees (the theme moves every click,
     the driver runs every line), so touching one of those selects every
@@ -96,19 +99,21 @@ $Everything = @(
     'src/OpenFunscripter.cpp:setupDefaultLayout'
 )
 # Only these kinds of change can break a script.
-$Relevant = @('*.cpp', '*.c', '*.h', '*.hpp', '*.inl', '*.glsl', '*.lua', 'CMakeLists.txt', 'tools/ui-test.ps1', 'tools/uitest/*.txt')
+$Relevant = @('*.cpp', '*.c', '*.h', '*.hpp', '*.inl', '*.glsl', '*.lua', 'CMakeLists.txt', 'tools/ui-test.ps1', 'tools/uitest/*.txt', 'tools/uitest/then/*.txt')
 
 # ------------------------------------------------------------- scripts ----
 $scripts = @(foreach ($file in Get-ChildItem (Join-Path $PSScriptRoot 'uitest') -Filter '*.txt' | Sort-Object Name) {
     $sweep = $false
     $media = @()
     $covers = @()
+    $then = ''
     foreach ($line in Get-Content $file.FullName -TotalCount 30) {
         if ($line -match '^#!\s*sweep\b') { $sweep = $true }
         elseif ($line -match '^#!\s*media\s+(.+)$') { $media = @($Matches[1].Trim() -split '\s+') }
         elseif ($line -match '^#!\s*covers\s+(.+)$') { $covers += @($Matches[1].Trim() -split '\s+') }
+        elseif ($line -match '^#!\s*then\s+(\S+)') { $then = Join-Path $PSScriptRoot "uitest\then\$($Matches[1]).txt" }
     }
-    [pscustomobject]@{ Name = $file.BaseName; Path = $file.FullName; Sweep = $sweep; Media = $media; Covers = $covers; Why = '' }
+    [pscustomobject]@{ Name = $file.BaseName; Path = $file.FullName; Sweep = $sweep; Media = $media; Covers = $covers; Then = $then; Why = '' }
 })
 
 # ------------------------------------------------------------- changes ----
@@ -219,7 +224,7 @@ $runs = @(foreach ($s in $chosen) {
     $mediaList = if ($s.Media.Count -gt 0) { $s.Media } else { @('video') }
     foreach ($m in $mediaList) {
         $run = if ($s.Media.Count -gt 0) { "$($s.Name)-$m" } else { $s.Name }
-        [pscustomobject]@{ Run = $run; Script = $s.Path; Media = $m; Sweep = $s.Sweep; Timeout = $timeout; Why = $s.Why }
+        [pscustomobject]@{ Run = $run; Script = $s.Path; Media = $m; Sweep = $s.Sweep; Timeout = $timeout; Then = $s.Then; Why = $s.Why }
     }
 })
 
@@ -273,14 +278,21 @@ $results = @($ordered | ForEach-Object -ThrottleLimit $jobsNow -Parallel {
     $lines = & pwsh -NoProfile -File $using:Runner -Script $run.Script -Media $run.Media `
         -Out $out -TimeoutSeconds $run.Timeout -Config $using:Config 2>&1 | ForEach-Object { "$_" }
     $code = $LASTEXITCODE
+    if ($code -eq 0 -and $run.Then) {
+        $lines += & pwsh -NoProfile -File $using:Runner -Script $run.Then -Media $run.Media `
+            -Out "$out-then" -ProfileOf $run.Run -TimeoutSeconds $run.Timeout -Config $using:Config 2>&1 | ForEach-Object { "$_" }
+        $code = $LASTEXITCODE
+    }
     $sw.Stop()
 
-    $summary = @($lines | Where-Object { $_ -match 'done:' }) | Select-Object -Last 1
+    # One per script, so a run with a follow up shows both.
+    $summary = (@($lines | Where-Object { $_ -match 'done:' }) |
+        ForEach-Object { $_ -replace '^\[\s*\d+\]\s*', '' }) -join '; then '
     $result = [pscustomobject]@{
         Run = $run.Run
         Passed = ($code -eq 0)
         Seconds = [math]::Round($sw.Elapsed.TotalSeconds, 1)
-        Summary = if ($summary) { ($summary -replace '^\[\s*\d+\]\s*', '') } else { 'did not finish' }
+        Summary = if ($summary) { $summary } else { 'did not finish' }
         Problems = @($lines | Where-Object { $_ -cmatch ': FAIL ' -or $_ -match '^!!!' -or $_ -match 'Exception' })
         Out = $out
     }

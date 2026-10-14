@@ -1,0 +1,11 @@
+# Runs in the profile layouts.txt left when it ended as a crash would: the
+# saved layout and the last panel change should both still be there.
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+expect layouts Wide
+expect show_statistics 0
+shot 01-kept
+windows 01-kept
+quit

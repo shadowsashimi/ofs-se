@@ -440,6 +440,9 @@ bool OFS_UiDriver::parse(const std::string& script, const std::string& media) no
         else if (command == "quit") {
             push(Op{ OpType::Quit });
         }
+        else if (command == "kill") {
+            push(Op{ OpType::Kill });
+        }
         else {
             fail("unknown command " + command);
         }
@@ -726,6 +729,13 @@ void OFS_UiDriver::execute(const Op& op) noexcept
         case OpType::Quit:
             finish();
             break;
+        case OpType::Kill:
+            // Gone at once, as a crash would leave it: nothing saved on the
+            // way out. The log is finished first, so the run still counts.
+            finished = true;
+            log("done: " + std::to_string(passed) + " passed, " + std::to_string(failed) + " failed");
+            std::_Exit(0);
+            break;
         case OpType::Frames:
         case OpType::WaitUntil:
             break;
@@ -972,6 +982,14 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
     add("show_chapter_manager", flag(ofsState.showChapterManager));
     add("show_script_check", flag(ofsState.showScriptCheck));
     add("show_devices", flag(ofsState.showDevices));
+    {
+        std::string names;
+        for (const auto& layout : ofsState.savedLayouts) {
+            if (!names.empty()) names += ",";
+            names += layout.name;
+        }
+        add("layouts", names);
+    }
     add("device_status", std::to_string((int32_t)app->deviceLink->CurrentStatus()));
     add("device_safety_note", flag(app->deviceLink->SafetyNoteOpen()));
     add("device_count", std::to_string(app->deviceLink->DeviceCount()));

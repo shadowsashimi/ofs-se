@@ -117,6 +117,9 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
   a table of actions and their bindings, and rebinding works again.
 - **Trackpads** - two fingers up and down zoom the timeline smoothly, and
   sideways move through time. Shift with a mouse wheel does the same.
+- **Layouts** - save where your panels are, and which are open, under a name
+  in *View → Layouts*, and switch between them. *Reset to default layout*
+  puts everything back.
 
 ![Speed map](./data/speed-map.png)
 
@@ -124,6 +127,8 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 
 - A crash handler that writes a symbolised stack trace, and a watchdog that
   dumps the main thread's stack if it hangs.
+- Settings are saved a few seconds after they change, not only on a clean
+  exit, so a crash doesn't lose them.
 - A UI test driver: scripts in [`tools/uitest`](tools/uitest) drive the real
   app and check what comes out. `tools\ui-test-all.ps1` runs the ones that
   cover what changed.

@@ -106,12 +106,64 @@ bool OpenFunscripter::imguiSetup() noexcept
     return true;
 }
 
-static void SaveState() noexcept
+// The app's settings, as last written to state.ofs.
+static std::vector<uint8_t> LastSavedState;
+
+// Writes the app's settings, unless they are what was written last. They
+// used to be written only on a clean exit, so a crash, or the app being
+// closed from outside, lost every change since it started: keys, devices,
+// panels, layouts. Now this runs every few seconds as well. Written beside
+// the file and then moved over it, so a crash part way through a write
+// leaves the old settings rather than half of the new.
+static void SaveState(bool force) noexcept
 {
     auto stateJson = OFS_StateManager::Get()->SerializeAppAll(true);
     auto stateBin = Util::SerializeCBOR(stateJson);
+    if (!force && stateBin == LastSavedState) return;
     auto statePath = Util::Prefpath("state.ofs");
-    Util::WriteFile(statePath.c_str(), stateBin.data(), stateBin.size());
+    auto tempPath = statePath + ".tmp";
+    Util::WriteFile(tempPath.c_str(), stateBin.data(), stateBin.size());
+    std::error_code ec;
+    std::filesystem::rename(Util::PathFromString(tempPath), Util::PathFromString(statePath), ec);
+    if (ec) {
+        // Some file systems will not move over an existing file.
+        Util::WriteFile(statePath.c_str(), stateBin.data(), stateBin.size());
+    }
+    LastSavedState = std::move(stateBin);
+}
+
+static LayoutPanels panelsOf(const OpenFunscripterState& state) noexcept
+{
+    LayoutPanels p;
+    p.showVideo = state.showVideo;
+    p.showActionEditor = state.showActionEditor;
+    p.showStatistics = state.showStatistics;
+    p.showHistory = state.showHistory;
+    p.showSimulator = state.showSimulator;
+    p.showSpecialFunctions = state.showSpecialFunctions;
+    p.showWsApi = state.showWsApi;
+    p.showChapterManager = state.showChapterManager;
+    p.showScriptCheck = state.showScriptCheck;
+    p.showDevices = state.showDevices;
+    p.showToolbar = state.showToolbar;
+    p.showTracks = state.showTracks;
+    return p;
+}
+
+static void applyPanels(OpenFunscripterState& state, const LayoutPanels& p) noexcept
+{
+    state.showVideo = p.showVideo;
+    state.showActionEditor = p.showActionEditor;
+    state.showStatistics = p.showStatistics;
+    state.showHistory = p.showHistory;
+    state.showSimulator = p.showSimulator;
+    state.showSpecialFunctions = p.showSpecialFunctions;
+    state.showWsApi = p.showWsApi;
+    state.showChapterManager = p.showChapterManager;
+    state.showScriptCheck = p.showScriptCheck;
+    state.showDevices = p.showDevices;
+    state.showToolbar = p.showToolbar;
+    state.showTracks = p.showTracks;
 }
 
 OpenFunscripter::~OpenFunscripter() noexcept
@@ -1663,6 +1715,11 @@ void OpenFunscripter::PlayPauseChange(const PlayPauseChangeEvent* ev) noexcept
 
 void OpenFunscripter::update() noexcept
 {
+    stateSaveTimer += ImGui::GetIO().DeltaTime;
+    if (stateSaveTimer >= 5.f) {
+        stateSaveTimer = 0.f;
+        SaveState(false);
+    }
     OFS_PROFILE(__FUNCTION__);
     const float delta = ImGui::GetIO().DeltaTime;
     keys->ProcessKeybindings();
@@ -1807,7 +1864,9 @@ void OpenFunscripter::Step() noexcept
     {
         OFS_PROFILE(__FUNCTION__);
         processEvents();
+        applyPendingLayout(false);
         newFrame();
+        applyPendingLayout(true);
         update();
         {
             OFS_PROFILE("ImGui");
@@ -1827,6 +1886,7 @@ void OpenFunscripter::Step() noexcept
 
             CreateDockspace();
             blockingTask.ShowBlockingTask();
+            showSaveLayoutPrompt();
 
             auto& ofsState = OpenFunscripterState::State(stateHandle);
 #ifdef WIN32
@@ -2002,7 +2062,7 @@ int OpenFunscripter::Run() noexcept
 
 void OpenFunscripter::Shutdown() noexcept
 {
-    SaveState();
+    SaveState(true);
 
     OFS_DynFontAtlas::Shutdown();
     OFS_Translator::Shutdown();
@@ -2069,10 +2129,12 @@ void OpenFunscripter::openFile(const std::string& file) noexcept
             else if (fileExtension == Funscript::Extension) {
                 // It's a funscript it should be imported into a new project
                 LoadedProject->ImportFromFunscript(file);
+                applySimulatorDefaults();
             }
             else {
                 // Assume it's some kind of media file
                 LoadedProject->ImportFromMedia(file);
+                applySimulatorDefaults();
             }
 
             if (LoadedProject->IsValid()) {
@@ -2104,6 +2166,7 @@ void OpenFunscripter::startStandaloneProject(const std::string& file, float dura
         OFS_StateManager::Get()->ClearProjectAll();
 
         if (LoadedProject->CreateStandalone(file, durationSeconds)) {
+            applySimulatorDefaults();
             initProject();
             // Written out at once. A project with no media cannot be found
             // again from the file that was scripted, the way one opened from a
@@ -2115,6 +2178,113 @@ void OpenFunscripter::startStandaloneProject(const std::string& file, float dura
             Util::MessageBoxAlert("Failed to create script.", LoadedProject->NotValidError());
         }
     });
+}
+
+void OpenFunscripter::applySimulatorDefaults() noexcept
+{
+    const auto& defaults = SimulatorDefaultConfigState::StaticStateSlow();
+    if (!defaults.saved) return;
+    SimulatorState::State(simulator.StateHandle()) = defaults.defaultState;
+}
+
+void OpenFunscripter::applyPendingLayout(bool frameStarted) noexcept
+{
+    auto& ofsState = OpenFunscripterState::State(stateHandle);
+    if (!frameStarted && pendingLayout) {
+        // Reading a layout clears the docking first, so every panel goes
+        // where the layout says rather than staying where it was.
+        ImGui::LoadIniSettingsFromMemory(pendingLayout->ini.c_str(), pendingLayout->ini.size());
+        ImGui::MarkIniSettingsDirty();
+        applyPanels(ofsState, pendingLayout->panels);
+        pendingLayout.reset();
+    }
+    if (frameStarted && pendingLayoutReset) {
+        pendingLayoutReset = false;
+        setupDefaultLayout(true);
+        applyPanels(ofsState, LayoutPanels());
+        ImGui::MarkIniSettingsDirty();
+    }
+}
+
+void OpenFunscripter::showLayoutsMenu() noexcept
+{
+    auto& ofsState = OpenFunscripterState::State(stateHandle);
+    if (!ImGui::BeginMenu("Layouts")) return;
+    auto& layouts = ofsState.savedLayouts;
+    if (layouts.empty()) {
+        ImGui::TextDisabled("No saved layouts yet");
+    }
+    for (const auto& layout : layouts) {
+        if (ImGui::MenuItem(layout.name.c_str())) {
+            pendingLayout = layout;
+        }
+        OFS::Tooltip("Put every panel back where it was when this layout was saved, and show the same panels.");
+    }
+    ImGui::Separator();
+    if (ImGui::MenuItem("Save current layout...")) {
+        showSaveLayout = true;
+        saveLayoutName = "Layout " + std::to_string(layouts.size() + 1);
+    }
+    OFS::Tooltip("Keep where every panel is, and which are open, under a name.");
+    if (ImGui::BeginMenu("Delete", !layouts.empty())) {
+        int32_t remove = -1;
+        for (int32_t i = 0; i < (int32_t)layouts.size(); i += 1) {
+            if (ImGui::MenuItem(layouts[i].name.c_str())) remove = i;
+        }
+        if (remove >= 0) layouts.erase(layouts.begin() + remove);
+        ImGui::EndMenu();
+    }
+    ImGui::Separator();
+    if (ImGui::MenuItem("Reset to default layout")) pendingLayoutReset = true;
+    OFS::Tooltip("Put every panel back where a fresh install has it, and show the panels it shows.");
+    ImGui::EndMenu();
+}
+
+void OpenFunscripter::showSaveLayoutPrompt() noexcept
+{
+    constexpr const char* PopupId = "Save layout###SAVE_LAYOUT";
+    if (showSaveLayout && !ImGui::IsPopupOpen(PopupId)) ImGui::OpenPopup(PopupId);
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->GetWorkCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    if (!ImGui::BeginPopupModal(PopupId, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) return;
+
+    auto& ofsState = OpenFunscripterState::State(stateHandle);
+    ImGui::TextUnformatted("Name");
+    if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 16.f);
+    const bool entered = ImGui::InputText("##LayoutName", &saveLayoutName, ImGuiInputTextFlags_EnterReturnsTrue);
+    bool exists = false;
+    for (const auto& layout : ofsState.savedLayouts) exists = exists || layout.name == saveLayoutName;
+    if (exists) ImGui::TextDisabled("Replaces the layout saved with this name.");
+    ImGui::Spacing();
+    const bool named = !saveLayoutName.empty();
+    bool close = false;
+    ImGui::BeginDisabled(!named);
+    if ((ImGui::Button("Save") || entered) && named) {
+        SavedLayout layout;
+        layout.name = saveLayoutName;
+        size_t size = 0;
+        const char* ini = ImGui::SaveIniSettingsToMemory(&size);
+        layout.ini.assign(ini, size);
+        layout.panels = panelsOf(ofsState);
+        bool replaced = false;
+        for (auto& existing : ofsState.savedLayouts) {
+            if (existing.name == layout.name) {
+                existing = layout;
+                replaced = true;
+            }
+        }
+        if (!replaced) ofsState.savedLayouts.push_back(std::move(layout));
+        close = true;
+    }
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    if (ImGui::Button("Cancel") || ImGui::IsKeyPressed(ImGuiKey_Escape, false)) close = true;
+    if (close) {
+        showSaveLayout = false;
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
 }
 
 void OpenFunscripter::initProject() noexcept
@@ -3440,13 +3610,6 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu(TR_ID("VIEW_MENU", Tr::VIEW_MENU))) {
-#ifndef NDEBUG
-            // this breaks the layout after restarting for some reason
-            if (ImGui::MenuItem("Reset layout")) {
-                setupDefaultLayout(true);
-            }
-            ImGui::Separator();
-#endif
             if (ImGui::MenuItem("Toolbar", NULL, &ofsState.showToolbar)) {}
             OFS::Tooltip("The row of mode, grid, snap and simulator choices under the menu bar. "
                 "Hidden, the Mode panel and the Simulator window show the same choices.");
@@ -3508,6 +3671,9 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
                 }
                 ImGui::EndCombo();
             }
+
+            ImGui::Separator();
+            showLayoutsMenu();
 
             ImGui::Separator();
             if (ImGui::BeginMenu(TR(DEBUG))) {

@@ -54,6 +54,7 @@
 //   expect KEY VALUE         compare against the state dump; logged as PASS or FAIL
 //   note TEXT                written to the log
 //   quit
+//   kill                     end at once, as a crash would, without the app's shutdown
 //
 // The script ends with quit whether it says so or not.
 //
@@ -102,6 +103,7 @@ private:
         Expect,
         Note,
         Quit,
+        Kill,
     };
 
     struct Op

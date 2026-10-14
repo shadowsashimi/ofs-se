@@ -28,6 +28,7 @@
 #include "OFS_ChapterManager.h"
 #include "UI/OFS_ScriptCheck.h"
 #include "api/OFS_DeviceLink.h"
+#include "state/OpenFunscripterState.h"
 
 #include <memory>
 #include <chrono>
@@ -172,6 +173,24 @@ private:
     std::weak_ptr<Funscript> trackToRemove;
     void setTrackShown(int32_t idx, bool shown) noexcept;
     void ShowTracksWindow(bool* open) noexcept;
+
+    // Layouts. Loading one and rebuilding the default are both done at the
+    // edge of a frame, where ImGui can take them: a layout is read in before
+    // the frame starts, and the default is built once it has started but
+    // before the dockspace is submitted. Done from the menu itself, in the
+    // middle of a frame, the old Reset layout left the docking broken.
+    std::optional<SavedLayout> pendingLayout;
+    bool pendingLayoutReset = false;
+    bool showSaveLayout = false;
+    std::string saveLayoutName;
+    void showLayoutsMenu() noexcept;
+    void showSaveLayoutPrompt() noexcept;
+    void applyPendingLayout(bool frameStarted) noexcept;
+    // New projects start from the simulator settings saved with Save config,
+    // when there are any.
+    void applySimulatorDefaults() noexcept;
+    // How long since the settings were last checked for changes to save.
+    float stateSaveTimer = 0.f;
     void addEditAction(int pos) noexcept;
 
     void saveActiveScriptAs();

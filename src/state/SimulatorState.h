@@ -79,6 +79,10 @@ struct SimulatorDefaultConfigState
 {
     static constexpr auto StateName = "SimulatorDefaultConfigState";
     SimulatorState defaultState;
+    // Whether Save config has ever been pressed. Older profiles carry a
+    // default state that nobody chose, the built in defaults of the day, and
+    // new projects should not be held to those.
+    bool saved = false;
 
     inline static SimulatorDefaultConfigState& StaticStateSlow() noexcept
     {
@@ -90,6 +94,7 @@ struct SimulatorDefaultConfigState
 
 REFL_TYPE(SimulatorDefaultConfigState)
     REFL_FIELD(defaultState)
+    REFL_FIELD(saved)
 REFL_END
 
 REFL_TYPE(SimulatorState)

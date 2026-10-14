@@ -28,6 +28,10 @@
       m4a-cover  the m4a with cover art, which mpv shows as a still picture
       dotted     the video named with dots of its own, 'Site.COM - clip.mp4'
 
+    -ProfileOf RUN starts from the profile left by the earlier run whose
+    output directory is named RUN, to check what the app kept from one run to
+    the next.
+
     Exits 0 only when the script ran to the end with no FAIL lines.
 
 .EXAMPLE
@@ -45,7 +49,10 @@ param(
     [ValidateSet('Release', 'Debug')] [string] $Config = 'Release',
     # Make the named media if it is missing, then stop. ui-test-all.ps1 does
     # this once up front, rather than have several runs make it at once.
-    [switch] $PrepareOnly
+    [switch] $PrepareOnly,
+    # Start from the profile an earlier run left behind, named by that run's
+    # output directory, rather than a fresh one, to check what the app kept.
+    [string] $ProfileOf
 )
 
 $ErrorActionPreference = 'Stop'
@@ -145,11 +152,17 @@ $Media = $runMedia
 
 # On the same volume as the real profile, so ffmpeg can be hard linked rather
 # than copied: it is a hundred megabytes.
-$Profile = Join-Path $env:TEMP "ofs-uitest\$RunName"
-if (Test-Path $Profile) { Remove-Item -Recurse -Force $Profile }
+if ($ProfileOf) {
+    $Profile = Join-Path $env:TEMP "ofs-uitest\$ProfileOf"
+    if (-not (Test-Path $Profile)) { throw "No profile left by run $ProfileOf" }
+}
+else {
+    $Profile = Join-Path $env:TEMP "ofs-uitest\$RunName"
+    if (Test-Path $Profile) { Remove-Item -Recurse -Force $Profile }
+}
 New-Item -ItemType Directory -Force $Profile | Out-Null
-if (Test-Path $realFfmpeg) {
-    $linked = Join-Path $Profile 'ffmpeg.exe'
+$linked = Join-Path $Profile 'ffmpeg.exe'
+if ((Test-Path $realFfmpeg) -and -not (Test-Path $linked)) {
     try { New-Item -ItemType HardLink -Path $linked -Target $realFfmpeg | Out-Null }
     catch { Copy-Item $realFfmpeg $linked }
 }

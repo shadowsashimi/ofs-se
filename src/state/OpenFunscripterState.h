@@ -17,6 +17,55 @@ REFL_TYPE(RecentFile)
 	REFL_FIELD(projectPath)
 REFL_END
 
+// Which panels are open, as a saved layout keeps them: the window layout
+// alone says where each panel goes, not whether it is showing. Defaults as
+// a fresh profile has them.
+struct LayoutPanels
+{
+    bool showVideo = true;
+    bool showActionEditor = false;
+    bool showStatistics = true;
+    bool showHistory = true;
+    bool showSimulator = true;
+    bool showSpecialFunctions = false;
+    bool showWsApi = false;
+    bool showChapterManager = false;
+    bool showScriptCheck = false;
+    bool showDevices = false;
+    bool showToolbar = true;
+    bool showTracks = true;
+};
+
+REFL_TYPE(LayoutPanels)
+	REFL_FIELD(showVideo)
+	REFL_FIELD(showActionEditor)
+	REFL_FIELD(showStatistics)
+	REFL_FIELD(showHistory)
+	REFL_FIELD(showSimulator)
+	REFL_FIELD(showSpecialFunctions)
+	REFL_FIELD(showWsApi)
+	REFL_FIELD(showChapterManager)
+	REFL_FIELD(showScriptCheck)
+	REFL_FIELD(showDevices)
+	REFL_FIELD(showToolbar)
+	REFL_FIELD(showTracks)
+REFL_END
+
+// A layout saved by name from View > Layouts: where every panel goes, as
+// ImGui writes it to its ini, and which panels are open.
+struct SavedLayout
+{
+    std::string name;
+    std::string ini;
+    LayoutPanels panels;
+};
+
+REFL_TYPE(SavedLayout)
+	REFL_FIELD(name)
+	REFL_FIELD(ini)
+	REFL_FIELD(panels)
+REFL_END
+
 struct OpenFunscripterState 
 {
 	static constexpr auto StateName = "OpenFunscripter";
@@ -51,6 +100,8 @@ struct OpenFunscripterState
     bool showToolbar = true;
     bool showTracks = true;
 
+    std::vector<SavedLayout> savedLayouts;
+
     inline static OpenFunscripterState& State(uint32_t stateHandle) noexcept
     {
         return OFS_AppState<OpenFunscripterState>(stateHandle).Get();
@@ -83,4 +134,7 @@ REFL_TYPE(OpenFunscripterState)
     REFL_FIELD(showDevices)
     REFL_FIELD(showToolbar)
     REFL_FIELD(showTracks)
+    REFL_FIELD(showActionEditor)
+    REFL_FIELD(showStatistics)
+    REFL_FIELD(savedLayouts)
 REFL_END
