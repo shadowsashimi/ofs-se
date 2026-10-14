@@ -3,6 +3,7 @@
 # layout's 1600x900 positions; screenshots record where they really were.
 #! covers src/OFS_UndoSystem.* OFS-lib/Funscript/FunscriptUndoSystem.* src/OpenFunscripter.cpp:Undo src/OpenFunscripter.cpp:Redo
 size 1600 900
+layout classic
 wait 20
 open $MEDIA
 wait 120

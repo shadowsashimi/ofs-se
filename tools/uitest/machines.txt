@@ -4,6 +4,7 @@
 # twist 41 555, SR6 41 579, SR6 with twist 41 603.
 #! covers src/api/OFS_TCodeMachines.h src/api/OFS_DeviceLink.cpp:UseMachine src/api/OFS_DeviceLink.cpp:CurrentMachine src/OpenFunscripter.cpp:AddMachineTracks src/OpenFunscripter.cpp:ShowTracksWindow
 size 1600 900
+layout classic
 wait 20
 open $MEDIA
 wait 120

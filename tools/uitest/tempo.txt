@@ -3,6 +3,7 @@
 # detection should find one musical chapter at 120.
 #! covers src/UI/OFS_ChapterManager.* OFS-lib/state/states/ChapterState.* OFS-lib/UI/OFS_Waveform.* src/UI/OFS_ScriptPositionsOverlays.*
 size 1600 900
+layout classic
 wait 20
 open $MEDIA
 wait 120

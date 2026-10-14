@@ -54,6 +54,11 @@
 //   expect KEY VALUE         compare against the state dump; logged as PASS or FAIL
 //   note TEXT                written to the log
 //   quit
+//   layout NAME              load tools\uitest\layouts\NAME.ini, as View > Layouts loads one;
+//                            lines like "panel showChapterManager 0" before its first
+//                            section say which panels are open, the rest as a fresh profile.
+//                            At the top of a script (after size), it is loaded before the
+//                            first frame, so the run starts as a profile that always had it
 //   kill                     end at once, as a crash would, without the app's shutdown
 //
 // The script ends with quit whether it says so or not.
@@ -104,6 +109,7 @@ private:
         Note,
         Quit,
         Kill,
+        Layout,
     };
 
     struct Op
@@ -143,6 +149,11 @@ private:
     int32_t wantHeight = 0;
     void holdWindowSize() noexcept;
     std::filesystem::path outDir;
+    // Where the script is, for files it names beside it.
+    std::filesystem::path scriptDir;
+    // A layout named at the top of the script, loaded before the first frame.
+    std::string startLayout;
+    void loadLayout(const std::string& path, int32_t line) noexcept;
     int32_t passed = 0;
     int32_t failed = 0;
     bool finished = false;

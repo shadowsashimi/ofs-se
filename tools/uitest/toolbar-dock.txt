@@ -6,6 +6,7 @@
 # panel's middle at 1450,150.
 #! covers src/OpenFunscripter.cpp:ShowToolbar src/OpenFunscripter.cpp:setupDefaultLayout
 size 1600 900
+layout classic
 wait 20
 open $MEDIA
 wait 120

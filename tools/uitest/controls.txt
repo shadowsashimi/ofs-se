@@ -6,6 +6,7 @@
 # from x 12 to 1588.
 #! covers OFS-lib/UI/OFS_VideoplayerControls.* OFS-lib/UI/OFS_Videopreview.* OFS-lib/UI/GradientBar.* OFS-lib/Funscript/FunscriptHeatmap.* OFS-lib/UI/OFS_ScriptTimeline.* OFS-lib/videoplayer/* OFS-lib/OFS_MpvLoader.*
 size 1600 900
+layout classic
 wait 20
 open $MEDIA
 wait 120

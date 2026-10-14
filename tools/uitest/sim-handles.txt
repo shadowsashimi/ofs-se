@@ -3,6 +3,7 @@
 # Simulator panel at 1600x900: Lock 1360,579. Toolbar: 2D 1489, 3D 1560 (y 43).
 #! covers src/UI/OFS_ScriptSimulator.* src/UI/OFS_VulvaHeightMap.h src/state/SimulatorState.h
 size 1600 900
+layout classic
 wait 20
 open $MEDIA
 wait 120

@@ -54,6 +54,7 @@ std::unique_ptr<OFS_UiDriver> OFS_UiDriver::FromEnvironment() noexcept
 
     auto driver = std::unique_ptr<OFS_UiDriver>(new OFS_UiDriver());
     driver->outDir = Util::PathFromString(outPath.empty() ? std::string(".") : outPath);
+    driver->scriptDir = Util::PathFromString(scriptPath).parent_path();
     Util::CreateDirectories(driver->outDir);
 
     std::ifstream file(Util::PathFromString(scriptPath));
@@ -71,6 +72,9 @@ std::unique_ptr<OFS_UiDriver> OFS_UiDriver::FromEnvironment() noexcept
         driver->ops.push_back(Op{ OpType::Quit });
     }
     driver->log(std::string("script ") + scriptPath + ", " + std::to_string(driver->ops.size()) + " steps");
+    // Before any panel has been drawn, so each takes its place from the
+    // layout as if the profile had always had it.
+    if (!driver->startLayout.empty()) driver->loadLayout(driver->startLayout, 0);
     return driver;
 }
 
@@ -443,6 +447,17 @@ bool OFS_UiDriver::parse(const std::string& script, const std::string& media) no
         else if (command == "kill") {
             push(Op{ OpType::Kill });
         }
+        else if (command == "layout") {
+            Op op;
+            op.type = OpType::Layout;
+            op.text = (scriptDir / "layouts" / (rest + ".ini")).u8string();
+            // Only window sizing, and the frames it waits, before it counts
+            // as the top of the script.
+            const bool atTop = std::all_of(ops.begin(), ops.end(),
+                [](const Op& o) { return o.type == OpType::Size || o.type == OpType::Frames; });
+            if (atTop) startLayout = op.text;
+            else push(op);
+        }
         else {
             fail("unknown command " + command);
         }
@@ -555,6 +570,9 @@ void OFS_UiDriver::execute(const Op& op) noexcept
         case OpType::Open:
             log("open " + op.text);
             app->openFile(op.text);
+            break;
+        case OpType::Layout:
+            loadLayout(op.text, op.line);
             break;
         case OpType::NewBlank:
             log("newblank " + op.text);
@@ -1062,6 +1080,53 @@ std::string OFS_UiDriver::collectWindows() noexcept
         out += buf;
     }
     return out;
+}
+
+void OFS_UiDriver::loadLayout(const std::string& path, int32_t line) noexcept
+{
+    log("layout " + path);
+    std::ifstream file(Util::PathFromString(path));
+    if (!file) {
+        log("line " + std::to_string(line) + ": FAIL could not read layout " + path);
+        failed += 1;
+        return;
+    }
+    SavedLayout layout;
+    layout.name = path;
+    std::string text;
+    bool sections = false;
+    while (std::getline(file, text)) {
+        if (!text.empty() && text.back() == '\r') text.pop_back();
+        if (!text.empty() && text[0] == '[') sections = true;
+        if (sections) {
+            layout.ini += text + "\n";
+            continue;
+        }
+        std::istringstream words(text);
+        std::string word, name;
+        int32_t value = 0;
+        if (!(words >> word >> name >> value) || word != "panel") continue;
+        bool* panel = name == "showVideo" ? &layout.panels.showVideo
+            : name == "showActionEditor" ? &layout.panels.showActionEditor
+            : name == "showStatistics" ? &layout.panels.showStatistics
+            : name == "showHistory" ? &layout.panels.showHistory
+            : name == "showSimulator" ? &layout.panels.showSimulator
+            : name == "showSpecialFunctions" ? &layout.panels.showSpecialFunctions
+            : name == "showWsApi" ? &layout.panels.showWsApi
+            : name == "showChapterManager" ? &layout.panels.showChapterManager
+            : name == "showScriptCheck" ? &layout.panels.showScriptCheck
+            : name == "showDevices" ? &layout.panels.showDevices
+            : name == "showToolbar" ? &layout.panels.showToolbar
+            : name == "showTracks" ? &layout.panels.showTracks
+            : nullptr;
+        if (panel == nullptr) {
+            log("line " + std::to_string(line) + ": FAIL unknown panel " + name);
+            failed += 1;
+            continue;
+        }
+        *panel = value != 0;
+    }
+    OpenFunscripter::ptr->pendingLayout = std::move(layout);
 }
 
 void OFS_UiDriver::log(const std::string& message) noexcept

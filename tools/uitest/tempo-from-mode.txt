@@ -3,6 +3,7 @@
 # made. The test media is a click every half second, 120 BPM.
 #! covers src/UI/OFS_ScriptPositionsOverlays.* src/UI/OFS_ChapterManager.*
 size 1600 900
+layout classic
 wait 20
 open $MEDIA
 wait 120

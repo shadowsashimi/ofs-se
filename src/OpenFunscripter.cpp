@@ -474,24 +474,28 @@ void OpenFunscripter::setupDefaultLayout(bool force) noexcept
         auto dock_toolbar_id = ImGui::DockBuilderSplitNode(MainDockspaceID, ImGuiDir_Up,
             toolbarHeight / rootHeight, NULL, &dock_rest_id);
 
-        ImGuiID dock_player_center_id;
-        ImGuiID opposite_node_id;
-        auto dock_time_bottom_id = ImGui::DockBuilderSplitNode(dock_rest_id, ImGuiDir_Down, 0.1f, NULL, &dock_player_center_id);
-        auto dock_positions_id = ImGui::DockBuilderSplitNode(dock_player_center_id, ImGuiDir_Down, 0.15f, NULL, &dock_player_center_id);
-        // The tracks beside the lanes they list.
-        auto dock_tracks_id = ImGui::DockBuilderSplitNode(dock_positions_id, ImGuiDir_Left, 0.14f, NULL, &dock_positions_id);
-        auto dock_mode_right_id = ImGui::DockBuilderSplitNode(dock_player_center_id, ImGuiDir_Right, 0.15f, NULL, &dock_player_center_id);
-        // The right column, bottom up. Mode is left the most room because it
-        // carries each mode's and grid's settings, which the tempo grid's run
-        // to several rows; the simulator gets enough for its mode bar and the
-        // settings under it; the undo history, empty to begin with, least.
-        // Seen in scripted screenshots of a fresh profile, where Mode cut the
-        // tempo settings off after one row and the history sat mostly empty.
-        auto dock_simulator_right_id = ImGui::DockBuilderSplitNode(dock_mode_right_id, ImGuiDir_Down, 0.24f, NULL, &dock_mode_right_id);
-        auto dock_action_right_id = ImGui::DockBuilderSplitNode(dock_mode_right_id, ImGuiDir_Down, 0.30f, NULL, &dock_mode_right_id);
-        auto dock_stats_right_id = ImGui::DockBuilderSplitNode(dock_mode_right_id, ImGuiDir_Down, 0.32f, NULL, &dock_mode_right_id);
-        auto dock_undo_right_id = ImGui::DockBuilderSplitNode(dock_mode_right_id, ImGuiDir_Down, 0.35f, NULL, &dock_mode_right_id);
+        // Three columns under it. The left one holds the tools: special
+        // functions, the mode's settings, and the simulator at the bottom.
+        // The middle one is the video over the lanes and the time bar. The
+        // right one holds what reports on the script: statistics and the
+        // undo history, chapters and the script check, and the tracks. Sizes
+        // are fractions of each split, measured from a layout arranged by
+        // hand at 1707x970.
+        ImGuiID dock_center_id;
+        auto dock_left_id = ImGui::DockBuilderSplitNode(dock_rest_id, ImGuiDir_Left, 0.144f, NULL, &dock_center_id);
+        auto dock_right_id = ImGui::DockBuilderSplitNode(dock_center_id, ImGuiDir_Right, 0.197f, NULL, &dock_center_id);
 
+        ImGuiID dock_player_center_id;
+        auto dock_time_bottom_id = ImGui::DockBuilderSplitNode(dock_center_id, ImGuiDir_Down, 0.143f, NULL, &dock_player_center_id);
+        auto dock_positions_id = ImGui::DockBuilderSplitNode(dock_player_center_id, ImGuiDir_Down, 0.2f, NULL, &dock_player_center_id);
+
+        ImGuiID dock_functions_id;
+        auto dock_simulator_id = ImGui::DockBuilderSplitNode(dock_left_id, ImGuiDir_Down, 0.316f, NULL, &dock_functions_id);
+        auto dock_mode_id = ImGui::DockBuilderSplitNode(dock_functions_id, ImGuiDir_Down, 0.386f, NULL, &dock_functions_id);
+
+        ImGuiID dock_stats_id;
+        auto dock_tracks_id = ImGui::DockBuilderSplitNode(dock_right_id, ImGuiDir_Down, 0.328f, NULL, &dock_stats_id);
+        auto dock_chapters_id = ImGui::DockBuilderSplitNode(dock_stats_id, ImGuiDir_Down, 0.627f, NULL, &dock_stats_id);
 
         ImGui::DockBuilderGetNode(dock_player_center_id)->LocalFlags |= ImGuiDockNodeFlags_AutoHideTabBar;
         ImGui::DockBuilderGetNode(dock_positions_id)->LocalFlags |= ImGuiDockNodeFlags_AutoHideTabBar;
@@ -502,17 +506,18 @@ void OpenFunscripter::setupDefaultLayout(bool force) noexcept
         ImGui::DockBuilderDockWindow(OFS_VideoplayerWindow::WindowId, dock_player_center_id);
         ImGui::DockBuilderDockWindow(OFS_VideoplayerControls::TimeId, dock_time_bottom_id);
         ImGui::DockBuilderDockWindow(ScriptTimeline::WindowId, dock_positions_id);
+
+        ImGui::DockBuilderDockWindow(SpecialFunctionsWindow::WindowId, dock_functions_id);
+        ImGui::DockBuilderDockWindow(ScriptingMode::WindowId, dock_mode_id);
+        ImGui::DockBuilderDockWindow(ScriptSimulator::WindowId, dock_simulator_id);
+
+        // Tabs share a node in pairs, the first named showing.
+        ImGui::DockBuilderDockWindow(StatisticsWindowId, dock_stats_id);
+        ImGui::DockBuilderDockWindow(UndoSystem::WindowId, dock_stats_id);
+        ImGui::DockBuilderDockWindow("###ChapterManager", dock_chapters_id);
+        ImGui::DockBuilderDockWindow(OFS_ScriptCheck::WindowId, dock_chapters_id);
         ImGui::DockBuilderDockWindow(TracksWindowId, dock_tracks_id);
-        ImGui::DockBuilderDockWindow(ScriptingMode::WindowId, dock_mode_right_id);
-        ImGui::DockBuilderDockWindow(ScriptSimulator::WindowId, dock_simulator_right_id);
-        // A tab beside statistics rather than a split of its own. Opened into
-        // its own split it took its height out of the undo history and the
-        // statistics, leaving one row of history and cutting the statistics
-        // off, and still had too little room for its own keypad.
-        (void)dock_action_right_id;
-        ImGui::DockBuilderDockWindow(ActionEditorWindowId, dock_stats_right_id);
-        ImGui::DockBuilderDockWindow(StatisticsWindowId, dock_stats_right_id);
-        ImGui::DockBuilderDockWindow(UndoSystem::WindowId, dock_undo_right_id);
+        ImGui::DockBuilderDockWindow(ActionEditorWindowId, dock_tracks_id);
         simulator.CenterSimulator();
         simulator.CenterWhenVideoShows = true;
         ImGui::DockBuilderFinish(MainDockspaceID);
@@ -2192,7 +2197,11 @@ void OpenFunscripter::applyPendingLayout(bool frameStarted) noexcept
     auto& ofsState = OpenFunscripterState::State(stateHandle);
     if (!frameStarted && pendingLayout) {
         // Reading a layout clears the docking first, so every panel goes
-        // where the layout says rather than staying where it was.
+        // where the layout says rather than staying where it was. Window
+        // places are cleared as well: a panel the layout says nothing about
+        // would otherwise keep its place in a dock that no longer exists,
+        // and come back as a sliver at the corner of the screen.
+        ImGui::ClearIniSettings();
         ImGui::LoadIniSettingsFromMemory(pendingLayout->ini.c_str(), pendingLayout->ini.size());
         ImGui::MarkIniSettingsDirty();
         applyPanels(ofsState, pendingLayout->panels);

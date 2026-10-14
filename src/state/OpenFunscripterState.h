@@ -27,10 +27,10 @@ struct LayoutPanels
     bool showStatistics = true;
     bool showHistory = true;
     bool showSimulator = true;
-    bool showSpecialFunctions = false;
+    bool showSpecialFunctions = true;
     bool showWsApi = false;
-    bool showChapterManager = false;
-    bool showScriptCheck = false;
+    bool showChapterManager = true;
+    bool showScriptCheck = true;
     bool showDevices = false;
     bool showToolbar = true;
     bool showTracks = true;
@@ -92,10 +92,10 @@ struct OpenFunscripterState
     bool alwaysShowBookmarkLabels = false;
     bool showHistory = true;
     bool showSimulator = true;
-    bool showSpecialFunctions = false;
+    bool showSpecialFunctions = true;
     bool showWsApi = false;
-    bool showChapterManager = false;
-    bool showScriptCheck = false;
+    bool showChapterManager = true;
+    bool showScriptCheck = true;
     bool showDevices = false;
     bool showToolbar = true;
     bool showTracks = true;

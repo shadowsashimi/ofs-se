@@ -5,6 +5,7 @@
 # typed field around 799.
 #! covers src/UI/OFS_SpecialFunctions.*
 size 1600 900
+layout classic
 wait 20
 open $MEDIA
 wait 120
