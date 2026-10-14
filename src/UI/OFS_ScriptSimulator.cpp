@@ -2103,20 +2103,42 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
     // where the limits are, and names over the video were clutter. Stroke only marks its two
     // ends, and twist rings the top of the case with a mark at neutral and at
     // its limit, which for twist is half a turn either way.
+    //
+    // In the interface's own colours: grey, as structure is everywhere else,
+    // with a dark edge so it reads over a bright video, and the accent only
+    // on the axis a pose handle under the mouse or being dragged moves, the
+    // way a slider's track lights under its thumb.
     {
-        const ImU32 guide = GetColor(accent, state.GlobalOpacity * 0.95f);
-        const ImU32 guideFaint = GetColor(accent, state.GlobalOpacity * 0.55f);
+        const auto& role = OFS_Sashimi::Role();
+        auto tone = [&](uint32_t color, float alpha) noexcept -> ImU32 {
+            const uint32_t a = (uint32_t)(Util::Clamp(alpha * state.GlobalOpacity, 0.f, 1.f) * 255.f);
+            return (color & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
+        };
         const float thick = Util::Max(1.f, scale * 0.007f);
         const float tick = Util::Max(4.f, scale * 0.045f);
+        const ImU32 edge = IM_COL32(0, 0, 0, (int)(0x50 * state.GlobalOpacity));
+        auto guideFor = [&](Axis axis, bool strong) noexcept -> ImU32 {
+            if (poseLitAxis[(int32_t)axis]) return tone(role.AccentBright, strong ? 1.f : 0.85f);
+            return tone(OFS_Sashimi::Grey80, strong ? 0.85f : 0.5f);
+        };
+        // Every guide line goes down twice: a wider dark edge, then the line.
+        auto line = [&](ImVec2 a, ImVec2 b, ImU32 color, float width) noexcept {
+            drawList->AddLine(a, b, edge, width + 2.f);
+            drawList->AddLine(a, b, color, width);
+        };
+        auto polyline = [&](const ImVec2* points, int32_t count, ImU32 color, ImDrawFlags flags, float width) noexcept {
+            drawList->AddPolyline(points, count, edge, flags, width + 2.f);
+            drawList->AddPolyline(points, count, color, flags, width);
+        };
         float caseRadius = 0.f;
         for (const auto& profileRing : Profile) caseRadius = Util::Max(caseRadius, profileRing.r * Radius);
         const float topY = Profile[0].y * HalfLength;
         const float lipY = Profile[SlitRing].y * HalfLength;
 
-        auto tickAt = [&](ImVec2 at, ImVec2 along) noexcept {
+        auto tickAt = [&](ImVec2 at, ImVec2 along, ImU32 color) noexcept {
             const float length = SDL_sqrtf((along.x * along.x) + (along.y * along.y));
             ImVec2 across = length > 1e-3f ? ImVec2(-along.y / length, along.x / length) : ImVec2(1.f, 0.f);
-            drawList->AddLine(at - (across * tick), at + (across * tick), guide, thick * 1.6f);
+            line(at - (across * tick), at + (across * tick), color, thick * 1.6f);
         };
         auto sweep = [&](const Vec3& local, Axis axis) noexcept {
             if (!axes.mapped[(int32_t)axis]) return;
@@ -2127,9 +2149,9 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
                 v[(int32_t)axis] = -1.f + (2.f * (float)i / (float)Steps);
                 points[i] = poseToScreen(local, v[0], v[1], v[2], v[3], v[4], v[5]);
             }
-            drawList->AddPolyline(points, Steps + 1, guideFaint, 0, thick);
-            tickAt(points[0], points[1] - points[0]);
-            tickAt(points[Steps], points[Steps] - points[Steps - 1]);
+            polyline(points, Steps + 1, guideFor(axis, false), 0, thick);
+            tickAt(points[0], points[1] - points[0], guideFor(axis, true));
+            tickAt(points[Steps], points[Steps] - points[Steps - 1], guideFor(axis, true));
         };
 
         if (axes.mapped[(int32_t)Axis::Stroke]) {
@@ -2137,10 +2159,13 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
             const ImVec2 low = poseToScreen(top, -1.f, 0.f, 0.f, 0.f, 0.f, 0.f);
             const ImVec2 high = poseToScreen(top, 1.f, 0.f, 0.f, 0.f, 0.f, 0.f);
             const ImVec2 flat(caseRadius * scale * 0.9f, 0.f);
-            drawList->AddLine(low - flat, low + flat, guide, thick * 1.6f);
-            drawList->AddLine(high - flat, high + flat, guide, thick * 1.6f);
+            line(low - flat, low + flat, guideFor(Axis::Stroke, true), thick * 1.6f);
+            line(high - flat, high + flat, guideFor(Axis::Stroke, true), thick * 1.6f);
         }
-        if (axes.mapped[(int32_t)Axis::Twist]) {
+        // While posing, the twist handle's own ring, with its knob turning on
+        // the body, says this better than a ring drawn at the neutral pose,
+        // which would sit apart from it as soon as the case tilts.
+        if (axes.mapped[(int32_t)Axis::Twist] && !posingThisFrame) {
             constexpr int32_t RingSteps = 32;
             ImVec2 points[RingSteps];
             const float ringRadius = caseRadius * 1.15f;
@@ -2148,14 +2173,14 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
                 const float angle = (2.f * (float)M_PI * (float)i) / (float)RingSteps;
                 points[i] = poseToScreen(Vec3{ SDL_cosf(angle) * ringRadius, topY, SDL_sinf(angle) * ringRadius }, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
             }
-            drawList->AddPolyline(points, RingSteps, guideFaint, ImDrawFlags_Closed, thick);
+            polyline(points, RingSteps, guideFor(Axis::Twist, false), ImDrawFlags_Closed, thick);
             // The front faces -z at neutral, and half a turn takes it to +z.
             const ImVec2 neutralIn = poseToScreen(Vec3{ 0.f, topY, -caseRadius * 1.02f }, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
             const ImVec2 neutralOut = poseToScreen(Vec3{ 0.f, topY, -caseRadius * 1.30f }, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
             const ImVec2 limitIn = poseToScreen(Vec3{ 0.f, topY, caseRadius * 1.02f }, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
             const ImVec2 limitOut = poseToScreen(Vec3{ 0.f, topY, caseRadius * 1.30f }, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
-            drawList->AddLine(neutralIn, neutralOut, guideFaint, thick * 1.6f);
-            drawList->AddLine(limitIn, limitOut, guide, thick * 1.6f);
+            line(neutralIn, neutralOut, guideFor(Axis::Twist, false), thick * 1.6f);
+            line(limitIn, limitOut, guideFor(Axis::Twist, true), thick * 1.6f);
         }
         sweep(Vec3{ 0.f, topY, 0.f }, Axis::Roll);
         sweep(Vec3{ 0.f, topY, 0.f }, Axis::Pitch);
@@ -4613,21 +4638,21 @@ const char* PoseAxisLabels[AxisCount] = { "Stroke", "Surge", "Sway", "Twist", "R
 const char* PoseAxisNamesLower[AxisCount] = { "stroke", "surge", "sway", "twist", "roll", "pitch" };
 
 // ---- The handles' look ------------------------------------------------------
-// Knobs like a slider's thumb: a white disc lifted off the scene by a soft
-// shadow, filling with the accent while dragged. Everything a little
-// translucent, so the video still reads through.
+// In the interface's own style, from its colour roles so it follows the theme:
+// knobs are small squares like the lanes' tick boxes, dark with a hairline at
+// rest, edged in the accent under the mouse and filled with it while dragged.
+// Corners follow the rounded or square setting. Labels are the lanes' name
+// pills.
 
-uint32_t poseColor(uint32_t rgb, float alpha) noexcept
+uint32_t poseColor(uint32_t color, float alpha) noexcept
 {
-    const uint32_t a = (uint32_t)(Util::Clamp(alpha, 0.f, 1.f) * 255.f);
-    return IM_COL32((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, a);
+    const uint32_t a = (uint32_t)(Util::Clamp(alpha, 0.f, 1.f) * (float)((color >> IM_COL32_A_SHIFT) & 0xFF));
+    return (color & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
 }
 
-uint32_t poseAccent(float alpha) noexcept
+float poseRounding(float size) noexcept
 {
-    const uint32_t accent = OFS_Sashimi::Role().AccentBright;
-    const uint32_t a = (uint32_t)(Util::Clamp(alpha, 0.f, 1.f) * 255.f);
-    return (accent & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
+    return ImGui::GetStyle().FrameRounding > 0.f ? Util::Min(3.f, size * 0.3f) : 0.f;
 }
 
 struct PoseLook
@@ -4640,68 +4665,59 @@ struct PoseLook
     float strength = 1.f;
 };
 
-// A soft shadow under a round shape: a few wide, faint discs, offset down.
-void poseShadow(ImDrawList* drawList, ImVec2 at, float radius, float strength) noexcept
+// The fill, edge and edge width of a handle in a given state.
+struct PoseInk
 {
-    drawList->AddCircleFilled(at + ImVec2(0.f, 1.5f), radius + 3.f, poseColor(0x000000, 0.10f * strength), 24);
-    drawList->AddCircleFilled(at + ImVec2(0.f, 1.f), radius + 1.5f, poseColor(0x000000, 0.22f * strength), 24);
-}
+    uint32_t fill;
+    uint32_t edge;
+    float width;
+};
 
-void poseKnob(ImDrawList* drawList, ImVec2 at, float radius, const PoseLook& l) noexcept
+PoseInk poseInk(const PoseLook& l) noexcept
 {
-    const float r = radius * (1.f + (0.3f * l.grow));
+    const auto& role = OFS_Sashimi::Role();
     if (!l.usable) {
-        drawList->AddCircleFilled(at, r, poseColor(0x8C8C8C, 0.45f * l.strength), 24);
-        drawList->AddCircle(at, r, poseColor(0x000000, 0.25f * l.strength), 24, 1.f);
-        return;
+        return { poseColor(role.OffFill, 0.55f * l.strength), poseColor(role.Divider, 0.6f * l.strength), 1.f };
     }
-    poseShadow(drawList, at, r, l.strength);
+    if (l.active) return { role.OnFillHi, role.OnBorder, 1.5f };
+    if (l.grow > 0.5f) return { poseColor(role.OffFillHi, 0.95f), role.AccentBright, 1.5f };
+    return { poseColor(role.OffFill, 0.92f * l.strength), poseColor(role.Outline, l.strength), 1.f };
+}
+
+// A square knob centred on at.
+void poseKnob(ImDrawList* drawList, ImVec2 at, float size, const PoseLook& l) noexcept
+{
+    const float half = size * 0.5f * (1.f + (0.2f * l.grow));
+    const PoseInk ink = poseInk(l);
+    const float round = poseRounding(half * 2.f);
+    const ImVec2 min = at - ImVec2(half, half);
+    const ImVec2 max = at + ImVec2(half, half);
+    drawList->AddRectFilled(min + ImVec2(0.f, 1.f), max + ImVec2(0.f, 1.f), poseColor(IM_COL32_BLACK, 0.35f * l.strength), round);
+    drawList->AddRectFilled(min, max, ink.fill, round);
+    drawList->AddRect(min, max, ink.edge, round, 0, ink.width);
     if (l.active) {
-        drawList->AddCircleFilled(at, r, poseAccent(1.f), 24);
-        drawList->AddCircle(at, r, poseColor(0xFFFFFF, 0.95f), 24, 1.5f);
-    }
-    else {
-        drawList->AddCircleFilled(at, r, poseColor(0xF7F7F7, 0.97f * l.strength), 24);
-        drawList->AddCircle(at, r, poseColor(0x000000, 0.18f * l.strength), 24, 1.f);
-        if (l.grow > 0.05f) drawList->AddCircle(at, r + 2.5f, poseAccent(0.8f * l.grow), 24, 1.5f);
+        drawList->AddRectFilled(at - ImVec2(1.5f, 1.5f), at + ImVec2(1.5f, 1.5f), OFS_Sashimi::Role().AccentPale, 1.f);
     }
 }
 
-// A capsule centred on at, lying along dir, with two short grabber lines
-// across it.
-void poseCapsule(ImDrawList* drawList, ImVec2 at, ImVec2 dir, float halfLength, float radius,
+// The case's grip: a bar lying along dir, with two short lines across it.
+void poseGrip(ImDrawList* drawList, ImVec2 at, ImVec2 dir, float halfLength, float halfWidth,
     const PoseLook& l) noexcept
 {
-    const float r = radius * (1.f + (0.25f * l.grow));
-    const float half = halfLength * (1.f + (0.15f * l.grow));
-    const ImVec2 side(-dir.y, dir.x);
-    constexpr int32_t Arc = 10;
-    ImVec2 outline[(Arc + 1) * 2];
-    int32_t n = 0;
-    for (int32_t i = 0; i <= Arc; i += 1) {
-        const float t = (float)M_PI * (float)i / (float)Arc;
-        outline[n++] = at + dir * half + (side * std::cos(t) + dir * std::sin(t)) * r;
-    }
-    for (int32_t i = 0; i <= Arc; i += 1) {
-        const float t = (float)M_PI * (float)i / (float)Arc;
-        outline[n++] = at - dir * half - (side * std::cos(t) + dir * std::sin(t)) * r;
-    }
-    if (l.usable) {
-        ImVec2 shadowed[(Arc + 1) * 2];
-        for (int32_t i = 0; i < n; i += 1) shadowed[i] = outline[i] + ImVec2(0.f, 1.5f);
-        drawList->AddConvexPolyFilled(shadowed, n, poseColor(0x000000, 0.25f * l.strength));
-    }
-    const uint32_t fill = !l.usable ? poseColor(0x8C8C8C, 0.45f * l.strength)
-        : l.active ? poseAccent(1.f) : poseColor(0xF7F7F7, 0.97f * l.strength);
-    drawList->AddConvexPolyFilled(outline, n, fill);
-    drawList->AddPolyline(outline, n, l.active ? poseColor(0xFFFFFF, 0.95f) : poseColor(0x000000, 0.18f * l.strength),
-        ImDrawFlags_Closed, l.active ? 1.5f : 1.f);
-    if (l.usable && !l.active && l.grow > 0.05f) {
-        drawList->AddPolyline(outline, n, poseAccent(0.8f * l.grow), ImDrawFlags_Closed, 1.5f);
-    }
-    const uint32_t grab = l.active ? poseColor(0xFFFFFF, 0.9f) : poseColor(0x000000, 0.35f * l.strength);
+    const float grow = 1.f + (0.15f * l.grow);
+    const ImVec2 along = dir * (halfLength * grow);
+    const ImVec2 side = ImVec2(-dir.y, dir.x) * (halfWidth * grow);
+    const ImVec2 corners[4] = { at + along + side, at + along - side, at - along - side, at - along + side };
+    const PoseInk ink = poseInk(l);
+    ImVec2 shadowed[4];
+    for (int32_t i = 0; i < 4; i += 1) shadowed[i] = corners[i] + ImVec2(0.f, 1.f);
+    drawList->AddConvexPolyFilled(shadowed, 4, poseColor(IM_COL32_BLACK, 0.35f * l.strength));
+    drawList->AddConvexPolyFilled(corners, 4, ink.fill);
+    drawList->AddPolyline(corners, 4, ink.edge, ImDrawFlags_Closed, ink.width);
+    const auto& role = OFS_Sashimi::Role();
+    const uint32_t grab = l.active ? role.AccentPale : poseColor(OFS_Sashimi::Grey80, l.usable ? l.strength : 0.4f);
     for (float o : { -2.5f, 2.5f }) {
-        drawList->AddLine(at + dir * o - side * (r * 0.55f), at + dir * o + side * (r * 0.55f), grab, 1.f);
+        drawList->AddLine(at + dir * o - side * 0.55f, at + dir * o + side * 0.55f, grab, 1.f);
     }
 }
 
@@ -4715,28 +4731,29 @@ void poseChevrons(ImDrawList* drawList, ImVec2 at, ImVec2 dir, float reach, uint
     const ImVec2 side(-n.y, n.x);
     for (float s : { 1.f, -1.f }) {
         const ImVec2 tip = at + n * (reach * s);
-        const ImVec2 back = tip - n * (5.f * s);
-        const ImVec2 wing[3] = { back + side * 4.5f, tip, back - side * 4.5f };
-        drawList->AddPolyline(wing, 3, poseColor(0x000000, 0.35f), 0, 3.5f);
-        drawList->AddPolyline(wing, 3, color, 0, 1.75f);
+        const ImVec2 back = tip - n * (4.f * s);
+        const ImVec2 wing[3] = { back + side * 4.f, tip, back - side * 4.f };
+        drawList->AddPolyline(wing, 3, poseColor(IM_COL32_BLACK, 0.45f), 0, 3.5f);
+        drawList->AddPolyline(wing, 3, color, 0, 1.5f);
     }
     if (label) {
         const ImVec2 size = ImGui::CalcTextSize(label);
-        const ImVec2 spot = at + n * (reach + 8.f) + side * 6.f;
-        drawList->AddText(spot - ImVec2(0.f, size.y * 0.5f) + ImVec2(1.f, 1.f), poseColor(0x000000, 0.6f), label);
-        drawList->AddText(spot - ImVec2(0.f, size.y * 0.5f), color, label);
+        const ImVec2 spot = at + n * (reach + 8.f) + side * 6.f - ImVec2(0.f, size.y * 0.5f);
+        drawList->AddText(spot + ImVec2(1.f, 1.f), poseColor(IM_COL32_BLACK, 0.7f), label);
+        drawList->AddText(spot, color, label);
     }
 }
 
-// A rounded label: dark, translucent, a hairline edge, the main text bright
-// and an optional note after it in a quieter tone. Kept inside the window,
-// flipping to the other side of at when it would run off the right.
+// A label like a lane's name pill: dark and translucent behind, a faint
+// hairline, primary text, and an optional note after it in the faint text
+// colour. Kept inside the window, flipping to the other side of at when it
+// would run off the right.
 void posePill(ImDrawList* drawList, ImVec2 at, const char* text, const char* note, bool beside) noexcept
 {
     const ImVec2 main = ImGui::CalcTextSize(text);
     const ImVec2 extra = note ? ImGui::CalcTextSize(note) : ImVec2(0.f, 0.f);
-    const float gap = note ? 16.f : 0.f;
-    const ImVec2 pad(11.f, 5.f);
+    const float gap = note ? 14.f : 0.f;
+    const ImVec2 pad(9.f, 4.f);
     const ImVec2 size(main.x + gap + extra.x + (pad.x * 2.f), main.y + (pad.y * 2.f));
     ImVec2 min = at;
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
@@ -4744,12 +4761,11 @@ void posePill(ImDrawList* drawList, ImVec2 at, const char* text, const char* not
         min.x = at.x - 36.f - size.x;
     }
     const ImVec2 max = min + size;
-    const float round = size.y * 0.5f;
-    drawList->AddRectFilled(min + ImVec2(0.f, 2.f), max + ImVec2(0.f, 2.f), poseColor(0x000000, 0.25f), round);
-    drawList->AddRectFilled(min, max, poseColor(0x1C1C1E, 0.90f), round);
-    drawList->AddRect(min, max, poseColor(0xFFFFFF, 0.10f), round, 0, 1.f);
-    drawList->AddText(min + pad, poseColor(0xFFFFFF, 0.96f), text);
-    if (note) drawList->AddText(min + pad + ImVec2(main.x + gap, 0.f), poseColor(0xFFFFFF, 0.55f), note);
+    const float round = ImGui::GetStyle().FrameRounding > 0.f ? size.y * 0.5f : 0.f;
+    drawList->AddRectFilled(min, max, IM_COL32(0x10, 0x10, 0x10, 0xE0), round);
+    drawList->AddRect(min, max, IM_COL32(255, 255, 255, 0x14), round);
+    drawList->AddText(min + pad, OFS_Sashimi::Grey95, text);
+    if (note) drawList->AddText(min + pad + ImVec2(main.x + gap, 0.f), OFS_Sashimi::Role().TextFaint, note);
 }
 
 // The track that drives an axis, or nothing.
@@ -5005,22 +5021,22 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
             const float angle = ((float)k / (float)PoseRingSamples) * 2.f * (float)M_PI;
             points[k] = poseRingPoint(state, value, angle, center, scale);
         }
-        const uint32_t line = !l.usable ? poseColor(0x8C8C8C, 0.30f * strength)
-            : (l.active || l.grow > 0.5f) ? poseAccent(0.95f)
-            : poseColor(0xFFFFFF, 0.55f * strength);
-        drawList->AddPolyline(points, PoseRingSamples, poseColor(0x000000, 0.25f * strength), ImDrawFlags_Closed, 3.5f);
-        drawList->AddPolyline(points, PoseRingSamples, line, ImDrawFlags_Closed, 1.5f + l.grow * 0.5f);
+        const auto& role = OFS_Sashimi::Role();
+        const uint32_t line = !l.usable ? poseColor(role.Divider, 0.6f * strength)
+            : (l.active || l.grow > 0.5f) ? role.AccentBright
+            : poseColor(OFS_Sashimi::Grey80, 0.6f * strength);
+        drawList->AddPolyline(points, PoseRingSamples, poseColor(IM_COL32_BLACK, 0.3f * strength), ImDrawFlags_Closed, 3.5f);
+        drawList->AddPolyline(points, PoseRingSamples, line, ImDrawFlags_Closed, 1.5f);
         // On the front of the body, which faces the viewer at -z, turning
         // with it.
         const PoseFrame knobFrame = makePoseFrame(state, value);
         const ImVec2 knob = project(knobFrame.toWorld(Vec3{ 0.f, knobFrame.strokeOffset + PoseRingY, -PoseRingRadius }),
             center, scale);
         PoseHandleScreen[(int32_t)PoseHandle::Ring] = knob;
-        poseKnob(drawList, knob, 4.5f, l);
+        poseKnob(drawList, knob, 8.f, l);
     }
 
-    // Case: a capsule grip lying along the body, with two grabber lines
-    // across it, the way a sheet's handle reads as something to pull.
+    // Case: a grip lying along the body, with two lines across it.
     {
         const PoseLook l = look(PoseHandle::Case);
         const ImVec2 at = PoseHandleScreen[(int32_t)PoseHandle::Case];
@@ -5034,7 +5050,7 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
         }
         const float len = std::sqrt(ImLengthSqr(along));
         const ImVec2 dir = len > 1e-3f ? along * (1.f / len) : ImVec2(0.f, -1.f);
-        poseCapsule(drawList, at, dir, PoseCaseHalfLength, 4.5f, l);
+        poseGrip(drawList, at, dir, PoseCaseHalfLength, 4.f, l);
     }
 
     // Floor square: on the ground under the body, moving with surge and
@@ -5050,15 +5066,16 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
             project(f.camera(Vec3{ c.x + PoseFloorHalf, y, c.z + PoseFloorHalf }), center, scale),
             project(f.camera(Vec3{ c.x - PoseFloorHalf, y, c.z + PoseFloorHalf }), center, scale),
         };
-        const float a = l.usable ? strength : 0.4f * strength;
-        drawList->AddConvexPolyFilled(corners, 4, (l.active || l.grow > 0.5f) ? poseAccent(0.18f) : poseColor(0xFFFFFF, 0.08f * a));
-        drawList->AddPolyline(corners, 4, (l.active || l.grow > 0.5f) ? poseAccent(0.9f) : poseColor(0xFFFFFF, 0.45f * a),
-            ImDrawFlags_Closed, 1.5f);
-        poseKnob(drawList, PoseHandleScreen[(int32_t)PoseHandle::Floor], 4.5f, l);
+        const auto& role = OFS_Sashimi::Role();
+        const float a = l.usable ? strength : 0.5f * strength;
+        const bool lit = l.usable && (l.active || l.grow > 0.5f);
+        drawList->AddConvexPolyFilled(corners, 4, lit ? role.OnFill : poseColor(role.OffFill, 0.45f * a));
+        drawList->AddPolyline(corners, 4, lit ? role.OnBorder : poseColor(role.Outline, a), ImDrawFlags_Closed, 1.f);
+        poseKnob(drawList, PoseHandleScreen[(int32_t)PoseHandle::Floor], 8.f, l);
     }
 
     // Tip: the biggest knob, on the closed end, since it carries two axes.
-    poseKnob(drawList, PoseHandleScreen[(int32_t)PoseHandle::Tip], 6.f, look(PoseHandle::Tip));
+    poseKnob(drawList, PoseHandleScreen[(int32_t)PoseHandle::Tip], 11.f, look(PoseHandle::Tip));
 
     // Which way each axis goes, on the handle under the mouse or being
     // dragged: chevrons where the axis moves the handle on screen, and for
@@ -5074,7 +5091,7 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
             ImVec2 across;
             const float open = poseRingOpenness(state, value, center, scale, &across, nullptr);
             if (open < PoseRingOpenEnough && hasTrack[3]) {
-                poseChevrons(drawList, at, across, reach, poseColor(0xFFFFFF, 0.9f), nullptr);
+                poseChevrons(drawList, at, across, reach, OFS_Sashimi::Grey95, nullptr);
             }
         }
         else {
@@ -5083,7 +5100,7 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
             for (int32_t k = 0; k < 2; k += 1) {
                 if (handleAxes[k] < 0) continue;
                 poseChevrons(drawList, at, dirs[k], reach,
-                    endOn[k] ? poseAccent(0.85f) : poseColor(0xFFFFFF, 0.9f),
+                    endOn[k] ? OFS_Sashimi::Role().AccentPale : OFS_Sashimi::Grey95,
                     endOn[k] ? PoseAxisLabels[handleAxes[k]] : nullptr);
             }
         }
@@ -5599,6 +5616,13 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
 
         ModelDrawnValid = false;
         posingThisFrame = posing;
+        for (auto& lit : poseLitAxis) lit = false;
+        const PoseHandle litHandle = PoseDragging != PoseHandle::None ? PoseDragging : PoseHovered;
+        if (posing && litHandle != PoseHandle::None) {
+            for (int32_t axis : PoseHandleAxes[(int32_t)litHandle]) {
+                if (axis >= 0 && hasTrack[axis]) poseLitAxis[axis] = true;
+            }
+        }
         drawMultiAxisModel(frontDraw, state, axes, modelCenter, modelScale);
         if (posing) drawPoseHandles(frontDraw, state, axes, hasTrack, modelCenter, modelScale);
         PoseHandlesShown = posing;

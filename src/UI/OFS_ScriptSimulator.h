@@ -248,6 +248,9 @@ private:
 	// The handles are up this frame, which the model's own twist marker
 	// makes way for.
 	bool posingThisFrame = false;
+	// The axes of the pose handle under the mouse or being dragged, whose
+	// guides light up.
+	bool poseLitAxis[(int32_t)Axis::Count] = {};
 	void updatePoseHandles(const struct SimulatorState& state, const MultiAxisValues& axes,
 		const bool* hasTrack, ImVec2 center, float scale, ImGuiID simId) noexcept;
 	void drawPoseHandles(struct ImDrawList* drawList, const struct SimulatorState& state,
