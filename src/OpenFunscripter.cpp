@@ -463,13 +463,18 @@ void OpenFunscripter::setupDefaultLayout(bool force) noexcept
 
         ImGui::DockBuilderRemoveNode(MainDockspaceID); // Clear out existing layout
         ImGui::DockBuilderAddNode(MainDockspaceID, ImGuiDockNodeFlags_DockSpace); // Add empty node
-        // The toolbar takes one row across the top. Measured on a node grown
-        // by its height, so everything under it is laid out at the same
-        // proportions as before it was a window. It keeps its height when the
+        // Measured at the size the dockspace will have: the window's, less
+        // the menu bar. ImGui gives any later change in size to the video
+        // alone, so a layout built at 1920x1080 and shown maximized on a
+        // smaller screen kept columns and rows sized for the bigger one. The
+        // toolbar takes one row across the top, and keeps its height when the
         // app is resized, since the node beside it holds the central one.
+        int windowWidth = DefaultWidth;
+        int windowHeight = DefaultHeight;
+        SDL_GetWindowSize(window, &windowWidth, &windowHeight);
         const float toolbarHeight = toolbarRowHeight();
-        const float rootHeight = DefaultHeight + toolbarHeight + DockSplitterSize;
-        ImGui::DockBuilderSetNodeSize(MainDockspaceID, ImVec2(DefaultWidth, rootHeight));
+        const float rootHeight = (float)windowHeight - ImGui::GetFrameHeight();
+        ImGui::DockBuilderSetNodeSize(MainDockspaceID, ImVec2((float)windowWidth, rootHeight));
         ImGuiID dock_rest_id;
         auto dock_toolbar_id = ImGui::DockBuilderSplitNode(MainDockspaceID, ImGuiDir_Up,
             toolbarHeight / rootHeight, NULL, &dock_rest_id);
@@ -511,13 +516,20 @@ void OpenFunscripter::setupDefaultLayout(bool force) noexcept
         ImGui::DockBuilderDockWindow(ScriptingMode::WindowId, dock_mode_id);
         ImGui::DockBuilderDockWindow(ScriptSimulator::WindowId, dock_simulator_id);
 
-        // Tabs share a node in pairs, the first named showing.
-        ImGui::DockBuilderDockWindow(StatisticsWindowId, dock_stats_id);
-        ImGui::DockBuilderDockWindow(UndoSystem::WindowId, dock_stats_id);
-        ImGui::DockBuilderDockWindow("###ChapterManager", dock_chapters_id);
-        ImGui::DockBuilderDockWindow(OFS_ScriptCheck::WindowId, dock_chapters_id);
-        ImGui::DockBuilderDockWindow(TracksWindowId, dock_tracks_id);
-        ImGui::DockBuilderDockWindow(ActionEditorWindowId, dock_tracks_id);
+        // Tabs share a node in pairs, the first named first and showing.
+        // ImGui otherwise orders tabs by when each window was first drawn,
+        // which put the undo history ahead of the statistics.
+        auto dockTab = [](const char* name, ImGuiID node, short order) noexcept {
+            ImGui::DockBuilderDockWindow(name, node);
+            if (auto* settings = ImGui::FindWindowSettings(ImHashStr(name))) settings->DockOrder = order;
+            if (auto* live = ImGui::FindWindowByName(name)) live->DockOrder = order;
+        };
+        dockTab(StatisticsWindowId, dock_stats_id, 0);
+        dockTab(UndoSystem::WindowId, dock_stats_id, 1);
+        dockTab("###ChapterManager", dock_chapters_id, 0);
+        dockTab(OFS_ScriptCheck::WindowId, dock_chapters_id, 1);
+        dockTab(TracksWindowId, dock_tracks_id, 0);
+        dockTab(ActionEditorWindowId, dock_tracks_id, 1);
         simulator.CenterSimulator();
         simulator.CenterWhenVideoShows = true;
         ImGui::DockBuilderFinish(MainDockspaceID);

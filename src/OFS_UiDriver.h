@@ -30,6 +30,9 @@
 // the output directory, for files a test writes and reads back.
 //
 //   size W H                 window size, restored if maximized
+//   startsize W H            open the window at this size, before the default layout is
+//                            built, as a maximized window on a smaller screen opens; first
+//                            in a script
 //   wait N                   let N frames pass
 //   open PATH                open a media or project file
 //   newblank SECONDS PATH    start a script with no video at PATH, skipping the save dialog
@@ -153,6 +156,9 @@ private:
     std::filesystem::path scriptDir;
     // A layout named at the top of the script, loaded before the first frame.
     std::string startLayout;
+    // A window size named at the top of the script, set before the first frame.
+    int32_t startWidth = 0;
+    int32_t startHeight = 0;
     void loadLayout(const std::string& path, int32_t line) noexcept;
     int32_t passed = 0;
     int32_t failed = 0;

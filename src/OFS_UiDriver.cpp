@@ -75,6 +75,9 @@ std::unique_ptr<OFS_UiDriver> OFS_UiDriver::FromEnvironment() noexcept
     // Before any panel has been drawn, so each takes its place from the
     // layout as if the profile had always had it.
     if (!driver->startLayout.empty()) driver->loadLayout(driver->startLayout, 0);
+    if (driver->startWidth > 0) {
+        SDL_SetWindowSize(OpenFunscripter::ptr->window, driver->startWidth, driver->startHeight);
+    }
     return driver;
 }
 
@@ -208,6 +211,12 @@ bool OFS_UiDriver::parse(const std::string& script, const std::string& media) no
             else op.n = 3000;
             op.text2 = cmp + " " + value;
             push(op);
+        }
+        else if (command == "startsize") {
+            if (!ops.empty()) { fail("startsize has to come first"); continue; }
+            if (!(args >> startWidth >> startHeight)) { fail("startsize needs a width and height"); continue; }
+            wantWidth = startWidth;
+            wantHeight = startHeight;
         }
         else if (command == "size") {
             Op op;
