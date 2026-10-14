@@ -637,11 +637,16 @@ struct PoseFrame
     // axis, which passes through the pivot, so it is unaffected either way.
     Vec3 toWorld(const Vec3& local) const noexcept
     {
+        return camera(toWorldNoCamera(local));
+    }
+    // The same point in the world, before the camera turns it to face the
+    // viewer: x across, y up, z away from the user.
+    Vec3 toWorldNoCamera(const Vec3& local) const noexcept
+    {
         Vec3 p{ local.x, local.y - pivotY, local.z };
         p = orientNoCamera(p);
         p.y += pivotY;
-        p = add(p, worldOffset);
-        return camera(p);
+        return add(p, worldOffset);
     }
     // Undoes the body's rotation, for putting the rod's upright axis into the
     // frame the profile is described in.
@@ -5059,6 +5064,93 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
 
     for (int32_t h = 0; h < (int32_t)PoseHandle::Count; h += 1) {
         PoseHandleScreen[h] = poseAnchor((PoseHandle)h, state, value, center, scale);
+    }
+
+    // A guide on the floor while the tip or the twist ring is under the
+    // mouse or dragged. On screen alone a tilt toward the viewer and one
+    // away look much the same, the tip moving up or down; on the floor,
+    // seen in perspective, near is plainly near. A disc under the body as
+    // wide as the tip can lean, crossed by the lines roll and pitch lean
+    // it along, with a chevron on the side facing the viewer. For tilt, the
+    // tip's shadow on it, a line dropped to the shadow from the tip, and the
+    // lean from the centre. For twist, a needle the way the front faces.
+    {
+        const float tipShow = poseHandleUsable(PoseHandle::Tip, hasTrack) ? poseGrow[(int32_t)PoseHandle::Tip] : 0.f;
+        const float ringShow = poseHandleUsable(PoseHandle::Ring, hasTrack) ? poseGrow[(int32_t)PoseHandle::Ring] : 0.f;
+        const float show = Util::Max(tipShow, ringShow);
+        if (show > 0.02f) {
+            const auto& role = OFS_Sashimi::Role();
+            const PoseFrame f = makePoseFrame(state, value);
+            const float y = poseFloorY();
+            const Vec3 c{ f.worldOffset.x, y, f.worldOffset.z };
+            auto floorAt = [&](float x, float z) noexcept {
+                return project(f.camera(Vec3{ x, y, z }), center, scale);
+            };
+            // As far as the tip leans at full tilt, and never inside the ring.
+            const float lever = std::abs(f.strokeOffset + PoseTipY - f.pivotY);
+            const float radius = Util::Max(lever * SDL_sinf(ModelMaxTilt), PoseRingRadius * 1.3f);
+
+            constexpr int32_t Samples = 48;
+            ImVec2 rim[Samples];
+            for (int32_t k = 0; k < Samples; k += 1) {
+                const float a = ((float)k / (float)Samples) * 2.f * (float)M_PI;
+                rim[k] = floorAt(c.x + (SDL_cosf(a) * radius), c.z + (SDL_sinf(a) * radius));
+            }
+            drawList->AddConvexPolyFilled(rim, Samples, poseColor(role.OffFill, 0.18f * show));
+            drawList->AddPolyline(rim, Samples, poseColor(role.Outline, show), ImDrawFlags_Closed, 1.f);
+
+            // Roll leans the tip across, pitch toward and away; the line for
+            // an axis being moved is lit.
+            const bool tipLit = tipShow > 0.5f;
+            const uint32_t quiet = poseColor(role.Divider, show);
+            const uint32_t lit = poseColor(role.AccentPale, 0.8f * show);
+            drawList->AddLine(floorAt(c.x - radius, c.z), floorAt(c.x + radius, c.z),
+                tipLit && hasTrack[4] ? lit : quiet, 1.f);
+            drawList->AddLine(floorAt(c.x, c.z - radius), floorAt(c.x, c.z + radius),
+                tipLit && hasTrack[5] ? lit : quiet, 1.f);
+
+            // The side facing the viewer, which is -z.
+            {
+                const ImVec2 tip = floorAt(c.x, c.z - (radius * 1.18f));
+                const ImVec2 wingL = floorAt(c.x - (radius * 0.09f), c.z - (radius * 1.06f));
+                const ImVec2 wingR = floorAt(c.x + (radius * 0.09f), c.z - (radius * 1.06f));
+                const ImVec2 wing[3] = { wingL, tip, wingR };
+                drawList->AddPolyline(wing, 3, poseColor(OFS_Sashimi::Grey80, 0.8f * show), 0, 1.5f);
+            }
+
+            if (ringShow > 0.02f) {
+                // Twist alone, seen from above: the front of the case faces
+                // -z before it turns.
+                const Vec3 front = rotateY(Vec3{ 0.f, 0.f, -1.f }, f.twistAngle);
+                const float reach = radius * 0.85f;
+                const ImVec2 from = floorAt(c.x, c.z);
+                const ImVec2 to = floorAt(c.x + (front.x * reach), c.z + (front.z * reach));
+                const Vec3 side{ -front.z, 0.f, front.x };
+                const float head = radius * 0.12f;
+                const ImVec2 barbL = floorAt(c.x + (front.x * (reach - head)) + (side.x * head * 0.6f),
+                    c.z + (front.z * (reach - head)) + (side.z * head * 0.6f));
+                const ImVec2 barbR = floorAt(c.x + (front.x * (reach - head)) - (side.x * head * 0.6f),
+                    c.z + (front.z * (reach - head)) - (side.z * head * 0.6f));
+                const uint32_t needle = poseColor(role.AccentBright, ringShow);
+                drawList->AddLine(from, to, needle, 2.f);
+                const ImVec2 arrow[3] = { barbL, to, barbR };
+                drawList->AddPolyline(arrow, 3, needle, 0, 2.f);
+            }
+
+            if (tipShow > 0.02f) {
+                const Vec3 tipWorld = f.toWorldNoCamera(Vec3{ 0.f, f.strokeOffset + PoseTipY, 0.f });
+                const ImVec2 shadow = floorAt(tipWorld.x, tipWorld.z);
+                const ImVec2 middle = floorAt(c.x, c.z);
+                const uint32_t accent = poseColor(role.AccentBright, tipShow);
+                // Dropped from the tip, faint, so it reads as a guide rather
+                // than part of the model.
+                drawList->AddLine(PoseHandleScreen[(int32_t)PoseHandle::Tip], shadow,
+                    poseColor(OFS_Sashimi::Grey80, 0.35f * tipShow), 1.f);
+                drawList->AddLine(middle, shadow, accent, 2.f);
+                drawList->AddCircleFilled(shadow, 4.5f, poseColor(IM_COL32_BLACK, 0.4f * tipShow));
+                drawList->AddCircleFilled(shadow, 3.5f, accent);
+            }
+        }
     }
 
     // Twist ring: a fine line round the body, with a knob on the front that
