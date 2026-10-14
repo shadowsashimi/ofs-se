@@ -240,6 +240,9 @@ private:
 	float poseOverride[(int32_t)Axis::Count] = { -1.f, -1.f, -1.f, -1.f, -1.f, -1.f };
 	ImVec2 poseLastMouse = ImVec2(0.f, 0.f);
 	float poseLastRingAngle = 0.f;
+	// Each axis's mode and direction when the handle being dragged was taken.
+	bool poseModeEndOn[2] = { false, false };
+	ImVec2 poseModeDir[2] = { ImVec2(0.f, 0.f), ImVec2(0.f, 0.f) };
 	// How far each handle has grown under the mouse, eased, 0 to 1.
 	float poseGrow[(int32_t)PoseHandle::Count] = {};
 	// Whether a handle has the mouse this frame, which keeps the frame's own
@@ -257,6 +260,8 @@ private:
 		const MultiAxisValues& axes, const bool* hasTrack, ImVec2 center, float scale) noexcept;
 	void commitPose(const bool* hasTrack) noexcept;
 	void cancelPose(ImGuiID simId) noexcept;
+	void poseDirections(PoseHandle handle, const struct SimulatorState& state, const float* value,
+		const bool* hasTrack, ImVec2 center, float scale, ImVec2* outDir, bool* outEndOn) noexcept;
 public:
 	// What the tip holds up in the canal, fallen back onto it short of the
 	// cervix, in the same units as the pile.

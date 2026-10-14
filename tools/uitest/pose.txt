@@ -75,6 +75,93 @@ release left
 wait 10
 expect actions:uitest.pitch 1
 
+note pitch, end on from the front, keeps to up and down for the whole drag: dragged
+note straight up it goes all the way to 100, and straight down all the way to 0,
+note roll staying put, and nothing written once Escape lets go. It used to turn into a seen axis partway, at about 80, and stick
+posehandle tip
+wait 5
+press left
+wait 3
+moveby 0 -12
+wait 2
+moveby 0 -12
+wait 2
+moveby 0 -12
+wait 2
+moveby 0 -12
+wait 2
+moveby 0 -12
+wait 2
+moveby 0 -12
+wait 2
+moveby 0 -12
+wait 2
+moveby 0 -12
+wait 2
+moveby 0 -12
+wait 2
+moveby 0 -12
+wait 2
+moveby 0 -12
+wait 2
+moveby 0 -12
+wait 2
+expect pose_value:pitch 100
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+moveby 0 12
+wait 2
+expect pose_value:pitch 0
+key escape
+wait 3
+release left
+wait 10
+
+
 note the case's grip can be taken anywhere along it, not only at its middle
 posehandle case 0 9
 wait 5

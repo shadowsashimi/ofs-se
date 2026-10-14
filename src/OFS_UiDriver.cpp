@@ -235,6 +235,13 @@ bool OFS_UiDriver::parse(const std::string& script, const std::string& media) no
             mouseMove(x, y);
             frames(2);
         }
+        else if (command == "moveby") {
+            Op op;
+            op.type = OpType::MouseBy;
+            if (!(args >> op.x >> op.y)) { fail("moveby needs DX DY"); continue; }
+            push(op);
+            frames(1);
+        }
         else if (command == "lanemove") {
             Op op;
             op.type = OpType::LaneMove;
@@ -568,6 +575,11 @@ void OFS_UiDriver::execute(const Op& op) noexcept
         case OpType::MouseMove:
             mouseX = op.x;
             mouseY = op.y;
+            io.AddMousePosEvent(mouseX, mouseY);
+            break;
+        case OpType::MouseBy:
+            mouseX += op.x;
+            mouseY += op.y;
             io.AddMousePosEvent(mouseX, mouseY);
             break;
         case OpType::LaneMove:
@@ -956,6 +968,10 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
             pose += number(app->simulator.PoseValue(i), "%.0f");
         }
         add("pose_values", pose);
+        const char* names[] = { "stroke", "surge", "sway", "twist", "roll", "pitch" };
+        for (int32_t i = 0; i < 6; i += 1) {
+            add((std::string("pose_value:") + names[i]).c_str(), number(app->simulator.PoseValue(i), "%.0f"));
+        }
     }
     {
         const char* names[] = { "case", "ring", "tip", "floor" };

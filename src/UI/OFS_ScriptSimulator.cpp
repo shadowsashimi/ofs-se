@@ -4470,7 +4470,8 @@ float poseRingAngleAt(const SimulatorState& state, const float* value, ImVec2 mo
 // with up meaning away from the viewer. Both axes stay within reach from any
 // angle, and each drag moves the axis it looks like it should.
 void poseAxisDirections(PoseHandle handle, const SimulatorState& state, const float* value,
-    const bool* usable, ImVec2 center, float scale, ImVec2* outDir, bool* outEndOn) noexcept
+    const bool* usable, ImVec2 center, float scale, ImVec2* outDir, bool* outEndOn,
+    ImVec2* outRaw = nullptr) noexcept
 {
     const auto& axes = PoseHandleAxes[(int32_t)handle];
     ImVec2 j[2] = { ImVec2(0.f, 0.f), ImVec2(0.f, 0.f) };
@@ -4504,6 +4505,7 @@ void poseAxisDirections(PoseHandle handle, const SimulatorState& state, const fl
     bool seen[2];
     for (int32_t k = 0; k < 2; k += 1) {
         seen[k] = on[k] && sens[k] >= 0.3f && sens[k] >= 0.35f * strongest;
+        if (outRaw) outRaw[k] = j[k];
     }
     for (int32_t k = 0; k < 2; k += 1) {
         if (!on[k]) continue;
@@ -4534,13 +4536,9 @@ void poseAxisDirections(PoseHandle handle, const SimulatorState& state, const fl
 }
 
 // How far each of a handle's axes has to move, in 0..100 units, for its
-// anchor to follow the mouse by delta on screen, along the directions above.
-void poseSolve(PoseHandle handle, const SimulatorState& state, const float* value,
-    const bool* usable, ImVec2 center, float scale, ImVec2 delta, float* outChange) noexcept
+// anchor to follow the mouse by delta on screen, along the given directions.
+void poseSolve(const ImVec2* d, const bool* endOn, ImVec2 delta, float* outChange) noexcept
 {
-    ImVec2 d[2];
-    bool endOn[2];
-    poseAxisDirections(handle, state, value, usable, center, scale, d, endOn);
     const bool on0 = ImLengthSqr(d[0]) > 0.f;
     const bool on1 = ImLengthSqr(d[1]) > 0.f;
     outChange[0] = outChange[1] = 0.f;
@@ -4787,6 +4785,39 @@ bool poseHandleUsable(PoseHandle handle, const bool* hasTrack) noexcept
 
 }
 
+// The directions a handle's axes are dragged in. While dragging, each axis
+// keeps the mode it had when the handle was taken: an axis that started end
+// on stays up and down for the whole drag, however far it comes round to
+// face the viewer. Deciding afresh every frame, pitch dragged up from the
+// front tilted far enough to be seen, turned into "follow the tip", and was
+// pulled back down by the same drag, so it stuck at about 80. An axis that
+// started in view follows where it moves the handle now, but never slower
+// than a quarter of its speed at the start, so it cannot leap as it turns
+// end on.
+void ScriptSimulator::poseDirections(PoseHandle handle, const SimulatorState& state, const float* value,
+    const bool* hasTrack, ImVec2 center, float scale, ImVec2* outDir, bool* outEndOn) noexcept
+{
+    ImVec2 raw[2];
+    poseAxisDirections(handle, state, value, hasTrack, center, scale, outDir, outEndOn, raw);
+    if (handle != PoseDragging) return;
+    for (int32_t k = 0; k < 2; k += 1) {
+        outEndOn[k] = poseModeEndOn[k];
+        if (poseModeEndOn[k]) {
+            outDir[k] = poseModeDir[k];
+            continue;
+        }
+        if (ImLengthSqr(poseModeDir[k]) <= 0.f) {
+            outDir[k] = ImVec2(0.f, 0.f);
+            continue;
+        }
+        const float least = 0.25f * std::sqrt(ImLengthSqr(poseModeDir[k]));
+        const float now = std::sqrt(ImLengthSqr(raw[k]));
+        outDir[k] = now >= least ? raw[k]
+            : now > 1e-4f ? raw[k] * (least / now)
+            : poseModeDir[k] * 0.25f;
+    }
+}
+
 void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const MultiAxisValues& axes,
     const bool* hasTrack, ImVec2 center, float scale, ImGuiID simId) noexcept
 {
@@ -4842,8 +4873,11 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
             poseLastRingAngle = angle;
         }
         else {
+            ImVec2 dirs[2];
+            bool endOn[2];
+            poseDirections(PoseDragging, state, value, hasTrack, center, scale, dirs, endOn);
             float change[2];
-            poseSolve(PoseDragging, state, value, hasTrack, center, scale, mouse - poseLastMouse, change);
+            poseSolve(dirs, endOn, mouse - poseLastMouse, change);
             for (int32_t k = 0; k < 2; k += 1) {
                 if (handleAxes[k] >= 0) poseRaw[handleAxes[k]] += change[k] * speed;
             }
@@ -4939,6 +4973,9 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
         }
         if (hit == PoseHandle::Ring) {
             poseLastRingAngle = poseRingAngleAt(state, value, mouse, center, scale, nullptr);
+        }
+        else {
+            poseAxisDirections(hit, state, value, hasTrack, center, scale, poseModeDir, poseModeEndOn);
         }
     }
 }
@@ -5095,7 +5132,7 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
             }
         }
         else {
-            poseAxisDirections(shown, state, value, hasTrack, center, scale, dirs, endOn);
+            poseDirections(shown, state, value, hasTrack, center, scale, dirs, endOn);
             const auto& handleAxes = PoseHandleAxes[(int32_t)shown];
             for (int32_t k = 0; k < 2; k += 1) {
                 if (handleAxes[k] < 0) continue;
