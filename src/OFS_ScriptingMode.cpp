@@ -11,6 +11,7 @@
 #include "OFS_SashimiTheme.h"
 
 #include "state/ScriptModeState.h"
+#include "state/SimulatorState.h"
 
 
 void ScriptingModeBase::AddEditAction(FunscriptAction action) noexcept
@@ -524,14 +525,47 @@ void RecordingMode::DrawModeSettings() noexcept
     // Two options, both visible, one click to switch: the same segmented bar
     // as the modes above it, where this was a dropdown.
     {
-        const char* labels[2] = { TR(MOUSE), TR(CONTROLLER) };
-        static constexpr const char* tips[2] = {
+        const char* labels[3] = { TR(MOUSE), TR(CONTROLLER), "3D model" };
+        static constexpr const char* tips[3] = {
             "Records the position from the mouse, moved up and down over the simulator.",
             "Records the position from a game controller's stick while the video plays.",
+            "Puppet recording: hold a handle on the 3D simulator while the video plays, and every "
+            "axis it moves is recorded until you let go.",
         };
-        const int32_t picked = OFS::SegmentedControl("##RecordingInput", labels, tips, 2,
-            activeType == RecordingType::Mouse ? 0 : 1);
-        if (picked >= 0) activeType = picked == 0 ? RecordingType::Mouse : RecordingType::Controller;
+        const int32_t picked = OFS::SegmentedControl("##RecordingInput", labels, tips, 3, (int32_t)activeType);
+        if (picked >= 0) activeType = (RecordingType)picked;
+    }
+
+    // The 3D model is the simulator's own puppet recording, armed for as long
+    // as it is the input here.
+    if (activeType == RecordingType::Model) {
+        if (!armedPuppet) {
+            app->simulator.PuppetArmed = true;
+            armedPuppet = true;
+        }
+        auto& simState = SimulatorState::State(app->simulator.StateHandle());
+        if (!simState.ShowMultiAxis) {
+            ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Role().TextFaint);
+            ImGui::TextWrapped("Switch the simulator to 3D to see the model's handles.");
+            ImGui::PopStyleColor();
+        }
+        ImGui::Checkbox("Armed", &app->simulator.PuppetArmed);
+        OFS::Tooltip("While the video plays, hold a handle on the model and move it: the case for "
+                     "stroke, the ring for twist, the tip for roll and pitch, the floor square for "
+                     "surge and sway. Letting go writes what you did over the points already there.");
+        OFS::StepperInt("Reaction offset (ms)", "##PuppetOffsetMode", &simState.PuppetOffsetMs, 10, 0, 1000);
+        OFS::Tooltip("Writes recorded takes this much earlier than your hand moved, to make up for "
+                     "reacting a little after what you see.");
+        ImGui::Spacing();
+        const bool taking = app->simulator.PuppetTaking();
+        ImGui::PushStyleColor(ImGuiCol_Text, taking ? OFS_Sashimi::Role().Accent : OFS_Sashimi::Role().TextFaint);
+        ImGui::TextUnformatted(taking ? TR(RECORDING_ACTIVE) : TR(RECORDING_PAUSED));
+        ImGui::PopStyleColor();
+        return;
+    }
+    if (armedPuppet) {
+        app->simulator.PuppetArmed = false;
+        armedPuppet = false;
     }
 
     switch (activeType) {
@@ -648,6 +682,10 @@ void RecordingMode::Update() noexcept
 void RecordingMode::Finish() noexcept
 {
     OFS_PROFILE(__FUNCTION__);
+    if (armedPuppet) {
+        OpenFunscripter::ptr->simulator.PuppetArmed = false;
+        armedPuppet = false;
+    }
     // this fixes a bug when the mode gets changed during a recording
     if (recordingActive) {
         recordingAxisX = nullptr;

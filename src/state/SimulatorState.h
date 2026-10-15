@@ -66,6 +66,10 @@ struct SimulatorState
     // Experimental: handles on the 3D model to pose it and write the pose as
     // points. Off unless asked for.
     bool PoseHandles = false;
+    // Puppet recording: how much earlier than the hand moved a take's points
+    // are written, in milliseconds, to make up for reacting a little after
+    // what is seen.
+    int32_t PuppetOffsetMs = 0;
     // Keep the simulator inside the video player, sized to it, following the
     // player as its window is moved or resized. Which side it sits against,
     // 0 left, 1 centre, 2 right, and how tall, as a share of the player. On to
@@ -141,4 +145,5 @@ REFL_TYPE(SimulatorState)
 	REFL_FIELD(StrokeMin)
 	REFL_FIELD(StrokeMax)
 	REFL_FIELD(PoseHandles)
+	REFL_FIELD(PuppetOffsetMs)
 REFL_END

@@ -996,6 +996,11 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
     add("simulator_mode", std::to_string((int32_t)app->simulator.CurrentMode()));
     add("pose_shown", flag(app->simulator.PoseHandlesShown));
     add("pose_hint", flag(app->simulator.PoseHintShown));
+    add("puppet_armed", flag(app->simulator.PuppetArmed));
+    add("puppet_taking", flag(app->simulator.PuppetTaking()));
+    add("puppet_button", app->simulator.PuppetButtonShown
+        ? number(app->simulator.PuppetButtonCenter.x, "%.0f") + "," + number(app->simulator.PuppetButtonCenter.y, "%.0f")
+        : std::string("none"));
     add("pose_hovered", std::to_string((int32_t)app->simulator.PoseHovered));
     add("pose_dragging", std::to_string((int32_t)app->simulator.PoseDragging));
     {
@@ -1088,6 +1093,16 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
     add("device_moves", std::to_string(app->deviceLink->MovesSent()));
     add("device_channels", app->deviceLink->ChannelsSent());
     add("device_axes", app->deviceLink->AxisReport());
+    {
+        // Each channel on its own too, as device_axis:R1, for waituntil.
+        std::istringstream report(app->deviceLink->AxisReport());
+        std::string item;
+        while (std::getline(report, item, ',')) {
+            const auto colon = item.find(':');
+            if (colon == std::string::npos) continue;
+            add(("device_axis:" + item.substr(0, colon)).c_str(), item.substr(colon + 1));
+        }
+    }
     add("device_machine", std::to_string(app->deviceLink->CurrentMachine()));
     add("device_axes_home", flag(app->deviceLink->AllAxesHome()));
     add("device_stroke", std::to_string(app->deviceLink->StrokeValue()));

@@ -1035,6 +1035,12 @@ void OpenFunscripter::registerBindings()
                 false },
             "Pose the 3D simulator with handles (experimental)", "Utility");
 
+        keys->RegisterAction(
+            { "toggle_puppet_recording",
+                [this]() { simulator.PuppetArmed = !simulator.PuppetArmed; },
+                false },
+            "Arm or disarm puppet recording on the 3D simulator", "Utility");
+
         // The 3D model's easter egg, also on a checkbox in its settings.
         keys->RegisterAction(
             { "toggle_simulator_finish",

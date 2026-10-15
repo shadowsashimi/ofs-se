@@ -232,7 +232,25 @@ public:
 	bool PoseHintShown = false;
 	// The pose being dragged to on an axis, or below zero when none is.
 	inline float PoseValue(int32_t axis) const noexcept { return poseOverride[axis]; }
+	// The same for whichever axis a script drives, or below zero.
+	float PoseValueFor(const class Funscript* script) const noexcept;
+
+	// Puppet recording. Armed, the handles stay up while the video plays, and
+	// holding one records the axes it moves for as long as it is held: a take.
+	// Letting go writes the take, simplified, over the points it covers.
+	bool PuppetArmed = false;
+	inline bool PuppetTaking() const noexcept { return takeActive; }
+	// Where the record button under the model was drawn, for the UI tests.
+	ImVec2 PuppetButtonCenter = ImVec2(0.f, 0.f);
+	bool PuppetButtonShown = false;
 private:
+	// The take being recorded: each axis's samples, time and value.
+	bool takeActive = false;
+	std::vector<std::pair<float, float>> takeSamples[(int32_t)Axis::Count];
+	void startTake(const bool* hasTrack) noexcept;
+	void sampleTake(const bool* hasTrack) noexcept;
+	void commitTake(const bool* hasTrack) noexcept;
+	void drawPuppetButton(struct ImDrawList* drawList, ImGuiID simId, bool playing) noexcept;
 	// The pose being dragged to: each axis as dragged, before any snapping,
 	// and where it started, so letting go writes only the axes that moved.
 	float poseRaw[(int32_t)Axis::Count] = {};

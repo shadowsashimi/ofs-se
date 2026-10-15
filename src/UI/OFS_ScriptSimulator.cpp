@@ -4946,11 +4946,16 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
         // Escape drops the pose: nothing is written, and the model goes back
         // to what the scripts say.
         if (ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+            takeActive = false;
             cancelPose(simId);
             return;
         }
-        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-            commitPose(hasTrack);
+        // Letting go ends a take as it ends a pose; so does pausing, since a
+        // take is the stretch of video it was held over.
+        const bool paused = OpenFunscripter::ptr->player->IsPaused();
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left) || (takeActive && paused)) {
+            if (takeActive) commitTake(hasTrack);
+            else commitPose(hasTrack);
             PoseDragging = PoseHandle::None;
             if (ImGui::GetActiveID() == simId) ImGui::ClearActiveID();
             return;
@@ -4981,10 +4986,22 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
             poseLastRingAngle = angle;
         }
         else if (PoseDragging == PoseHandle::Tip || PoseDragging == PoseHandle::Floor) {
-            float change[2];
-            poseLean(PoseDragging, state, value, hasTrack, mouse - poseLastMouse, center, scale, change);
-            for (int32_t k = 0; k < 2; k += 1) {
-                if (handleAxes[k] >= 0) poseRaw[handleAxes[k]] += change[k] * speed;
+            // In steps of a few pixels, measured afresh at each: how the axes
+            // move the handle changes as it leans, and a fast flick taken in
+            // one step drifted onto the other axis.
+            const ImVec2 total = mouse - poseLastMouse;
+            const int32_t steps = Util::Clamp((int32_t)std::ceil(std::sqrt(ImLengthSqr(total)) / 4.f), 1, 64);
+            float stepValue[AxisCount];
+            for (int32_t i = 0; i < AxisCount; i += 1) stepValue[i] = value[i];
+            for (int32_t step = 0; step < steps; step += 1) {
+                float change[2];
+                poseLean(PoseDragging, state, stepValue, hasTrack, total * (1.f / (float)steps), center, scale, change);
+                for (int32_t k = 0; k < 2; k += 1) {
+                    const int32_t axis = handleAxes[k];
+                    if (axis < 0) continue;
+                    poseRaw[axis] += change[k] * speed;
+                    stepValue[axis] = Util::Clamp(poseRaw[axis], 0.f, 100.f);
+                }
             }
         }
         else {
@@ -5003,6 +5020,7 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
             poseRaw[axis] = Util::Clamp(poseRaw[axis], 0.f, 100.f);
             poseOverride[axis] = snap ? std::round(poseRaw[axis] / 5.f) * 5.f : poseRaw[axis];
         }
+        if (takeActive) sampleTake(hasTrack);
         return;
     }
 
@@ -5061,7 +5079,8 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
                   "Ctrl+Shift snaps to 5. Double click to set it back to the middle.").c_str()
             : PoseHandleMissing[(int32_t)hit]);
     }
-    if (usable && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
+    const bool playing = !OpenFunscripter::ptr->player->IsPaused();
+    if (usable && !playing && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
         // A double click sets the handle's axes back to the middle, 50, and
         // writes that like a drag would: a quick way to level a tilt or
         // straighten a twist.
@@ -5092,7 +5111,177 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
         else {
             poseAxisDirections(hit, state, value, hasTrack, center, scale, poseModeDir, poseModeEndOn);
         }
+        // Taken while the video plays, which only happens armed: a take.
+        if (playing && PuppetArmed) {
+            for (int32_t axis : PoseHandleAxes[(int32_t)hit]) {
+                if (axis >= 0 && hasTrack[axis]) poseOverride[axis] = value[axis];
+            }
+            startTake(hasTrack);
+        }
     }
+}
+
+float ScriptSimulator::PoseValueFor(const Funscript* script) const noexcept
+{
+    if (script == nullptr || PoseDragging == PoseHandle::None) return -1.f;
+    const int32_t axis = AxisFromLabel(AxisLabel(script));
+    return axis >= 0 ? poseOverride[axis] : -1.f;
+}
+
+void ScriptSimulator::startTake(const bool* hasTrack) noexcept
+{
+    takeActive = true;
+    for (auto& samples : takeSamples) samples.clear();
+    sampleTake(hasTrack);
+}
+
+void ScriptSimulator::sampleTake(const bool* hasTrack) noexcept
+{
+    const float time = OpenFunscripter::ptr->player->CurrentTime();
+    for (int32_t axis : PoseHandleAxes[(int32_t)PoseDragging]) {
+        if (axis < 0 || !hasTrack[axis] || poseOverride[axis] < 0.f) continue;
+        auto& samples = takeSamples[axis];
+        // Only forward. Playback can hold a frame for a draw or two, and a
+        // seek back during a take is not a stretch to write over.
+        if (!samples.empty() && time <= samples.back().first) continue;
+        samples.emplace_back(time, poseOverride[axis]);
+    }
+}
+
+namespace {
+// The samples worth keeping from a take: its ends, and between them every
+// sample needed so that a straight line through the kept ones is never
+// further than tolerance from a sample it skips, measured in position. The
+// Ramer-Douglas-Peucker idea, measured up and down only, so time and
+// position need no common scale.
+std::vector<std::pair<float, float>> simplifyTake(const std::vector<std::pair<float, float>>& samples, float tolerance) noexcept
+{
+    if (samples.size() <= 2) return samples;
+    std::vector<bool> keep(samples.size(), false);
+    keep.front() = keep.back() = true;
+    std::vector<std::pair<size_t, size_t>> spans{ { 0, samples.size() - 1 } };
+    while (!spans.empty()) {
+        const auto [from, to] = spans.back();
+        spans.pop_back();
+        if (to <= from + 1) continue;
+        const auto& a = samples[from];
+        const auto& b = samples[to];
+        float worst = 0.f;
+        size_t worstAt = from;
+        for (size_t i = from + 1; i < to; i += 1) {
+            const float t = (samples[i].first - a.first) / Util::Max(1e-6f, b.first - a.first);
+            const float line = a.second + ((b.second - a.second) * t);
+            const float off = std::abs(samples[i].second - line);
+            if (off > worst) {
+                worst = off;
+                worstAt = i;
+            }
+        }
+        if (worst > tolerance) {
+            keep[worstAt] = true;
+            spans.emplace_back(from, worstAt);
+            spans.emplace_back(worstAt, to);
+        }
+    }
+    std::vector<std::pair<float, float>> kept;
+    for (size_t i = 0; i < samples.size(); i += 1) {
+        if (keep[i]) kept.push_back(samples[i]);
+    }
+    return kept;
+}
+}
+
+void ScriptSimulator::commitTake(const bool* hasTrack) noexcept
+{
+    takeActive = false;
+    auto app = OpenFunscripter::ptr;
+    const auto& state = SimulatorState::State(stateHandle);
+    const float offset = (float)state.PuppetOffsetMs / 1000.f;
+    // Two positions either way keeps the shape of the motion while taking out
+    // the wobble of a hand, which is what makes a take editable.
+    constexpr float Tolerance = 2.f;
+
+    // Only the axes that moved: holding a handle still is not a take on it.
+    std::vector<std::pair<std::shared_ptr<Funscript>, int32_t>> writes;
+    for (int32_t axis : PoseHandleAxes[(int32_t)PoseDragging]) {
+        if (axis < 0 || !hasTrack[axis]) continue;
+        const auto& samples = takeSamples[axis];
+        if (samples.size() < 2) continue;
+        bool moved = false;
+        for (const auto& sample : samples) {
+            moved = moved || std::abs(sample.second - samples.front().second) >= 1.f;
+        }
+        if (!moved) continue;
+        if (auto script = poseScriptFor(axis)) writes.emplace_back(script, axis);
+    }
+    for (int32_t i = 0; i < AxisCount; i += 1) poseOverride[i] = -1.f;
+    if (writes.empty()) return;
+
+    UndoContextScripts scripts;
+    for (auto& [script, axis] : writes) scripts.push_back(script);
+    app->undoSystem->Snapshot(StateType::PUPPET_RECORDING, std::move(scripts));
+    for (auto& [script, axis] : writes) {
+        const auto& samples = takeSamples[axis];
+        const float from = Util::Max(0.f, samples.front().first - offset);
+        const float to = Util::Max(0.f, samples.back().first - offset);
+        script->RemoveActionsInInterval(from, to);
+        FunscriptArray actions;
+        for (const auto& [time, position] : simplifyTake(samples, Tolerance)) {
+            actions.emplace(FunscriptAction(Util::Max(0.f, time - offset), (int32_t)std::round(position)));
+        }
+        script->AddMultipleActions(actions);
+    }
+}
+
+// The record button, under the model: a dot and a word, the dot red while
+// armed and the whole pill lit while a take is being recorded. A click arms
+// and disarms it.
+void ScriptSimulator::drawPuppetButton(ImDrawList* drawList, ImGuiID simId, bool playing) noexcept
+{
+    const auto& role = OFS_Sashimi::Role();
+    const char* label = takeActive ? "Recording" : PuppetArmed ? "Record armed" : "Record";
+    const char* note = takeActive ? nullptr
+        : PuppetArmed ? (playing ? "hold a handle" : "play, then hold a handle")
+        : nullptr;
+    const ImVec2 labelSize = ImGui::CalcTextSize(label);
+    const ImVec2 noteSize = note ? ImGui::CalcTextSize(note) : ImVec2(0.f, 0.f);
+    const float dot = 4.f;
+    const ImVec2 pad(10.f, 4.f);
+    const float gap = note ? 12.f : 0.f;
+    const ImVec2 size((pad.x * 2.f) + (dot * 2.f) + 7.f + labelSize.x + gap + noteSize.x, labelSize.y + (pad.y * 2.f));
+    const ImVec2 min(((ModelDrawnMin.x + ModelDrawnMax.x) - size.x) * 0.5f, ModelDrawnMax.y + 8.f);
+    const ImVec2 max = min + size;
+    PuppetButtonCenter = (min + max) * 0.5f;
+    PuppetButtonShown = true;
+
+    const ImVec2 mouse = ImGui::GetIO().MousePos;
+    const bool hovered = PoseDragging == PoseHandle::None
+        && mouse.x >= min.x && mouse.x <= max.x && mouse.y >= min.y && mouse.y <= max.y
+        && simulatorCanTakeMouse(simId, true);
+    if (hovered) {
+        ImGui::SetHoveredID(ImGui::GetCurrentWindowRead()->ID);
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+        OFS::ShowWrappedTooltip(PuppetArmed
+            ? "Recording is armed. While the video plays, hold a handle on the model and move it: "
+              "every axis it moves is recorded until you let go, over the points already there. "
+              "Escape throws a take away. Click to disarm."
+            : "Record motion with the model's handles while the video plays. Click to arm.");
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) PuppetArmed = !PuppetArmed;
+    }
+
+    const float round = ImGui::GetStyle().FrameRounding > 0.f ? size.y * 0.5f : 0.f;
+    drawList->AddRectFilled(min, max, takeActive ? role.OnFill
+        : hovered ? IM_COL32(0x22, 0x22, 0x22, 0xE8) : IM_COL32(0x10, 0x10, 0x10, 0xE0), round);
+    drawList->AddRect(min, max, takeActive || PuppetArmed ? role.OnBorder
+        : hovered ? role.Outline : IM_COL32(255, 255, 255, 0x14), round);
+    const ImVec2 dotAt(min.x + pad.x + dot, (min.y + max.y) * 0.5f);
+    // A record dot reads as one in red whatever the theme's highlight is.
+    const uint32_t red = IM_COL32(0xE5, 0x3E, 0x3E, 0xFF);
+    if (PuppetArmed || takeActive) drawList->AddCircleFilled(dotAt, dot, red);
+    else drawList->AddCircle(dotAt, dot, OFS_Sashimi::Grey80, 0, 1.5f);
+    const ImVec2 textAt(dotAt.x + dot + 7.f, min.y + pad.y);
+    drawList->AddText(textAt, OFS_Sashimi::Grey95, label);
+    if (note) drawList->AddText(textAt + ImVec2(labelSize.x + gap, 0.f), role.TextFaint, note);
 }
 
 void ScriptSimulator::commitPose(const bool* hasTrack) noexcept
@@ -5571,6 +5760,13 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
                      "twist, the tip for roll and pitch, and the square on the floor for surge and sway. "
                      "Letting go adds a point at the playhead to each axis you moved. Ctrl drags slowly, "
                      "Ctrl+Shift snaps to steps of 5. Experimental, so it may change.");
+        ImGui::Checkbox("Puppet recording", &PuppetArmed);
+        OFS::Tooltip("While the video plays, hold a handle on the model and move it: every axis it "
+                     "moves is recorded until you let go, replacing the points already there. The "
+                     "Record button under the model does the same.");
+        OFS::StepperInt("Reaction offset (ms)", "##PuppetOffset", &state.PuppetOffsetMs, 10, 0, 1000);
+        OFS::Tooltip("Writes recorded takes this much earlier than your hand moved, to make up for "
+                     "reacting a little after what you see.");
         ImGui::Checkbox("Cutaway case", &state.CutawayCase);
         OFS::Tooltip("Remove the near half of the case so the sleeve inside is visible.");
         ImGui::Checkbox("Highlight ring", &state.ShowRim);
@@ -5814,7 +6010,10 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
             const int32_t axisIdx = AxisFromLabel(AxisLabel(script.get()));
             if (axisIdx >= 0) hasTrack[axisIdx] = true;
         }
-        const bool posing = state.PoseHandles && app->LoadedProject->IsValid() && app->player->IsPaused();
+        // Armed for puppet recording, they stay up while playing too.
+        const bool playing = !app->player->IsPaused();
+        const bool posing = app->LoadedProject->IsValid()
+            && ((state.PoseHandles && !playing) || PuppetArmed);
         if (posing) {
             // Every axis with a track counts as driven while posing, empty or
             // not. The frame the model is fitted by takes in the full swing of
@@ -5828,6 +6027,7 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
         }
         else if (PoseDragging != PoseHandle::None) {
             // Played or switched off mid drag: the pose is dropped unwritten.
+            takeActive = false;
             cancelPose(simId);
         }
         for (int32_t i = 0; i < (int32_t)Axis::Count; i += 1) {
@@ -5852,10 +6052,18 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
         // The handles go while playing, since the pose is written at the
         // playhead. Say why, rather than have them simply vanish.
         PoseHintShown = state.PoseHandles && !posing && app->LoadedProject->IsValid() && ModelDrawnValid;
+        // Under the model: the record button wherever the handles are on or
+        // recording is armed, and the hint below it.
+        PuppetButtonShown = false;
+        float hintY = ModelDrawnMax.y + 8.f;
+        if ((state.PoseHandles || PuppetArmed) && app->LoadedProject->IsValid() && ModelDrawnValid) {
+            drawPuppetButton(frontDraw, simId, playing);
+            hintY += ImGui::GetTextLineHeight() + 16.f;
+        }
         if (PoseHintShown) {
             const char* hint = "Pause to pose";
             const float width = ImGui::CalcTextSize(hint).x + 22.f;
-            posePill(frontDraw, ImVec2(((ModelDrawnMin.x + ModelDrawnMax.x) - width) * 0.5f, ModelDrawnMax.y + 8.f),
+            posePill(frontDraw, ImVec2(((ModelDrawnMin.x + ModelDrawnMax.x) - width) * 0.5f, hintY),
                 hint, nullptr, false);
         }
         if (ModelDrawnValid) {

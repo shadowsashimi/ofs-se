@@ -1,0 +1,120 @@
+# Puppet recording: armed, the 3D model's handles stay up while the video
+# plays, and holding one records the axes it moves until it is let go. The
+# take is simplified and written over the points it covers, as one undo.
+# Escape throws a take away. Add > OSR2 with twist is at 30 694, then
+# 41 555, at 1600x900.
+#! covers src/UI/OFS_ScriptSimulator.cpp:commitTake src/UI/OFS_ScriptSimulator.cpp:sampleTake src/UI/OFS_ScriptSimulator.cpp:drawPuppetButton src/OFS_ScriptingMode.cpp
+size 1600 900
+layout classic
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+click 30 694
+wait 10
+click 41 555
+wait 20
+expect script_axes stroke,twist,roll,pitch
+
+note armed, the handles are up and the record button shows under the model
+expect puppet_armed 0
+action toggle_puppet_recording
+wait 10
+expect puppet_armed 1
+expect pose_shown 1
+shot 01-armed
+
+note while playing, hold the tip and sway it side to side
+play
+wait 20
+expect pose_shown 1
+posehandle tip
+wait 3
+press left
+wait 3
+expect puppet_taking 1
+posehandle tip 25 0
+wait 15
+posehandle tip -40 0
+wait 15
+posehandle tip 40 0
+wait 15
+posehandle tip -40 0
+wait 15
+shot 02-taking
+release left
+wait 5
+expect puppet_taking 0
+pause
+wait 10
+note a take of a few points on roll, nothing on pitch, which was not moved
+waituntil actions:uitest.roll >= 4 5
+expect actions:uitest.pitch 0
+shot 03-written
+
+note one undo takes the whole take back out
+key ctrl+z
+wait 10
+expect actions:uitest.roll 0
+
+note Escape during a take throws it away
+play
+wait 10
+posehandle tip
+wait 3
+press left
+wait 3
+posehandle tip 30 0
+wait 15
+key escape
+wait 3
+expect puppet_taking 0
+release left
+pause
+wait 10
+expect actions:uitest.roll 0
+
+note pausing ends a take and writes it
+seek 8
+wait 10
+play
+wait 10
+posehandle tip
+wait 3
+press left
+wait 3
+posehandle tip 30 0
+wait 15
+posehandle tip -40 0
+wait 15
+pause
+wait 5
+expect puppet_taking 0
+release left
+wait 10
+waituntil actions:uitest.roll >= 2 5
+
+note disarmed, the handles go while playing
+action toggle_puppet_recording
+wait 5
+expect puppet_armed 0
+play
+wait 10
+expect pose_shown 0
+pause
+
+note Recording mode's 3D model input arms it too, and picking Mouse again
+note disarms it. Recording is at 432 45 on the toolbar; in the Mode panel
+note Mouse is at 1385 134 and 3D model at 1450 165.
+click 432 45
+wait 10
+click 1450 165
+wait 10
+expect puppet_armed 1
+shot 04-recording-mode
+click 1385 134
+wait 10
+expect puppet_armed 0
+quit

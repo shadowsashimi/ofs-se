@@ -1,0 +1,64 @@
+# A handle being dragged on the model drives a connected machine, so a pose or
+# a take can be felt as it is made: here the tip, rolled with the video
+# paused and every script empty, moves the roll channel of a wifi machine
+# (the stand-in from tcode.txt) off its rest. Add > OSR2 with twist is at
+# 30 694, then 41 555; the devices panel is as in tcode.txt.
+#! server mock-tcode
+#! covers src/api/OFS_DeviceLink.cpp src/UI/OFS_ScriptSimulator.cpp:PoseValueFor
+size 1600 900
+layout classic
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+click 30 694
+wait 10
+click 41 555
+wait 20
+expect script_axes stroke,twist,roll,pitch
+action toggle_pose_handles
+wait 10
+
+note connect to the stand-in on wifi
+click 266 13
+wait 5
+click 300 282
+wait 20
+expect show_devices 1
+click 1034 243
+wait 10
+dclick 792 346
+wait 3
+key ctrl+a
+type 127.0.0.1
+key enter
+wait 5
+click 792 534
+wait 10
+click 645 576
+wait 20
+expect device_status 2
+note close the panel again, so the model is in reach
+click 266 13
+wait 5
+click 300 282
+wait 20
+expect show_devices 0
+waituntil device_axis:R1 = 500 300
+
+note roll the tip with the video paused: the machine follows the hand
+posehandle tip
+wait 5
+press left
+wait 3
+posehandle tip 20 0
+wait 3
+posehandle tip 20 0
+wait 10
+waituntil device_axis:R1 >= 560 60
+shot 01-rolled
+release left
+wait 10
+quit
