@@ -28,6 +28,7 @@
 #include "OFS_ChapterManager.h"
 #include "UI/OFS_ScriptCheck.h"
 #include "api/OFS_DeviceLink.h"
+#include "UI/OFS_PreviewExport.h"
 #include "state/OpenFunscripterState.h"
 
 #include <memory>
@@ -46,6 +47,7 @@ class OpenFunscripter {
     // Scripted UI testing reaches into the app to open files, read state and
     // capture the window. See OFS_UiDriver.h.
     friend class OFS_UiDriver;
+    friend class OFS_PreviewExport;
     std::unique_ptr<class OFS_UiDriver> uiDriver;
 private:
     SDL_Window* window;
@@ -180,6 +182,7 @@ private:
     // before the dockspace is submitted. Done from the menu itself, in the
     // middle of a frame, the old Reset layout left the docking broken.
     std::optional<SavedLayout> pendingLayout;
+    OFS_PreviewExport previewExport;
     // Whether state.ofs holds the settings as they are now.
     static bool SettingsSaved() noexcept;
     bool pendingLayoutReset = false;

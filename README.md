@@ -69,6 +69,10 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
   down, and exports a copy within the limits you set.
 - **No video needed** - start a script on a blank timeline of a chosen
   length.
+- **Preview videos** - *File → Export → Export preview video* makes a clip
+  for sharing: the video with the simulator, a strip of the tracks and the
+  heatmap over it, any of them switched off. MP4 with the sound, or an
+  animated WebP or GIF. It renders in the background while you keep working.
 - **Funscript 2.0 and 1.1** - full read and write support for the latest
   funscript formats.
 

@@ -1364,7 +1364,7 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
     // change in insertion rather than from position, because what drags them
     // is the rod moving, not where it happens to be.
     {
-        const float dt = Util::Clamp(ImGui::GetIO().DeltaTime, 1.f / 480.f, 1.f / 20.f);
+        const float dt = Util::Clamp(modelDeltaTime(), 1.f / 480.f, 1.f / 20.f);
         // Flesh, not rubber tubing: the ridges are carried along by the rod's
         // own movement through them, as friction does, and held back by the
         // wall they belong to, so they travel with each stroke, overshoot as it
@@ -1490,7 +1490,7 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
     // and wobbles back when the head draws away, a damped spring towards how
     // far the rod reaches past it.
     {
-        const float pressDt = Util::Clamp(ImGui::GetIO().DeltaTime, 1.f / 480.f, 1.f / 20.f);
+        const float pressDt = Util::Clamp(modelDeltaTime(), 1.f / 480.f, 1.f / 20.f);
         const float want = Util::Clamp(rodTipY + 0.004f - (strokeOffset + (CervixTipY * HalfLength)), 0.f, CervixPressMax);
         cervixPressVel = (cervixPressVel + ((400.f * (want - cervixPress)) * pressDt))
             / (1.f + (22.f * pressDt) + (400.f * pressDt * pressDt));
@@ -1769,7 +1769,7 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
                 lipGape.assign(RingCount, 0.f);
                 lipGapeVel.assign(RingCount, 0.f);
             }
-            const float lipDt = Util::Clamp(ImGui::GetIO().DeltaTime, 1.f / 480.f, 1.f / 30.f);
+            const float lipDt = Util::Clamp(modelDeltaTime(), 1.f / 480.f, 1.f / 30.f);
             const float restRx = r * Profile[s].sx;
             const float restRz = r * ringSquashZ[s];
             const float target = Util::Max(0.f, Util::Max(rx - restRx, rz - restRz));
@@ -3074,7 +3074,7 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
     // the canal from the tip. It gathers at the closed end of the sleeve, is
     // pushed ahead of the rod when the rod comes up under it, and fades.
     if(FinishEasterEgg) {
-        const float dt = Util::Clamp(ImGui::GetIO().DeltaTime, 1.f / 480.f, 0.1f);
+        const float dt = Util::Clamp(modelDeltaTime(), 1.f / 480.f, 0.1f);
         if(finishCanalCoat.size() != (size_t)RingCount) finishCanalCoat.assign(RingCount, 0.f);
         if(finishRodCoat.size() != (size_t)(RodBands + 1)) finishRodCoat.assign(RodBands + 1, 0.f);
         const float rodSpeed = finishLastInsertion >= 0.f ? std::abs(insertion - finishLastInsertion) / dt : 0.f;
@@ -5119,6 +5119,119 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
             startTake(hasTrack);
         }
     }
+}
+
+float ScriptSimulator::modelDeltaTime() const noexcept
+{
+    return motionDtOverride >= 0.f ? motionDtOverride : ImGui::GetIO().DeltaTime;
+}
+
+ScriptSimulator::ModelMotion ScriptSimulator::captureMotion() const noexcept
+{
+    ModelMotion m;
+#define OFS_MOTION_CAPTURE(type, name, init) m.name = name;
+    OFS_MODEL_MOTION(OFS_MOTION_CAPTURE)
+#undef OFS_MOTION_CAPTURE
+    return m;
+}
+
+void ScriptSimulator::restoreMotion(const ModelMotion& m) noexcept
+{
+#define OFS_MOTION_RESTORE(type, name, init) name = m.name;
+    OFS_MODEL_MOTION(OFS_MOTION_RESTORE)
+#undef OFS_MOTION_RESTORE
+}
+
+void ScriptSimulator::DrawExportFrame(ImDrawList* drawList, ImVec2 areaMin, ImVec2 areaMax,
+    float time, float dt, bool restart) noexcept
+{
+    auto app = OpenFunscripter::ptr;
+    const auto& state = SimulatorState::State(stateHandle);
+    const auto& scripts = app->LoadedFunscripts();
+    const float areaW = areaMax.x - areaMin.x;
+    const float areaH = areaMax.y - areaMin.y;
+    if (areaW <= 1.f || areaH <= 1.f) return;
+
+    if (!state.ShowMultiAxis) {
+        // The bar, upright against the right of the area.
+        auto active = app->ActiveFunscript();
+        if (!active) return;
+        AxisBar bar;
+        const float x = areaMax.x - Util::Max(state.Width, areaW * 0.06f);
+        bar.p1 = ImVec2(x, areaMin.y + (areaH * 0.08f));
+        bar.p2 = ImVec2(x, areaMax.y - (areaH * 0.08f));
+        bar.position = active->GetPositionAtTime(time);
+        bar.script = active.get();
+        bar.frontColor = state.Front;
+        bar.isActive = true;
+        drawAxisBar(drawList, state, bar, time, false);
+        return;
+    }
+
+    // What the live simulator was doing, put back afterwards: its motion, how
+    // it was last drawn, and the parts of it that are not for a video, which
+    // are the easter egg and the pose guides.
+    const ModelMotion live = captureMotion();
+    const ImVec2 liveMin = ModelDrawnMin, liveMax = ModelDrawnMax;
+    const bool liveValid = ModelDrawnValid;
+    const bool liveFinish = FinishEasterEgg;
+    const bool livePosing = posingThisFrame;
+    bool liveLit[(int32_t)Axis::Count];
+    for (int32_t i = 0; i < (int32_t)Axis::Count; i += 1) {
+        liveLit[i] = poseLitAxis[i];
+        poseLitAxis[i] = false;
+    }
+    FinishEasterEgg = false;
+    posingThisFrame = false;
+    motionDtOverride = Util::Max(1e-4f, dt);
+    if (restart) exportMotion = ModelMotion();
+
+    MultiAxisValues axes;
+    for (const auto& script : scripts) {
+        const int32_t axisIdx = AxisFromLabel(AxisLabel(script.get()));
+        if (axisIdx < 0 || script->Actions().empty()) continue;
+        axes.value[axisIdx] = script->GetPositionAtTime(time);
+        axes.mapped[axisIdx] = true;
+    }
+
+    // Fitted once per video, from the model's drawn extent at a unit size,
+    // which takes in the full swing of each axis, so it holds still as the
+    // axes move.
+    if (restart) {
+        ImDrawList scratch(ImGui::GetDrawListSharedData());
+        scratch._ResetForNewFrame();
+        scratch.PushClipRectFullScreen();
+        scratch.PushTextureID(ImGui::GetIO().Fonts->TexID);
+        constexpr float Unit = 100.f;
+        restoreMotion(exportMotion);
+        ModelDrawnValid = false;
+        drawMultiAxisModel(&scratch, state, axes, ImVec2(0.f, 0.f), Unit);
+        if (ModelDrawnValid) {
+            exportRelMin = ModelDrawnMin / Unit;
+            exportRelMax = ModelDrawnMax / Unit;
+        }
+        else {
+            exportRelMin = ImVec2(-1.f, -1.f);
+            exportRelMax = ImVec2(1.f, 1.f);
+        }
+    }
+    const ImVec2 rel = exportRelMax - exportRelMin;
+    const float scale = Util::Min((areaH * 0.94f) / Util::Max(1e-3f, rel.y), (areaW * 0.94f) / Util::Max(1e-3f, rel.x));
+    const ImVec2 center(areaMax.x - (areaW * 0.03f) - (exportRelMax.x * scale),
+        ((areaMin.y + areaMax.y) * 0.5f) - (((exportRelMin.y + exportRelMax.y) * 0.5f) * scale));
+
+    restoreMotion(exportMotion);
+    drawMultiAxisModel(drawList, state, axes, center, scale);
+    exportMotion = captureMotion();
+
+    restoreMotion(live);
+    ModelDrawnMin = liveMin;
+    ModelDrawnMax = liveMax;
+    ModelDrawnValid = liveValid;
+    FinishEasterEgg = liveFinish;
+    posingThisFrame = livePosing;
+    for (int32_t i = 0; i < (int32_t)Axis::Count; i += 1) poseLitAxis[i] = liveLit[i];
+    motionDtOverride = -1.f;
 }
 
 float ScriptSimulator::PoseValueFor(const Funscript* script) const noexcept

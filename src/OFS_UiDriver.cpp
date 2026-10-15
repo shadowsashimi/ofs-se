@@ -471,6 +471,20 @@ bool OFS_UiDriver::parse(const std::string& script, const std::string& media) no
         else if (command == "kill") {
             push(Op{ OpType::Kill });
         }
+        else if (command == "preview") {
+            Op op;
+            op.type = OpType::PreviewExport;
+            std::string format, parts;
+            float height = 0.f;
+            if (!(args >> op.text >> format >> height >> op.x >> op.y)) {
+                fail("preview needs PATH FORMAT HEIGHT START END");
+                continue;
+            }
+            args >> parts;
+            op.n = format == "webp" ? 1 : format == "gif" ? 2 : 0;
+            op.text2 = std::to_string((int32_t)height) + " " + (parts.empty() ? "video,simulator,timeline,heatmap" : parts);
+            push(op);
+        }
         else if (command == "layout") {
             Op op;
             op.type = OpType::Layout;
@@ -595,6 +609,22 @@ void OFS_UiDriver::execute(const Op& op) noexcept
             log("open " + op.text);
             app->openFile(op.text);
             break;
+        case OpType::PreviewExport: {
+            log("preview " + op.text);
+            OFS_PreviewExport::Options options;
+            std::istringstream extra(op.text2);
+            std::string parts;
+            extra >> options.height >> parts;
+            options.format = op.n;
+            options.start = op.x;
+            options.end = op.y;
+            options.video = parts.find("video") != std::string::npos;
+            options.simulator = parts.find("simulator") != std::string::npos;
+            options.timeline = parts.find("timeline") != std::string::npos;
+            options.heatmap = parts.find("heatmap") != std::string::npos;
+            app->previewExport.StartTo(op.text, options);
+            break;
+        }
         case OpType::Layout:
             loadLayout(op.text, op.line);
             break;
@@ -997,6 +1027,8 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
     add("pose_shown", flag(app->simulator.PoseHandlesShown));
     add("pose_hint", flag(app->simulator.PoseHintShown));
     add("puppet_armed", flag(app->simulator.PuppetArmed));
+    add("preview_stage", app->previewExport.StageName());
+    add("preview_frames", std::to_string(app->previewExport.FramesDone()) + "/" + std::to_string(app->previewExport.FramesTotal()));
     add("puppet_taking", flag(app->simulator.PuppetTaking()));
     add("puppet_button", app->simulator.PuppetButtonShown
         ? number(app->simulator.PuppetButtonCenter.x, "%.0f") + "," + number(app->simulator.PuppetButtonCenter.y, "%.0f")
