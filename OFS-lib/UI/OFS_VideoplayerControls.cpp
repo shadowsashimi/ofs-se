@@ -636,12 +636,22 @@ void OFS_VideoplayerControls::DrawTimeline() noexcept
         ImGui::Text("%s / %s", timeBuf1, timeBuf2);
     }
     // The measured speed, only while it is not keeping up with the set one:
-    // otherwise it repeats the speed field beside it.
-    if (!player->IsPaused() && std::abs(actualPlaybackSpeed - player->CurrentSpeed()) > 0.05f) {
+    // otherwise it repeats the speed field beside it. It has a slot of its
+    // own, blank the rest of the time, so the buttons after it stay put
+    // rather than being pushed along whenever it appears.
+    {
         ImGui::SameLine();
-        ImGui::TextDisabled("x%.2f", actualPlaybackSpeed);
-        OFS::Tooltip("Measured playback speed. It falls below the set speed when the video "
-                     "cannot be decoded fast enough to keep up.");
+        const ImVec2 at = ImGui::GetCursorScreenPos();
+        const float slot = ImGui::CalcTextSize("x0.00").x;
+        ImGui::Dummy(ImVec2(slot, ImGui::GetFrameHeight()));
+        if (!player->IsPaused() && std::abs(actualPlaybackSpeed - player->CurrentSpeed()) > 0.05f) {
+            char measured[16];
+            snprintf(measured, sizeof(measured), "x%.2f", actualPlaybackSpeed);
+            ImGui::GetWindowDrawList()->AddText(ImVec2(at.x, at.y + style.FramePadding.y),
+                ImGui::GetColorU32(ImGuiCol_TextDisabled), measured);
+            OFS::Tooltip("Measured playback speed. It falls below the set speed when the video "
+                         "cannot be decoded fast enough to keep up.");
+        }
     }
 
     ImGui::SameLine(0.f, groupGap);

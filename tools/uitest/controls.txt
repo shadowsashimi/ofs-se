@@ -1,9 +1,9 @@
 # The player controls and the timeline's zoom, with the mouse.
 # At 1600x900 everything that drives playback is one row along y 812:
 # previous frame 26, back 3 s 73, play 118, forward 3 s 164, next frame 211,
-# the time, then -10% at 545, the speed field 604, +10% 671, 1x 718, mute
-# 775 and the volume slider from 800 to the edge; the seek bar along y 853
-# from x 12 to 1588.
+# the time and a slot for the measured speed, then -10% at 594, the speed
+# field 653, +10% 720, 1x 767, mute 824 and the volume slider from 849 to
+# the edge; the seek bar along y 853 from x 12 to 1588.
 #! covers OFS-lib/UI/OFS_VideoplayerControls.* OFS-lib/UI/OFS_Videopreview.* OFS-lib/UI/GradientBar.* OFS-lib/Funscript/FunscriptHeatmap.* OFS-lib/UI/OFS_ScriptTimeline.* OFS-lib/videoplayer/* OFS-lib/OFS_MpvLoader.*
 size 1600 900
 layout classic
@@ -29,22 +29,22 @@ wait 15
 expect player_time 8.000
 
 note speed up by a tenth, then back to normal
-click 671 812
+click 720 812
 wait 5
 expect speed 1.10
-click 718 812
+click 767 812
 wait 5
 expect speed 1.00
 
 note type a speed into the field and press Enter
-dclick 604 812
+dclick 653 812
 wait 5
 key ctrl+a
 type 0.5
 key enter
 wait 5
 expect speed 0.50
-click 718 812
+click 767 812
 wait 5
 expect speed 1.00
 
