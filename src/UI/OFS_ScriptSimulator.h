@@ -243,6 +243,8 @@ public:
 	// Where the record button under the model was drawn, for the UI tests.
 	ImVec2 PuppetButtonCenter = ImVec2(0.f, 0.f);
 	bool PuppetButtonShown = false;
+	// The top and side views are showing, for the UI tests.
+	bool InsetViewsShown = false;
 
 	// One frame of the simulator for a preview video: the model, or the bar
 	// in 2D, at a time in the scripts, fitted into an area of an image being
@@ -275,6 +277,19 @@ private:
 #undef OFS_MOTION_FIELD
 	};
 	ModelMotion captureMotion() const noexcept;
+	// The top and side views, drawn after the model itself.
+	void drawInsetViews(struct ImDrawList* drawList, const struct SimulatorState& state,
+		const MultiAxisValues& axes, ImVec2 modelCenter, float modelScale) noexcept;
+	// Each inset's extent at a unit size, measured now and then rather than
+	// every frame, and how many frames ago.
+	ImVec2 insetRelMin[2] = { ImVec2(-1.f, -1.f), ImVec2(-1.f, -1.f) };
+	ImVec2 insetRelMax[2] = { ImVec2(1.f, 1.f), ImVec2(1.f, 1.f) };
+	int32_t insetMeasuredFrame = -1000;
+	// The main model's extent at rest, at a unit size, which the views are
+	// placed beside: placed beside its extent as drawn, they moved whenever
+	// a guide swung out with the pose.
+	ImVec2 insetAnchorMin = ImVec2(-1.f, -1.f);
+	ImVec2 insetAnchorMax = ImVec2(1.f, 1.f);
 	void restoreMotion(const ModelMotion& motion) noexcept;
 	// The preview video's own motion, and how its model is fitted.
 	ModelMotion exportMotion;

@@ -1,0 +1,38 @@
+# The 3D simulator's top and side views: two small views beside the model,
+# from straight above and from the side, moving with it. Off to begin with.
+# Add > OSR2 with twist is at 30 694, then 41 555, at 1600x900.
+#! covers src/UI/OFS_ScriptSimulator.cpp:drawInsetViews
+size 1600 900
+layout classic
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+click 30 694
+wait 10
+click 41 555
+wait 20
+expect inset_views 0
+action toggle_simulator_views
+wait 10
+expect inset_views 1
+shot 01-views
+
+note leaning and slid, which the top view shows as a move across the floor
+simaxis stroke 60
+simaxis sway 90
+simaxis surge 80
+simaxis roll 80
+simaxis pitch 75
+simaxis twist 70
+wait 60
+expect inset_views 1
+shot 02-posed
+
+note and off again
+action toggle_simulator_views
+wait 10
+expect inset_views 0
+quit

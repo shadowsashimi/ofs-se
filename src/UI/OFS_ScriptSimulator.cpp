@@ -5160,6 +5160,105 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
     }
 }
 
+void ScriptSimulator::drawInsetViews(ImDrawList* drawList, const SimulatorState& state,
+    const MultiAxisValues& axes, ImVec2 modelCenter, float modelScale) noexcept
+{
+    if (!state.InsetViews || !ModelDrawnValid) return;
+
+    // The extent of each view at a unit size, and of the main model at rest,
+    // measured again twice a second, in case a setting that changes them
+    // has moved.
+    const int32_t frame = ImGui::GetFrameCount();
+    const bool measure = frame - insetMeasuredFrame > 30;
+    if (measure) insetMeasuredFrame = frame;
+
+    // What the live model was doing, put back afterwards, so these extra
+    // draws neither step its springs nor move its frame.
+    const ModelMotion live = captureMotion();
+    const ImVec2 liveMin = ModelDrawnMin, liveMax = ModelDrawnMax;
+    const bool liveValid = ModelDrawnValid;
+    const bool liveFinish = FinishEasterEgg;
+    const bool livePosing = posingThisFrame;
+    bool liveLit[(int32_t)Axis::Count];
+    for (int32_t i = 0; i < (int32_t)Axis::Count; i += 1) {
+        liveLit[i] = poseLitAxis[i];
+        poseLitAxis[i] = false;
+    }
+    FinishEasterEgg = false;
+    posingThisFrame = false;
+
+    constexpr float Unit = 100.f;
+    auto measureAt = [&](const SimulatorState& view, const MultiAxisValues& values, ImVec2& outMin, ImVec2& outMax) noexcept {
+        ImDrawList scratch(ImGui::GetDrawListSharedData());
+        scratch._ResetForNewFrame();
+        scratch.PushClipRectFullScreen();
+        scratch.PushTextureID(ImGui::GetIO().Fonts->TexID);
+        restoreMotion(live);
+        ModelDrawnValid = false;
+        drawMultiAxisModel(&scratch, view, values, ImVec2(0.f, 0.f), Unit);
+        if (ModelDrawnValid) {
+            outMin = ModelDrawnMin / Unit;
+            outMax = ModelDrawnMax / Unit;
+        }
+    };
+    if (measure) measureAt(state, MultiAxisValues(), insetAnchorMin, insetAnchorMax);
+
+    // Beside the model at rest, a third of its height each, stacked: on its
+    // left, where Fit to video's usual place against the right of the
+    // picture leaves room, or on its right when the left is off the screen.
+    const ImVec2 modelMin = modelCenter + (insetAnchorMin * modelScale);
+    const ImVec2 modelMax = modelCenter + (insetAnchorMax * modelScale);
+    const float side = Util::Max(90.f, (modelMax.y - modelMin.y) * 0.32f);
+    const float gap = 8.f;
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    float x = modelMin.x - gap - side;
+    if (x < viewport->Pos.x + gap) x = modelMax.x + gap;
+    const ImVec2 boxes[2][2] = {
+        { ImVec2(x, modelMin.y), ImVec2(x + side, modelMin.y + side) },
+        { ImVec2(x, modelMin.y + side + gap), ImVec2(x + side, modelMin.y + (side * 2.f) + gap) },
+    };
+    struct View { const char* name; float yaw; float elevation; };
+    // From straight above with the front toward the bottom, and from the
+    // viewer's right.
+    static constexpr View Views[2] = { { "Top", 0.f, 89.f }, { "Side", 90.f, 0.f } };
+
+    const auto& role = OFS_Sashimi::Role();
+    for (int32_t v = 0; v < 2; v += 1) {
+        SimulatorState view = state;
+        view.CameraYaw = Views[v].yaw;
+        view.CameraElevation = Views[v].elevation;
+        view.ShowAxisReadout = false;
+        if (measure) measureAt(view, MultiAxisValues(), insetRelMin[v], insetRelMax[v]);
+        const ImVec2 min = boxes[v][0], max = boxes[v][1];
+        const float round = ImGui::GetStyle().FrameRounding > 0.f ? 6.f : 0.f;
+        drawList->AddRectFilled(min, max, IM_COL32(0x10, 0x10, 0x10, 0xC8), round);
+        drawList->AddRect(min, max, IM_COL32(255, 255, 255, 0x18), round);
+
+        // Closer in than the whole of the floor and wall, which left the
+        // model small in the middle; the box clips what reaches past it.
+        const ImVec2 rel = insetRelMax[v] - insetRelMin[v];
+        const float inner = side * 1.35f;
+        const float scale = Util::Min(inner / Util::Max(1e-3f, rel.x), inner / Util::Max(1e-3f, rel.y));
+        const ImVec2 boxCentre = (min + max) * 0.5f;
+        const ImVec2 centre = boxCentre - (((insetRelMin[v] + insetRelMax[v]) * 0.5f) * scale);
+
+        restoreMotion(live);
+        drawList->PushClipRect(min, max, true);
+        drawMultiAxisModel(drawList, view, axes, centre, scale);
+        drawList->PopClipRect();
+        drawList->AddText(min + ImVec2(7.f, 4.f), role.TextFaint, Views[v].name);
+    }
+
+    restoreMotion(live);
+    ModelDrawnMin = liveMin;
+    ModelDrawnMax = liveMax;
+    ModelDrawnValid = liveValid;
+    FinishEasterEgg = liveFinish;
+    posingThisFrame = livePosing;
+    for (int32_t i = 0; i < (int32_t)Axis::Count; i += 1) poseLitAxis[i] = liveLit[i];
+    InsetViewsShown = true;
+}
+
 float ScriptSimulator::modelDeltaTime() const noexcept
 {
     return motionDtOverride >= 0.f ? motionDtOverride : ImGui::GetIO().DeltaTime;
@@ -5927,6 +6026,9 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
         OFS::StepperInt("Reaction offset (ms)", "##PuppetOffset", &state.PuppetOffsetMs, 10, 0, 1000);
         OFS::Tooltip("Writes recorded takes this much earlier than your hand moved, to make up for "
                      "reacting a little after what you see.");
+        ImGui::Checkbox("Top and side views", &state.InsetViews);
+        OFS::Tooltip("Two small views beside the model, from straight above and from the side, so "
+                     "surge, sway and twist, and pitch, can be read without turning the camera.");
         ImGui::Checkbox("Cutaway case", &state.CutawayCase);
         OFS::Tooltip("Remove the near half of the case so the sleeve inside is visible.");
         ImGui::Checkbox("Highlight ring", &state.ShowRim);
@@ -6129,6 +6231,7 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
     poseTookMouse = false;
     PoseHandlesShown = false;
     PoseHintShown = false;
+    InsetViewsShown = false;
     if(state.ShowMultiAxis) {
         // Every loaded script feeds one degree of freedom of a single model.
         MultiAxisValues axes;
@@ -6231,6 +6334,7 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
             fitRelMax = (ModelDrawnMax - modelCenter) / modelScale;
             fitRelValid = true;
         }
+        drawInsetViews(frontDraw, state, axes, modelCenter, modelScale);
     }
     else {
         AxisBar bar;

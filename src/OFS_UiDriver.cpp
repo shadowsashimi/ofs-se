@@ -991,6 +991,7 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
     add("waveform_busy", flag(app->scriptTimeline.WaveformBusy()));
     add("waveform_channel", std::to_string(app->scriptTimeline.WaveformChannelShown()));
     add("snap_beats", flag(BaseOverlay::State().SnapToBeats));
+    add("inset_views", flag(app->simulator.InsetViewsShown));
     add("speed_colors", std::to_string(BaseOverlay::State().SpeedColors));
     add("waveform_samples", std::to_string(app->scriptTimeline.Wave.data.SampleCount()));
     add("waveform_bass", flag(app->scriptTimeline.WaveformIsBass()));

@@ -1081,6 +1081,15 @@ void OpenFunscripter::registerBindings()
             "Toggle the 3D simulator's cutaway", "Utility");
 
         keys->RegisterAction(
+            { "toggle_simulator_views",
+                [this]() {
+                    auto& simState = SimulatorState::State(simulator.StateHandle());
+                    simState.InsetViews = !simState.InsetViews;
+                },
+                false },
+            "Show or hide the 3D simulator's top and side views", "Utility");
+
+        keys->RegisterAction(
             { "toggle_simulator_rod",
                 [this]() {
                     auto& simState = SimulatorState::State(simulator.StateHandle());
