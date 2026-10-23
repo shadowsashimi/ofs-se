@@ -315,6 +315,17 @@ __declspec(dllimport) void *__stdcall CreateEventA(LPSECURITY_ATTRIBUTES, int,
 __declspec(dllimport) int __stdcall CreateProcessA(
     const char *, char *, LPSECURITY_ATTRIBUTES, LPSECURITY_ATTRIBUTES, int,
     unsigned long, void *, const char *, LPSTARTUPINFOA, LPPROCESS_INFORMATION);
+// OFS-SE: the command line is passed on as UTF-16, so arguments outside the
+// ANSI code page, such as a file named in Japanese, reach the program intact.
+// CreateProcessA turned them into question marks.
+__declspec(dllimport) int __stdcall CreateProcessW(
+    const wchar_t *, wchar_t *, LPSECURITY_ATTRIBUTES, LPSECURITY_ATTRIBUTES,
+    int, unsigned long, void *, const wchar_t *, struct _STARTUPINFOW *,
+    LPPROCESS_INFORMATION);
+__declspec(dllimport) int __stdcall MultiByteToWideChar(unsigned int,
+                                                        unsigned long,
+                                                        const char *, int,
+                                                        wchar_t *, int);
 __declspec(dllimport) int __stdcall CloseHandle(void *);
 __declspec(dllimport) unsigned long __stdcall WaitForSingleObject(
     void *, unsigned long);
@@ -661,19 +672,37 @@ int subprocess_create_ex(const char *const commandLine[], int options,
 
   commandLineCombined[len] = '\0';
 
-  if (!CreateProcessA(
-          SUBPROCESS_NULL,
-          commandLineCombined, // command line
-          SUBPROCESS_NULL,     // process security attributes
-          SUBPROCESS_NULL,     // primary thread security attributes
-          1,                   // handles are inherited
-          createNoWindow,      // creation flags
-          used_environment,    // used environment
-          SUBPROCESS_NULL,     // use parent's current directory
-          SUBPROCESS_PTR_CAST(LPSTARTUPINFOA,
-                              &startInfo), // STARTUPINFO pointer
-          SUBPROCESS_PTR_CAST(LPPROCESS_INFORMATION, &processInfo))) {
-    return -1;
+  // OFS-SE: the arguments are UTF-8; Windows wants them as UTF-16 to keep
+  // every character. STARTUPINFOA and STARTUPINFOW have the same layout.
+  {
+    const int wideLen = MultiByteToWideChar(65001 /* CP_UTF8 */, 0,
+                                            commandLineCombined, -1,
+                                            SUBPROCESS_NULL, 0);
+    wchar_t *commandLineWide;
+    if (wideLen <= 0) {
+      return -1;
+    }
+    commandLineWide = SUBPROCESS_CAST(
+        wchar_t *, _alloca(SUBPROCESS_CAST(size_t, wideLen) * sizeof(wchar_t)));
+    if (!commandLineWide ||
+        MultiByteToWideChar(65001, 0, commandLineCombined, -1, commandLineWide,
+                            wideLen) <= 0) {
+      return -1;
+    }
+    if (!CreateProcessW(
+            SUBPROCESS_NULL,
+            commandLineWide,  // command line
+            SUBPROCESS_NULL,  // process security attributes
+            SUBPROCESS_NULL,  // primary thread security attributes
+            1,                // handles are inherited
+            createNoWindow,   // creation flags
+            used_environment, // used environment, ANSI as before
+            SUBPROCESS_NULL,  // use parent's current directory
+            SUBPROCESS_PTR_CAST(struct _STARTUPINFOW *,
+                                &startInfo), // STARTUPINFO pointer
+            SUBPROCESS_PTR_CAST(LPPROCESS_INFORMATION, &processInfo))) {
+      return -1;
+    }
   }
 
   out_process->hProcess = processInfo.hProcess;

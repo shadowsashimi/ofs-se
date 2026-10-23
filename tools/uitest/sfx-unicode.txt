@@ -1,0 +1,17 @@
+# A sound effect named in Japanese, as SFX packs often are. ffmpeg used to be
+# handed the name as question marks and could not open the file, and the
+# waveform came up empty, or as whatever file had been opened before it.
+# Four seconds of a tone on and off every half second, about 588 samples.
+#! covers lib/stb/subprocess.h OFS-lib/UI/OFS_Waveform.*
+#! media wav-japanese
+size 1600 900
+wait 30
+open $MEDIA
+wait 120
+expect project_valid 1
+expect audio_only 1
+waituntil waveform_busy = 0 600
+waituntil waveform_samples >= 560 60
+expect waveform_shown 1
+shot 01-waveform
+quit

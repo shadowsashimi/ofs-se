@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <cstdio>
+#include <cstring>
 #include <fstream>
 #include <sstream>
 
@@ -43,10 +44,18 @@ std::unique_ptr<OFS_UiDriver> OFS_UiDriver::FromEnvironment() noexcept
     if (!Enabled()) return nullptr;
 
     // Copied straight away: on Windows SDL_getenv hands back the same buffer
-    // every call, so a second lookup overwrites the first.
+    // every call, so a second lookup overwrites the first. On Windows read as
+    // UTF-16 and turned into UTF-8, since SDL_getenv gives the ANSI code page,
+    // where a media file named in Japanese came through as question marks.
     auto readEnv = [](const char* name) {
+#ifdef _WIN32
+        const std::wstring wideName(name, name + std::strlen(name));
+        const wchar_t* value = _wgetenv(wideName.c_str());
+        return value != nullptr ? std::filesystem::path(value).u8string() : std::string();
+#else
         const char* value = SDL_getenv(name);
         return std::string(value != nullptr ? value : "");
+#endif
     };
     const std::string scriptPath = readEnv("OFS_UITEST_SCRIPT");
     const std::string outPath = readEnv("OFS_UITEST_OUT");
@@ -950,6 +959,7 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
     }
     add("waveform_shown", flag(app->scriptTimeline.WaveformShown()));
     add("waveform_busy", flag(app->scriptTimeline.WaveformBusy()));
+    add("waveform_samples", std::to_string(app->scriptTimeline.Wave.data.SampleCount()));
     add("waveform_bass", flag(app->scriptTimeline.WaveformIsBass()));
     add("beat_ticks", std::to_string(app->scriptTimeline.BeatTickCount()));
     add("standalone", flag(app->LoadedProject->IsValid() && app->LoadedProject->IsStandalone()));

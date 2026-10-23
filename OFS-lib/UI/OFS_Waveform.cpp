@@ -14,7 +14,13 @@
 
 bool OFS_Waveform::LoadFlac(const std::string& output) noexcept
 {
+#ifdef _WIN32
+	// By its UTF-16 name: the profile it sits in can have any characters in
+	// it, and fopen reads a name in the ANSI code page.
+	drflac* flac = drflac_open_file_w(Util::PathFromString(output).wstring().c_str(), NULL);
+#else
 	drflac* flac = drflac_open_file(output.c_str(), NULL);
+#endif
 	if (!flac) return false;
 
 	std::vector<drflac_int16> ChunkSamples; ChunkSamples.resize(48000);
@@ -65,6 +71,15 @@ bool OFS_Waveform::GenerateAndLoadFlac(const std::string& ffmpegPath, const std:
 {
 	generating = true;
 
+	// The file is shared from one waveform to the next. Gone before ffmpeg
+	// runs, a failed run leaves no waveform rather than the last file's: a
+	// sound effect named in Japanese, which ffmpeg was once handed as question
+	// marks, came up with the waveform of whatever was opened before it.
+	{
+		std::error_code ec;
+		std::filesystem::remove(Util::PathFromString(output), ec);
+	}
+
 	// Everything below 150 Hz, which in most music is the kick drum and the
 	// bass line: what a stroke usually follows. The rest of the mix - vocals,
 	// hats, synths - crowds the envelope and hides that pulse.
@@ -106,6 +121,11 @@ bool OFS_Waveform::GenerateAndLoadFlac(const std::string& ffmpegPath, const std:
 	subprocess_join(&proc, &return_code);
 	subprocess_destroy(&proc);
 
+	if (return_code != 0) {
+		LOGF_ERROR("ffmpeg could not read the audio of \"%s\"", videoPath.c_str());
+		generating = false;
+		return false;
+	}
 	if (!LoadFlac(output)) {
 		generating = false;
 		return false;

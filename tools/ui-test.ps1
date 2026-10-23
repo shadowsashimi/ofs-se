@@ -87,6 +87,11 @@ $generated = [ordered]@{
     'wav-tiny'  = @{ File = 'sfx-tiny.wav'; Args = @(
         '-f', 'lavfi', '-i', "aevalsrc='0.8*sin(2*PI*880*t)':s=22050:d=0.05",
         '-c:a', 'pcm_u8') }
+    # Named in Japanese, as sound effect packs often are: four seconds of a
+    # tone switching on and off every half second.
+    'wav-japanese' = @{ File = '効果音 テスト.wav'; Args = @(
+        '-f', 'lavfi', '-i', "aevalsrc='0.8*sin(2*PI*440*t)*mod(floor(t*2),2)':s=44100:d=4",
+        '-c:a', 'pcm_s16le') }
 }
 
 function Get-GeneratedMedia([string] $name) {
