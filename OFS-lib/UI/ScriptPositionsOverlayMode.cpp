@@ -60,9 +60,66 @@ float EmptyOverlay::steppingIntervalBackward(float realFrameTime, float fromTime
     return -realFrameTime;
 }
 
+// Colours along a few speeds, blended straight between them, and held past
+// the last.
+static ImColor speedRamp(float speed, const float* speeds, const ImColor* colors, int32_t count) noexcept
+{
+    if (speed <= speeds[0]) return colors[0];
+    for (int32_t i = 1; i < count; i += 1) {
+        if (speed <= speeds[i]) {
+            const float span = Util::Max(1e-3f, speeds[i] - speeds[i - 1]);
+            const float t = (speed - speeds[i - 1]) / span;
+            const ImVec4& a = colors[i - 1].Value;
+            const ImVec4& b = colors[i].Value;
+            return ImColor(a.x + ((b.x - a.x) * t), a.y + ((b.y - a.y) * t), a.z + ((b.z - a.z) * t), 1.f);
+        }
+    }
+    return colors[count - 1];
+}
+
+// The timeline's lines used to be coloured with EroScripts' heatmap palette
+// alone, which runs through cyan, lime, gold, red, magenta and violet across
+// everyday speeds: easy to read at a glance, tiring over hours. The heatmap
+// keeps that palette; the lines can have another.
+ImColor BaseOverlay::SpeedColor(float speed) noexcept
+{
+    const auto& state = State();
+    switch (state.SpeedColors) {
+        case 1: {
+            // The original OpenFunscripter's.
+            static const float speeds[4] = { 0.f, 133.f, 267.f, 400.f };
+            static const ImColor colors[4] = { IM_COL32(0xFF, 0xFF, 0xFF, 0xFF), IM_COL32(0x66, 0xFF, 0x00, 0xFF),
+                IM_COL32(0xFF, 0xFF, 0x00, 0xFF), IM_COL32(0xFF, 0x00, 0x00, 0xFF) };
+            return speedRamp(speed, speeds, colors, 4);
+        }
+        case 2: {
+            // The same order of slow to fast, with the saturation taken out.
+            static const float speeds[4] = { 0.f, 150.f, 300.f, 450.f };
+            static const ImColor colors[4] = { IM_COL32(0xB4, 0xB8, 0xBC, 0xFF), IM_COL32(0x6F, 0xA8, 0xA0, 0xFF),
+                IM_COL32(0xC9, 0xA5, 0x6A, 0xFF), IM_COL32(0xC7, 0x71, 0x6A, 0xFF) };
+            return speedRamp(speed, speeds, colors, 4);
+        }
+        case 3:
+            return ImColor(IM_COL32(0xC8, 0xC8, 0xC8, 0xFF));
+        case 4: {
+            float speeds[4] = { state.CustomSpeed0, state.CustomSpeed1, state.CustomSpeed2, state.CustomSpeed3 };
+            const ImColor colors[4] = { state.CustomColor0, state.CustomColor1, state.CustomColor2, state.CustomColor3 };
+            // Each stop at or above the one before, whatever was typed.
+            for (int32_t i = 1; i < 4; i += 1) speeds[i] = Util::Max(speeds[i], speeds[i - 1]);
+            return speedRamp(speed, speeds, colors, 4);
+        }
+        default: {
+            ImColor color;
+            const float rel = Util::Clamp<float>(speed / FunscriptHeatmap::MaxSpeedPerSecond, 0.f, 1.f);
+            FunscriptHeatmap::LineColors.getColorAt(rel, &color.Value.x);
+            color.Value.w = 1.f;
+            return color;
+        }
+    }
+}
+
 inline static void getActionLineColor(
-    ImColor* speedColor, 
-    const ImGradient& speedGradient,
+    ImColor* speedColor,
     FunscriptAction action,
     FunscriptAction prevAction,
     const BaseOverlayState& overlay) noexcept
@@ -72,9 +129,7 @@ inline static void getActionLineColor(
         *speedColor = overlay.MaxSpeedColor;
         return;
     }
-    float relSpeed = Util::Clamp<float>(speed / FunscriptHeatmap::MaxSpeedPerSecond, 0.f, 1.f);
-    speedGradient.getColorAt(relSpeed, &speedColor->Value.x);
-    speedColor->Value.w = 1.f;
+    *speedColor = BaseOverlay::SpeedColor(speed);
 }
 
 ImVec2 BaseOverlay::GetPointForAction(const OverlayDrawingCtx& ctx, FunscriptAction action) noexcept
@@ -199,7 +254,7 @@ void BaseOverlay::drawActionLinesSpline(const OverlayDrawingCtx& ctx, const Base
                 }
                 else {
                     ImColor speedColor;
-                    getActionLineColor(&speedColor, FunscriptHeatmap::LineColors, action, *prevAction, state);
+                    getActionLineColor(&speedColor, action, *prevAction, state);
                     color = ImGui::ColorConvertFloat4ToU32(speedColor);
                 }
                 drawSpline(ctx, *prevAction, action, color, 3.f);
@@ -251,7 +306,7 @@ void BaseOverlay::drawActionLinesLinear(const OverlayDrawingCtx& ctx, const Base
                 }
                 else {
                     ImColor speedColor;
-                    getActionLineColor(&speedColor, FunscriptHeatmap::LineColors, action, *prevAction, state);
+                    getActionLineColor(&speedColor, action, *prevAction, state);
                     color = ImGui::ColorConvertFloat4ToU32(speedColor);
                 }
                 drawLine(ctx, point, prevPoint, color);

@@ -1,0 +1,107 @@
+# The timeline's speed colours: EroScripts' heatmap palette, the original
+# OFS one, a muted one, one plain colour, or four stops of your own. Strokes
+# from slow to fast, then each palette in turn. Preferences at 1600x900:
+# Options 327,13, Preferences 380,86, the Timeline section 460,339; Line
+# colours EroScripts 643,537, Classic 760, Muted 878, Plain 997, Custom 1115;
+# close 1177,224.
+#! covers OFS-lib/UI/ScriptPositionsOverlayMode.* OFS-lib/state/states/BaseOverlayState.h src/UI/OFS_Preferences.cpp
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note strokes getting faster: 80, 200, 400, 800 units a second, then slow
+hold shift
+lanemove 2.8 10
+tap
+lanemove 3.8 90
+tap
+lanemove 4.2 10
+tap
+lanemove 4.4 90
+tap
+lanemove 4.5 10
+tap
+lanemove 5.5 90
+tap
+lanemove 6.5 10
+tap
+let shift
+wait 5
+expect actions 7
+expect speed_colors 0
+shot 01-eroscripts
+
+note classic
+click 327 13
+wait 5
+click 380 86
+wait 20
+click 460 339
+wait 20
+click 760 537
+wait 10
+expect speed_colors 1
+click 1177 224
+wait 10
+shot 02-classic
+
+note muted
+click 327 13
+wait 5
+click 380 86
+wait 20
+click 460 339
+wait 20
+click 878 537
+wait 10
+expect speed_colors 2
+click 1177 224
+wait 10
+shot 03-muted
+
+note plain
+click 327 13
+wait 5
+click 380 86
+wait 20
+click 460 339
+wait 20
+click 997 537
+wait 10
+expect speed_colors 3
+click 1177 224
+wait 10
+shot 04-plain
+
+note custom
+click 327 13
+wait 5
+click 380 86
+wait 20
+click 460 339
+wait 20
+click 1115 537
+wait 10
+expect speed_colors 4
+shot 05-custom-stops
+click 1177 224
+wait 10
+shot 05-custom
+
+note and back to EroScripts
+click 327 13
+wait 5
+click 380 86
+wait 20
+click 460 339
+wait 20
+click 643 537
+wait 10
+expect speed_colors 0
+click 1177 224
+wait 10
+quit

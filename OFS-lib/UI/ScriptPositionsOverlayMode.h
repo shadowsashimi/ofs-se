@@ -54,6 +54,10 @@ public:
 		return BaseOverlayState::State(StateHandle);
 	}
 
+	// The colour a line is drawn in for a speed, in units a second, by the
+	// speed colours chosen in Preferences.
+	static ImColor SpeedColor(float speed) noexcept;
+
 	struct ColoredLine {
 		ImVec2 p1;
 		ImVec2 p2;

@@ -286,6 +286,57 @@ bool OFS_Preferences::ShowPreferenceWindow() noexcept
 				OFS::Tooltip(TR(SHOW_VIDEO_POSITION_TOOLTIP));
 
 				groupHeader("Speed");
+				{
+					static constexpr const char* labels[5] = { "EroScripts", "Classic", "Muted", "Plain", "Custom" };
+					static constexpr const char* tips[5] = {
+						"The colours of the heatmap here and on EroScripts, from cyan through red to violet.",
+						"The original OpenFunscripter's: white, green, yellow, red.",
+						"Slow to fast in soft grey, teal, amber and red, for long sessions.",
+						"One light grey, whatever the speed.",
+						"Four colours at speeds you choose.",
+					};
+					ImGui::TextDisabled("Line colours");
+					OFS::Tooltip("What the lines between points are coloured by their speed. The heatmap keeps "
+								 "EroScripts' colours whichever is picked.");
+					const int32_t picked = OFS::SegmentedControl("##SpeedColors", labels, tips, 5, overlayState.SpeedColors);
+					if (picked >= 0) {
+						overlayState.SpeedColors = picked;
+						save = true;
+					}
+					// What they look like, from still to 600 units a second.
+					constexpr float PreviewTop = 600.f;
+					const float width = ImGui::GetContentRegionAvail().x;
+					const float height = ImGui::GetFrameHeight() * 0.55f;
+					const ImVec2 at = ImGui::GetCursorScreenPos();
+					auto drawList = ImGui::GetWindowDrawList();
+					constexpr int32_t Steps = 120;
+					for (int32_t i = 0; i < Steps; i += 1) {
+						const float x0 = at.x + (width * (float)i / (float)Steps);
+						const float x1 = at.x + (width * (float)(i + 1) / (float)Steps) + 1.f;
+						const float speed = PreviewTop * ((float)i + 0.5f) / (float)Steps;
+						drawList->AddRectFilled(ImVec2(x0, at.y), ImVec2(x1, at.y + height),
+							ImGui::ColorConvertFloat4ToU32(BaseOverlay::SpeedColor(speed).Value));
+					}
+					ImGui::Dummy(ImVec2(width, height));
+					ImGui::TextDisabled("0");
+					ImGui::SameLine(width - ImGui::CalcTextSize("600 units/s").x);
+					ImGui::TextDisabled("600 units/s");
+					if (overlayState.SpeedColors == 4) {
+						float* speeds[4] = { &overlayState.CustomSpeed0, &overlayState.CustomSpeed1,
+							&overlayState.CustomSpeed2, &overlayState.CustomSpeed3 };
+						ImColor* colors[4] = { &overlayState.CustomColor0, &overlayState.CustomColor1,
+							&overlayState.CustomColor2, &overlayState.CustomColor3 };
+						for (int32_t i = 0; i < 4; i += 1) {
+							ImGui::PushID(i);
+							ImGui::ColorEdit3("##StopColor", &colors[i]->Value.x, ImGuiColorEditFlags_NoInputs);
+							if (ImGui::IsItemDeactivatedAfterEdit()) save = true;
+							ImGui::SameLine();
+							if (OFS::StepperFloat("From (units/s)", "##StopSpeed", speeds[i], 25.f, 0.f, 2000.f, "%.0f")) save = true;
+							ImGui::PopID();
+						}
+						OFS::Tooltip("Each colour starts at its speed and blends into the next.");
+					}
+				}
 				if (ImGui::Checkbox(TR_ID("HighlightEnable", Tr::ENABLE_MAX_SPEED_HIGHLIGHT), &overlayState.ShowMaxSpeedHighlight)) {
 					save = true;
 				}

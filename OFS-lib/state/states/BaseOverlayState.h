@@ -22,6 +22,18 @@ struct BaseOverlayState
     // Snap points placed or dragged with the mouse onto a beat tick, the hits
     // found in the waveform, when one is near enough. Ahead of the grid.
     bool SnapToBeats = false;
+    // How the timeline colours its lines by speed: 0 as EroScripts' heatmap,
+    // 1 as the original OFS, 2 muted, for long sessions, 3 one plain colour,
+    // 4 the four stops below.
+    int32_t SpeedColors = 0;
+    float CustomSpeed0 = 0.f;
+    float CustomSpeed1 = 150.f;
+    float CustomSpeed2 = 300.f;
+    float CustomSpeed3 = 450.f;
+    ImColor CustomColor0 = IM_COL32(0xB4, 0xB8, 0xBC, 0xFF);
+    ImColor CustomColor1 = IM_COL32(0x6F, 0xA8, 0xA0, 0xFF);
+    ImColor CustomColor2 = IM_COL32(0xC9, 0xA5, 0x6A, 0xFF);
+    ImColor CustomColor3 = IM_COL32(0xC7, 0x71, 0x6A, 0xFF);
 
     inline static uint32_t RegisterStatic() noexcept
     {
@@ -43,4 +55,13 @@ REFL_TYPE(BaseOverlayState)
     REFL_FIELD(SnapToGrid)
     REFL_FIELD(SnapPositionStep)
     REFL_FIELD(SnapToBeats)
+    REFL_FIELD(SpeedColors)
+    REFL_FIELD(CustomSpeed0)
+    REFL_FIELD(CustomSpeed1)
+    REFL_FIELD(CustomSpeed2)
+    REFL_FIELD(CustomSpeed3)
+    REFL_FIELD(CustomColor0)
+    REFL_FIELD(CustomColor1)
+    REFL_FIELD(CustomColor2)
+    REFL_FIELD(CustomColor3)
 REFL_END
