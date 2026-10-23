@@ -50,10 +50,10 @@ static void copyTranslationHelper() noexcept
 // section opens the same way.
 static void sectionHeader(const char* title, const char* description) noexcept
 {
-	ImGui::TextUnformatted(title);
+	ImGui::TextUnformatted(TRS(title));
 	if (description != nullptr) {
 		ImGui::PushTextWrapPos(0.f);
-		ImGui::TextDisabled("%s", description);
+		ImGui::TextDisabled("%s", TRS(description));
 		ImGui::PopTextWrapPos();
 	}
 	ImGui::Separator();
@@ -131,7 +131,7 @@ bool OFS_Preferences::ShowPreferenceWindow() noexcept
 
 				groupHeader("Theme");
 				// Not localized on purpose, "Sashimi" is the build name.
-				if (ImGui::RadioButton("Sashimi", (int*)&state.currentTheme,
+				if (ImGui::RadioButton(TRS("Sashimi"), (int*)&state.currentTheme,
 					static_cast<int32_t>(OFS_Theme::Sashimi))) {
 					SetTheme((OFS_Theme)state.currentTheme);
 					save = true;
@@ -148,7 +148,7 @@ bool OFS_Preferences::ShowPreferenceWindow() noexcept
 					SetTheme((OFS_Theme)state.currentTheme);
 					save = true;
 				}
-				if (ImGui::Checkbox("Rounded corners", &state.roundedCorners)) {
+				if (ImGui::Checkbox(TRS("Rounded corners"), &state.roundedCorners)) {
 					SetTheme((OFS_Theme)state.currentTheme);
 					save = true;
 				}
@@ -243,6 +243,16 @@ bool OFS_Preferences::ShowPreferenceWindow() noexcept
 					Util::OpenFileExplorer(Util::Prefpath(OFS_Translator::TranslationDir));
 				}
 				OFS::Tooltip("Open the folder translations are loaded from.");
+				if (ImGui::Button(TRS("Save text to translate"))) {
+					const auto path = (Util::PathFromString(Util::Prefpath(OFS_Translator::TranslationDir)) / "text-to-translate.csv").u8string();
+					if (OFS_Translator::ptr->SaveTextTemplate(path.c_str())) {
+						Util::OpenFileExplorer(Util::Prefpath(OFS_Translator::TranslationDir));
+					}
+				}
+				OFS::Tooltip("Writes every piece of text shown so far that has no key in the translation "
+							 "file, with the loaded language's translation where it has one, to "
+							 "text-to-translate.csv in the translations folder. Open the panels and menus "
+							 "to translate first. Its rows, filled in, go at the end of a translation file.");
 				break;
 			}
 			case SectionVideo:
@@ -295,7 +305,7 @@ bool OFS_Preferences::ShowPreferenceWindow() noexcept
 						"One light grey, whatever the speed.",
 						"Four colours at speeds you choose.",
 					};
-					ImGui::TextDisabled("Line colours");
+					ImGui::TextDisabled(TRS("Line colours"));
 					OFS::Tooltip("What the lines between points are coloured by their speed. The heatmap keeps "
 								 "EroScripts' colours whichever is picked.");
 					const int32_t picked = OFS::SegmentedControl("##SpeedColors", labels, tips, 5, overlayState.SpeedColors);
@@ -320,7 +330,7 @@ bool OFS_Preferences::ShowPreferenceWindow() noexcept
 					ImGui::Dummy(ImVec2(width, height));
 					ImGui::TextDisabled("0");
 					ImGui::SameLine(width - ImGui::CalcTextSize("600 units/s").x);
-					ImGui::TextDisabled("600 units/s");
+					ImGui::TextDisabled(TRS("600 units/s"));
 					if (overlayState.SpeedColors == 4) {
 						float* speeds[4] = { &overlayState.CustomSpeed0, &overlayState.CustomSpeed1,
 							&overlayState.CustomSpeed2, &overlayState.CustomSpeed3 };
@@ -357,13 +367,13 @@ bool OFS_Preferences::ShowPreferenceWindow() noexcept
 				OFS::Tooltip("Snaps points placed or dragged with the mouse onto the grid of the "
 							 "current mode: frames, or the tempo grid's division. Hold Alt to place "
 							 "one point off the grid.");
-				ImGui::Checkbox("Snap to beats", &overlayState.SnapToBeats);
+				ImGui::Checkbox(TRS("Snap to beats"), &overlayState.SnapToBeats);
 				OFS::Tooltip("Snaps points placed or dragged with the mouse onto a beat tick, a hit "
 							 "found in the waveform, when one is close. Ahead of the grid. Needs the "
 							 "waveform and its beat ticks showing.");
 				{
 					ImGui::AlignTextToFramePadding();
-					ImGui::TextUnformatted("Round position");
+					ImGui::TextUnformatted(TRS("Round position"));
 					ImGui::SameLine();
 					DrawPositionRoundingSelector("##prefPosStep");
 				}

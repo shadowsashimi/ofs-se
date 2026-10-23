@@ -4,11 +4,26 @@
 #include <array>
 #include <vector>
 #include <variant>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
 
 class OFS_Translator
 {
     private:
     std::vector<char> StringData;
+    // Text translated by its English, for everything written in English in
+    // the code rather than given a key in localization.csv. A row of a
+    // translation file keyed #TEXT holds the English in its second column
+    // and the translation in its third.
+    std::unordered_map<std::string, std::string> texts;
+    // A translation with the ImGui id the English had after its ##, kept so
+    // the pointer handed out stays valid.
+    std::unordered_map<std::string, std::string> composed;
+    // Every English text asked for this session, for the template a
+    // translator fills in, less the keyed strings, which have their own.
+    std::unordered_set<std::string> seen;
+    std::unordered_set<std::string> keyedDefaults;
     
     public:
     static OFS_Translator* ptr;
@@ -20,6 +35,19 @@ class OFS_Translator
     void LoadDefaults() noexcept;
 
     static bool MergeIntoOne(const char* input1, const char* input2, const char* outputPath) noexcept;
+
+    // The translation of text written in English, or the English itself.
+    // Anything after ## is an ImGui id and is kept as it is.
+    const char* Text(const char* english) noexcept;
+    inline static const char* Tx(const char* english) noexcept
+    {
+        return ptr != nullptr ? ptr->Text(english) : english;
+    }
+    // Writes every English text seen this session, with any translation the
+    // loaded language has for it, as #TEXT rows to add to a translation file.
+    bool SaveTextTemplate(const char* path) const noexcept;
+    inline size_t TextTranslationCount() const noexcept { return texts.size(); }
+    inline const std::unordered_map<std::string, std::string>& Texts() const noexcept { return texts; }
 
     static void Init() noexcept
     {
@@ -50,6 +78,9 @@ OFS_Translator::ptr->Translation[static_cast<uint32_t>(Tr::str_id)]
 OFS_Translator::ptr->Translation[static_cast<uint32_t>(id)]
 #define TR_ID(id, str_id)\
 FMT("%s###%s", OFS_Translator::ptr->Translation[static_cast<uint32_t>(str_id)], id)
+// Text written in English where it is used, translated when the language
+// loaded has it.
+#define TRS(english) OFS_Translator::Tx(english)
 
 class TrString
 {

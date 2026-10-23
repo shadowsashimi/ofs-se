@@ -192,7 +192,7 @@ void OFS_ScriptCheck::ShowWindow(bool* open) noexcept
             "400 units a second, 50ms apart. A reasonable middle.",
             "600 units a second, 20ms apart. For a quick one.",
         };
-        ImGui::TextDisabled("Limits");
+        ImGui::TextDisabled(TRS("Limits"));
         const int32_t picked = OFS::SegmentedControl("##CheckPreset", labels, tips, 3, state.preset);
         if (picked >= 0) {
             state.preset = picked;
@@ -215,15 +215,15 @@ void OFS_ScriptCheck::ShowWindow(bool* open) noexcept
     ImGui::Spacing();
     const bool haveScript = app->LoadedProject->IsValid();
     ImGui::BeginDisabled(!haveScript);
-    if (ImGui::Button("Check", ImVec2(-1.f, 0.f))) run();
+    if (ImGui::Button(TRS("Check"), ImVec2(-1.f, 0.f))) run();
     ImGui::EndDisabled();
 
     if (!checkedOnce) {
         ImGui::Spacing();
         ImGui::PushTextWrapPos(0.f);
-        ImGui::TextDisabled("Lists the strokes a device cannot follow: too fast to keep up with, "
+        ImGui::TextDisabled(TRS("Lists the strokes a device cannot follow: too fast to keep up with, "
                             "too close together to tell apart, long stretches with nothing in "
-                            "them, and points past the end of the media.");
+                            "them, and points past the end of the media."));
         ImGui::PopTextWrapPos();
         ImGui::End();
         return;
@@ -236,18 +236,18 @@ void OFS_ScriptCheck::ShowWindow(bool* open) noexcept
 
     ImGui::Spacing();
     if (problems.empty()) {
-        ImGui::TextDisabled("Nothing to report in \"%s\".", checkedScript.c_str());
+        ImGui::TextDisabled(TRS("Nothing to report in \"%s\"."), checkedScript.c_str());
         ImGui::End();
         return;
     }
 
-    ImGui::Text("%d to look at in \"%s\"", (int32_t)problems.size(), checkedScript.c_str());
-    ImGui::TextDisabled("%d too fast, %d too close, %d long gaps, %d past the end",
+    ImGui::Text(TRS("%d to look at in \"%s\""), (int32_t)problems.size(), checkedScript.c_str());
+    ImGui::TextDisabled(TRS("%d too fast, %d too close, %d long gaps, %d past the end"),
         counts[0], counts[1], counts[2], counts[3]);
 
     ImGui::Spacing();
     ImGui::BeginDisabled(counts[0] == 0);
-    if (ImGui::Button("Slow the fast ones down")) {
+    if (ImGui::Button(TRS("Slow the fast ones down"))) {
         auto script = app->ActiveFunscript();
         app->undoSystem->Snapshot(StateType::LIMIT_SPEED, script);
         auto limited = OFS_Check::LimitSpeed(script->Actions(), CurrentLimits());
@@ -259,7 +259,7 @@ void OFS_ScriptCheck::ShowWindow(bool* open) noexcept
                  "which shortens the stroke and leaves its timing alone.");
     ImGui::SameLine();
     ImGui::BeginDisabled(counts[1] == 0);
-    if (ImGui::Button("Thin out the close ones")) {
+    if (ImGui::Button(TRS("Thin out the close ones"))) {
         auto script = app->ActiveFunscript();
         app->undoSystem->Snapshot(StateType::THIN_OUT, script);
         auto thinned = OFS_Check::ThinOut(script->Actions(), CurrentLimits());
@@ -307,16 +307,16 @@ void OFS_ScriptCheck::ShowWindow(bool* open) noexcept
                 ImGui::TableNextColumn();
                 switch (problem.kind) {
                     case OFS_Check::ProblemKind::TooFast:
-                        ImGui::Text("%.0f units/s", problem.value);
+                        ImGui::Text(TRS("%.0f units/s"), problem.value);
                         break;
                     case OFS_Check::ProblemKind::TooClose:
-                        ImGui::Text("%.0f ms apart", problem.value * 1000.f);
+                        ImGui::Text(TRS("%.0f ms apart"), problem.value * 1000.f);
                         break;
                     case OFS_Check::ProblemKind::LongGap:
-                        ImGui::Text("%.1f s of nothing", problem.value);
+                        ImGui::Text(TRS("%.1f s of nothing"), problem.value);
                         break;
                     case OFS_Check::ProblemKind::PastTheEnd:
-                        ImGui::Text("%.1f s after the end", problem.value);
+                        ImGui::Text(TRS("%.1f s after the end"), problem.value);
                         break;
                 }
                 ImGui::PopID();

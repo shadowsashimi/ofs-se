@@ -261,12 +261,12 @@ void OFS_WaveformLOD::Update(const OverlayDrawingCtx& ctx) noexcept
 
 #if OFS_WAVEFORM_DEBUG
 	ImGui::Begin("Waveform Debug");
-	ImGui::Text("everyNth: %d", everyNth);
-	ImGui::Text("texels: %d (first %d, last %d)", texelCount, firstTexel, lastTexel);
-	ImGui::Text("sample range: %.2f .. %.2f (%.2f visible)", startIndexF, endIndexF, visibleSampleCountF);
-	ImGui::Text("scale: %.6f  offset: %.6f", samplingScale, samplingOffset);
-	ImGui::Text("u at left edge:  %.6f", samplingOffset);
-	ImGui::Text("u at right edge: %.6f", samplingScale + samplingOffset);
+	ImGui::Text(TRS("everyNth: %d"), everyNth);
+	ImGui::Text(TRS("texels: %d (first %d, last %d)"), texelCount, firstTexel, lastTexel);
+	ImGui::Text(TRS("sample range: %.2f .. %.2f (%.2f visible)"), startIndexF, endIndexF, visibleSampleCountF);
+	ImGui::Text(TRS("scale: %.6f  offset: %.6f"), samplingScale, samplingOffset);
+	ImGui::Text(TRS("u at left edge:  %.6f"), samplingOffset);
+	ImGui::Text(TRS("u at right edge: %.6f"), samplingScale + samplingOffset);
 	ImGui::End();
 #endif
 }

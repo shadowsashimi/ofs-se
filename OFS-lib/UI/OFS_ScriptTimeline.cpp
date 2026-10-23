@@ -192,7 +192,7 @@ void ScriptTimeline::DrawWaveformSettings() noexcept
 
 	ImGui::BeginDisabled(busy);
 	ImGui::Checkbox(TR(ENABLE_WAVEFORM), &ShowAudioWaveform);
-	ImGui::Checkbox("Beat ticks", &ShowBeatTicks);
+	ImGui::Checkbox(TRS("Beat ticks"), &ShowBeatTicks);
 	OFS::Tooltip("Marks along the bottom of the track where a hit lands, found from the "
 				 "same audio as the waveform.");
 
@@ -202,7 +202,7 @@ void ScriptTimeline::DrawWaveformSettings() noexcept
 			"The whole mix.",
 			"Below 150Hz, which is usually the kick and the bass line. Reads the audio again.",
 		};
-		ImGui::TextDisabled("Waveform of");
+		ImGui::TextDisabled(TRS("Waveform of"));
 		const int32_t picked = OFS::SegmentedControl("##WaveformBand", labels, tips, 2,
 			BassWaveform ? 1 : 0);
 		if (picked >= 0 && (picked == 1) != BassWaveform) {
@@ -220,7 +220,7 @@ void ScriptTimeline::DrawWaveformSettings() noexcept
 			"side and voices on the other. Reads the audio again.",
 			"The right channel alone. Reads the audio again.",
 		};
-		ImGui::TextDisabled("Channel");
+		ImGui::TextDisabled(TRS("Channel"));
 		const int32_t picked = OFS::SegmentedControl("##WaveformChannel", labels, tips, 3, WaveformChannel);
 		if (picked >= 0 && picked != WaveformChannel) {
 			WaveformChannel = picked;
@@ -239,7 +239,7 @@ void ScriptTimeline::DrawWaveformSettings() noexcept
 		OFS::Spinner("##WaveformSpin", ImGui::GetFontSize() / 3.f, 4.f, ImGui::GetColorU32(ImGuiCol_TabActive));
 	}
 	else if (videoPath.empty()) {
-		ImGui::TextDisabled("Open a video or audio file to generate its waveform.");
+		ImGui::TextDisabled(TRS("Open a video or audio file to generate its waveform."));
 	}
 	else if (ImGui::Button(TR(UPDATE_WAVEFORM))) {
 		RequestWaveform();
@@ -811,7 +811,7 @@ void ScriptTimeline::ShowScriptPositions(
 					activeOverlay != nullptr && activeOverlay->HasSnapGrid());
 				OFS::Tooltip("Snaps points placed or dragged with the mouse onto the grid of "
 							 "the current mode. Hold Alt to place one point off the grid.");
-				ImGui::MenuItem("Snap to beats", 0, &overlayState.SnapToBeats, BeatTicksAvailable());
+				ImGui::MenuItem(TRS("Snap to beats"), 0, &overlayState.SnapToBeats, BeatTicksAvailable());
 				OFS::Tooltip("Snaps points placed or dragged with the mouse onto a beat tick when "
 							 "one is close, ahead of the grid. Needs the waveform and its beat ticks.");
 			}
@@ -823,12 +823,12 @@ void ScriptTimeline::ShowScriptPositions(
 			else if (Wave.data.SampleCount() > 0) {
 				ImGui::MenuItem(TR(ENABLE_WAVEFORM), NULL, &ShowAudioWaveform);
 			}
-			else if (ImGui::MenuItem("Make waveform", NULL, false, CanGenerateWaveform())) {
+			else if (ImGui::MenuItem(TRS("Make waveform"), NULL, false, CanGenerateWaveform())) {
 				RequestWaveform();
 			}
 			if (OnOpenSettings) {
 				ImGui::Separator();
-				if (ImGui::MenuItem("Timeline settings...")) OnOpenSettings();
+				if (ImGui::MenuItem(TRS("Timeline settings..."))) OnOpenSettings();
 				OFS::Tooltip("Lines, points, spline, the playhead line, position rounding, and the "
 							 "waveform's height and colour.");
 			}

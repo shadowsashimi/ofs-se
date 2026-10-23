@@ -315,14 +315,14 @@ bool OpenFunscripter::Init(int argc, char* argv[])
         }
         const bool hasSelection = selected > 0;
         if (edited.size() == 1) {
-            if (hasSelection) ImGui::TextDisabled("%u selected in %s", selected, edited.front()->Title().c_str());
-            else ImGui::TextDisabled("Nothing selected in %s", edited.front()->Title().c_str());
+            if (hasSelection) ImGui::TextDisabled(TRS("%u selected in %s"), selected, edited.front()->Title().c_str());
+            else ImGui::TextDisabled(TRS("Nothing selected in %s"), edited.front()->Title().c_str());
         }
         else if (hasSelection) {
-            ImGui::TextDisabled("%u selected in %d of %d edited lanes", selected, lanesWithSelection, (int)edited.size());
+            ImGui::TextDisabled(TRS("%u selected in %d of %d edited lanes"), selected, lanesWithSelection, (int)edited.size());
         }
         else {
-            ImGui::TextDisabled("Nothing selected in the %d edited lanes", (int)edited.size());
+            ImGui::TextDisabled(TRS("Nothing selected in the %d edited lanes"), (int)edited.size());
         }
 
         if (ImGui::MenuItem(TR(CUT), keys->GetBindingString("cut"), false, hasSelection)) cutSelection();
@@ -337,10 +337,10 @@ bool OpenFunscripter::Init(int argc, char* argv[])
         if (ImGui::MenuItem(TR(EQUALIZE), keys->GetBindingString("equalize_actions"), false, script->SelectionSize() >= 3)) equalizeSelection();
         // Unlike the rest, isolate works on the point nearest the playhead
         // rather than on the selection, so the label has to say so.
-        if (ImGui::MenuItem("Isolate point at playhead", keys->GetBindingString("isolate_action"))) isolateAction();
+        if (ImGui::MenuItem(TRS("Isolate point at playhead"), keys->GetBindingString("isolate_action"))) isolateAction();
         // Simplify needs its epsilon slider, so this opens it on the selection
         // rather than simplifying by a guessed amount.
-        if (ImGui::MenuItem("Simplify...", nullptr, false, script->SelectionSize() > 4)) {
+        if (ImGui::MenuItem(TRS("Simplify..."), nullptr, false, script->SelectionSize() > 4)) {
             specialFunctions->SetFunction(SpecialFunctionType::RamerDouglasPeucker);
             OpenFunscripterState::State(stateHandle).showSpecialFunctions = true;
         }
@@ -2047,13 +2047,13 @@ void OpenFunscripter::Step() noexcept
                     }
                     else {
                         ImGui::PushTextWrapPos(0.f);
-                        ImGui::TextDisabled("A point already sits at the playhead, at %d.", scriptAction->pos);
+                        ImGui::TextDisabled(TRS("A point already sits at the playhead, at %d."), scriptAction->pos);
                         ImGui::PopTextWrapPos();
                     }
                 }
                 else {
                     ImGui::PushTextWrapPos(0.f);
-                    ImGui::TextDisabled("Pause to place a point at any position with a slider.");
+                    ImGui::TextDisabled(TRS("Pause to place a point at any position with a slider."));
                     ImGui::PopTextWrapPos();
                 }
                 ImGui::End();
@@ -2262,10 +2262,10 @@ void OpenFunscripter::applyPendingLayout(bool frameStarted) noexcept
 void OpenFunscripter::showLayoutsMenu() noexcept
 {
     auto& ofsState = OpenFunscripterState::State(stateHandle);
-    if (!ImGui::BeginMenu("Layouts")) return;
+    if (!ImGui::BeginMenu(TRS("Layouts"))) return;
     auto& layouts = ofsState.savedLayouts;
     if (layouts.empty()) {
-        ImGui::TextDisabled("No saved layouts yet");
+        ImGui::TextDisabled(TRS("No saved layouts yet"));
     }
     for (const auto& layout : layouts) {
         if (ImGui::MenuItem(layout.name.c_str())) {
@@ -2274,12 +2274,12 @@ void OpenFunscripter::showLayoutsMenu() noexcept
         OFS::Tooltip("Put every panel back where it was when this layout was saved, and show the same panels.");
     }
     ImGui::Separator();
-    if (ImGui::MenuItem("Save current layout...")) {
+    if (ImGui::MenuItem(TRS("Save current layout..."))) {
         showSaveLayout = true;
         saveLayoutName = "Layout " + std::to_string(layouts.size() + 1);
     }
     OFS::Tooltip("Keep where every panel is, and which are open, under a name.");
-    if (ImGui::BeginMenu("Delete", !layouts.empty())) {
+    if (ImGui::BeginMenu(TRS("Delete"), !layouts.empty())) {
         int32_t remove = -1;
         for (int32_t i = 0; i < (int32_t)layouts.size(); i += 1) {
             if (ImGui::MenuItem(layouts[i].name.c_str())) remove = i;
@@ -2288,7 +2288,7 @@ void OpenFunscripter::showLayoutsMenu() noexcept
         ImGui::EndMenu();
     }
     ImGui::Separator();
-    if (ImGui::MenuItem("Reset to default layout")) pendingLayoutReset = true;
+    if (ImGui::MenuItem(TRS("Reset to default layout"))) pendingLayoutReset = true;
     OFS::Tooltip("Put every panel back where a fresh install has it, and show the panels it shows.");
     ImGui::EndMenu();
 }
@@ -2302,18 +2302,18 @@ void OpenFunscripter::showSaveLayoutPrompt() noexcept
     if (!ImGui::BeginPopupModal(PopupId, nullptr, ImGuiWindowFlags_AlwaysAutoResize)) return;
 
     auto& ofsState = OpenFunscripterState::State(stateHandle);
-    ImGui::TextUnformatted("Name");
+    ImGui::TextUnformatted(TRS("Name"));
     if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
     ImGui::SetNextItemWidth(ImGui::GetFontSize() * 16.f);
     const bool entered = ImGui::InputText("##LayoutName", &saveLayoutName, ImGuiInputTextFlags_EnterReturnsTrue);
     bool exists = false;
     for (const auto& layout : ofsState.savedLayouts) exists = exists || layout.name == saveLayoutName;
-    if (exists) ImGui::TextDisabled("Replaces the layout saved with this name.");
+    if (exists) ImGui::TextDisabled(TRS("Replaces the layout saved with this name."));
     ImGui::Spacing();
     const bool named = !saveLayoutName.empty();
     bool close = false;
     ImGui::BeginDisabled(!named);
-    if ((ImGui::Button("Save") || entered) && named) {
+    if ((ImGui::Button(TRS("Save")) || entered) && named) {
         SavedLayout layout;
         layout.name = saveLayoutName;
         size_t size = 0;
@@ -2332,7 +2332,7 @@ void OpenFunscripter::showSaveLayoutPrompt() noexcept
     }
     ImGui::EndDisabled();
     ImGui::SameLine();
-    if (ImGui::Button("Cancel") || ImGui::IsKeyPressed(ImGuiKey_Escape, false)) close = true;
+    if (ImGui::Button(TRS("Cancel")) || ImGui::IsKeyPressed(ImGuiKey_Escape, false)) close = true;
     if (close) {
         showSaveLayout = false;
         ImGui::CloseCurrentPopup();
@@ -2866,17 +2866,17 @@ void OpenFunscripter::drawRemoveTrackModal() noexcept
 
     bool close = false;
     if (script) {
-        ImGui::Text("Remove %s from the project?", script->Title().c_str());
-        ImGui::TextDisabled("The file stays on disk, but changes that weren't saved\n"
-                            "to it or exported are lost. This can't be undone.");
+        ImGui::Text(TRS("Remove %s from the project?"), script->Title().c_str());
+        ImGui::TextDisabled(TRS("The file stays on disk, but changes that weren't saved\n"
+                            "to it or exported are lost. This can't be undone."));
         ImGui::Spacing();
         // Enter removes and Escape cancels, as in a system dialog.
-        if (ImGui::Button("Remove") || ImGui::IsKeyPressed(ImGuiKey_Enter, false) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter, false)) {
+        if (ImGui::Button(TRS("Remove")) || ImGui::IsKeyPressed(ImGuiKey_Enter, false) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter, false)) {
             removeTrackNow(script);
             close = true;
         }
         ImGui::SameLine();
-        if (ImGui::Button("Cancel") || ImGui::IsKeyPressed(ImGuiKey_Escape, false)) close = true;
+        if (ImGui::Button(TRS("Cancel")) || ImGui::IsKeyPressed(ImGuiKey_Escape, false)) close = true;
     }
     else {
         close = true;
@@ -2941,7 +2941,7 @@ void OpenFunscripter::ShowTracksWindow(bool* open) noexcept
 
     ImGui::Begin(TracksWindowId, open);
     if (!LoadedProject->IsValid() || LoadedFunscripts().empty()) {
-        ImGui::TextDisabled("Open a video or a script to see its tracks.");
+        ImGui::TextDisabled(TRS("Open a video or a script to see its tracks."));
         ImGui::End();
         return;
     }
@@ -2949,15 +2949,15 @@ void OpenFunscripter::ShowTracksWindow(bool* open) noexcept
     auto& scripts = LoadedFunscripts();
     const int32_t current = (int32_t)LoadedProject->ActiveIdx();
 
-    if (ImGui::Button("Add")) ImGui::OpenPopup("##addTrack");
+    if (ImGui::Button(TRS("Add"))) ImGui::OpenPopup("##addTrack");
     trackTooltip("Add a track: an axis like twist or roll beside the main script, or a new file.");
     ImGui::SameLine();
-    if (ImGui::Button("Load...")) loadTracksDialog();
+    if (ImGui::Button(TRS("Load..."))) loadTracksDialog();
     trackTooltip("Load .funscript files as tracks.");
     if (ImGui::BeginPopup("##addTrack")) {
         // A whole machine's worth of tracks at once, and the Devices panel
         // set to send to it.
-        ImGui::TextDisabled("Machine");
+        ImGui::TextDisabled(TRS("Machine"));
         for (int32_t m = 0; m < TCodeMachineCount; m += 1) {
             if (ImGui::MenuItem(TCodeMachines[m].name)) {
                 AddMachineTracks(m);
@@ -2968,12 +2968,12 @@ void OpenFunscripter::ShowTracksWindow(bool* open) noexcept
             trackTooltip(tip.c_str());
         }
         ImGui::Separator();
-        ImGui::TextDisabled("Axis");
+        ImGui::TextDisabled(TRS("Axis"));
         for (auto axis : Funscript::AxisNames) {
             if (ImGui::MenuItem(axis, nullptr, false, !trackLoaded(axisTrackPath(axis)))) addAxisTrack(axis);
         }
         ImGui::Separator();
-        if (ImGui::MenuItem("New file...")) addNewTrackDialog();
+        if (ImGui::MenuItem(TRS("New file..."))) addNewTrackDialog();
         ImGui::EndPopup();
     }
 
@@ -3374,7 +3374,7 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
                     },
                     false);
             }
-            if (ImGui::MenuItem("New script without video...")) {
+            if (ImGui::MenuItem(TRS("New script without video..."))) {
                 ShowNewScriptDialog = true;
             }
             OFS::Tooltip("Script to a length you pick, with no media to open.");
@@ -3475,7 +3475,7 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
                 // own plus and minus buttons, in a menu, with no hint of what
                 // they sized.
                 ImGui::AlignTextToFramePadding();
-                ImGui::TextDisabled("Heatmap size");
+                ImGui::TextDisabled(TRS("Heatmap size"));
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 4.f);
                 if (ImGui::InputInt("##heatmapWidth", &ofsState.heatmapSettings.defaultWidth, 0, 0)) {
@@ -3489,7 +3489,7 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
                     ofsState.heatmapSettings.defaultHeight = Util::Clamp(ofsState.heatmapSettings.defaultHeight, 8, 8192);
                 }
                 ImGui::SameLine();
-                ImGui::TextDisabled("px");
+                ImGui::TextDisabled(TRS("px"));
                 if (ImGui::MenuItem(TR(SAVE_HEATMAP))) {
                     std::string filename = ActiveFunscript()->Title() + "_Heatmap.png";
                     auto defaultPath = Util::PathFromString(ofsState.heatmapSettings.defaultPath);
@@ -3670,7 +3670,7 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu(TR_ID("VIEW_MENU", Tr::VIEW_MENU))) {
-            if (ImGui::MenuItem("Toolbar", NULL, &ofsState.showToolbar)) {}
+            if (ImGui::MenuItem(TRS("Toolbar"), NULL, &ofsState.showToolbar)) {}
             OFS::Tooltip("The row of mode, grid, snap and simulator choices under the menu bar. "
                 "Hidden, the Mode panel and the Simulator window show the same choices.");
             if (ImGui::MenuItem(TR(STATISTICS), NULL, &ofsState.showStatistics)) {}
@@ -3681,11 +3681,11 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
             if (ImGui::MenuItem(TR(SPECIAL_FUNCTIONS), NULL, &ofsState.showSpecialFunctions)) {}
             if (ImGui::MenuItem(TR(WEBSOCKET_API), NULL, &ofsState.showWsApi)) {}
             if (ImGui::MenuItem(TR(CHAPTERS), NULL, &ofsState.showChapterManager)) {}
-            if (ImGui::MenuItem("Script check", NULL, &ofsState.showScriptCheck)) {}
+            if (ImGui::MenuItem(TRS("Script check"), NULL, &ofsState.showScriptCheck)) {}
             OFS::Tooltip("Lists the strokes a device cannot follow, and slows them down.");
-            if (ImGui::MenuItem("Devices", NULL, &ofsState.showDevices)) {}
+            if (ImGui::MenuItem(TRS("Devices"), NULL, &ofsState.showDevices)) {}
             OFS::Tooltip("Plays the script on a real device through Intiface Central.");
-            if (ImGui::MenuItem("Tracks", NULL, &ofsState.showTracks)) {}
+            if (ImGui::MenuItem(TRS("Tracks"), NULL, &ofsState.showTracks)) {}
             OFS::Tooltip("Every track in the project: show or hide it, choose which are edited, add, load and remove them.");
 
 
@@ -3740,7 +3740,7 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
                 if (ImGui::MenuItem(TR(METRICS), NULL, &DebugMetrics)) {}
                 if (ImGui::MenuItem(TR(LOG_OUTPUT), NULL, &ofsState.showDebugLog)) {}
 #ifndef NDEBUG
-                if (ImGui::MenuItem("ImGui Demo", NULL, &DebugDemo)) {}
+                if (ImGui::MenuItem(TRS("ImGui Demo"), NULL, &DebugDemo)) {}
 #endif
                 ImGui::EndMenu();
             }
@@ -3975,7 +3975,7 @@ void OpenFunscripter::ShowToolbar() noexcept
             else {
                 ImGui::Spacing();
             }
-            ImGui::TextDisabled("%s", label);
+            ImGui::TextDisabled("%s", TRS(label));
             OFS::Tooltip(tip);
             if (wide) ImGui::SameLine();
         };
@@ -4043,7 +4043,7 @@ void OpenFunscripter::ShowToolbar() noexcept
                 }
 
                 ImGui::SameLine();
-                ImGui::TextDisabled("Round position");
+                ImGui::TextDisabled(TRS("Round position"));
                 OFS::Tooltip("Rounds the position, up and down, of points placed or dragged with the mouse.");
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(-1.f);
@@ -4070,8 +4070,8 @@ void OpenFunscripter::ShowToolbar() noexcept
                         "such as the right side, or out on its own.");
                 }
             }
-            if (ImGui::MenuItem("Hide toolbar")) ofsState.showToolbar = false;
-            ImGui::TextDisabled("View > Toolbar brings it back. With it hidden,\nthe Mode panel shows the mode and grid choices.");
+            if (ImGui::MenuItem(TRS("Hide toolbar"))) ofsState.showToolbar = false;
+            ImGui::TextDisabled(TRS("View > Toolbar brings it back. With it hidden,\nthe Mode panel shows the mode and grid choices."));
             ImGui::EndPopup();
         }
     }
@@ -4098,21 +4098,21 @@ void OpenFunscripter::ShowNewScriptWindow(bool* open) noexcept
     ImGui::Spacing();
 
     ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted("Length");
+    ImGui::TextUnformatted(TRS("Length"));
     ImGui::SameLine();
     OFS::InputDuration("##NewScriptDuration", &ofsState.newScriptDurationSeconds,
         (int32_t)OFS_Project::MinStandaloneDuration, (int32_t)OFS_Project::MaxStandaloneDuration);
     OFS::Tooltip("Can be changed later under Project > Configure.");
 
     ImGui::Spacing();
-    if (ImGui::Button("Choose location...", ImVec2(-1.f, 0.f))) {
+    if (ImGui::Button(TRS("Choose location..."), ImVec2(-1.f, 0.f))) {
         // Closed first: the file dialog is the next thing the user deals with,
         // and the modal behind it would only be in the way.
         *open = false;
         ImGui::CloseCurrentPopup();
         createStandaloneProject((float)ofsState.newScriptDurationSeconds);
     }
-    if (ImGui::Button("Cancel", ImVec2(-1.f, 0.f))) {
+    if (ImGui::Button(TRS("Cancel"), ImVec2(-1.f, 0.f))) {
         *open = false;
         ImGui::CloseCurrentPopup();
     }
@@ -4126,7 +4126,7 @@ void OpenFunscripter::ShowAboutWindow(bool* open) noexcept
     OFS_PROFILE(__FUNCTION__);
     ImGui::Begin(TR(ABOUT), open, ImGuiWindowFlags_None | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse);
     ImGui::TextUnformatted("OFS-SE " OFS_LATEST_GIT_TAG);
-    ImGui::TextUnformatted("OpenFunscripter - Sashimi Edition");
+    ImGui::TextUnformatted(TRS("OpenFunscripter - Sashimi Edition"));
     ImGui::Text("%s: %s", TR(GIT_COMMIT), OFS_LATEST_GIT_HASH);
 
     ImGui::End();
@@ -4197,14 +4197,14 @@ void OpenFunscripter::ShowStatisticsWindow(bool* open) noexcept
     statisticsHeading("At the playhead");
     if (actions.empty()) {
         ImGui::PushTextWrapPos(0.f);
-        ImGui::TextDisabled("This script has no points yet. Once it does, the stroke under "
-                            "the playhead is measured here.");
+        ImGui::TextDisabled(TRS("This script has no points yet. Once it does, the stroke under "
+                            "the playhead is measured here."));
         ImGui::PopTextWrapPos();
     }
     else if (behind == nullptr) {
         ImGui::PushTextWrapPos(0.f);
-        ImGui::TextDisabled("The playhead is before the first point. Move past it to measure "
-                            "the stroke it is in.");
+        ImGui::TextDisabled(TRS("The playhead is before the first point. Move past it to measure "
+                            "the stroke it is in."));
         ImGui::PopTextWrapPos();
     }
     else if (beginStatisticsTable("##playheadStats")) {
@@ -4252,7 +4252,7 @@ void OpenFunscripter::ShowStatisticsWindow(bool* open) noexcept
     }
     else if (selection.size() == 1) {
         statisticsHeading("Selection");
-        ImGui::TextDisabled("One point, at %.3f s and %d.", selection.front().atS, selection.front().pos);
+        ImGui::TextDisabled(TRS("One point, at %.3f s and %d."), selection.front().atS, selection.front().pos);
     }
 
     statisticsHeading("Script");

@@ -1,0 +1,10 @@
+Key (do not touch),Default,Translation
+ABOUT,About,关于
+#TEXT,Round position,位置取整
+#TEXT,Snap,吸附
+#TEXT,Beats,节拍
+#TEXT,Grid,网格
+#TEXT,Simulator,模拟器
+#TEXT,Layouts,布局
+#TEXT,Save current layout...,保存当前布局...
+#TEXT,Reset to default layout,恢复默认布局

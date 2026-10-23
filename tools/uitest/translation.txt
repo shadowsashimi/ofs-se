@@ -1,0 +1,27 @@
+# Text written in English in the code is translated by its English: a
+# translation file's rows keyed #TEXT hold the English and the translation.
+# Loaded here from tools\uitest\lang\test-zh.csv, which translates the
+# toolbar's Snap, Grid, Beats, Round position and Simulator, the Layouts menu
+# and About (by its key, as before). Then the template of every text seen.
+#! covers OFS-lib/localization/OFS_Localization.* OFS-lib/OFS_DynamicFontAtlas.cpp OFS-lib/UI/OFS_ImGui.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+expect text_translations 0
+shot 01-english
+language test-zh.csv
+wait 60
+expect text_translations 8
+shot 02-chinese
+note the View menu's Layouts submenu, translated
+click 266 13
+wait 5
+move 300 426
+wait 20
+shot 03-layouts-menu
+key escape
+wait 5
+savetext
+quit

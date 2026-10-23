@@ -147,6 +147,17 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
   app and check what comes out. `tools\ui-test-all.ps1` runs the ones that
   cover what changed.
 
+## Translating
+
+Translations are CSV files in the `lang` folder, which *Options → Preferences
+→ Application* opens. Rows keyed like `ABOUT` are the original OFS strings.
+Most of the newer text is translated by its English instead: a row
+`#TEXT,"English text","translation"`. To get those rows, load your
+translation, open the panels and menus you want to cover, then click *Save
+text to translate*. It writes `text-to-translate.csv` with every piece of
+text seen so far and any translation it already has; fill in the third
+column and add the rows to the end of your translation file.
+
 ## How this was built
 
 I set the direction for this fork, tested every change, and made the design,

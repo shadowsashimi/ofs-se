@@ -95,10 +95,10 @@ void OFS_ChapterManager::ShowWindow(bool* open) noexcept
     {
         ImGui::Spacing();
         ImGui::PushTextWrapPos(0.f);
-        ImGui::TextDisabled("No chapters yet. Detect tracks and chapters, above, splits the media "
+        ImGui::TextDisabled(TRS("No chapters yet. Detect tracks and chapters, above, splits the media "
                             "where the music starts, stops or changes tempo, and measures each "
                             "part. A chapter can also be started by hand at the playhead with the "
-                            "Create chapter binding, found in Options > Keys.");
+                            "Create chapter binding, found in Options > Keys."));
         ImGui::PopTextWrapPos();
     }
     else if(ImGui::BeginTable("##chapterTable", 3, ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp))
@@ -256,14 +256,14 @@ void OFS_ChapterManager::ShowWindow(bool* open) noexcept
                 // lot of music is half or double the beat that is wanted. Either
                 // way is a click, and it is remembered on the chapter, so
                 // measuring again keeps the correction.
-                if(ImGui::MenuItem("Double time (x2)", nullptr, false, chapter.bpm > 0.f && chapter.bpm * 2.f <= 1000.f)) {
+                if(ImGui::MenuItem(TRS("Double time (x2)"), nullptr, false, chapter.bpm > 0.f && chapter.bpm * 2.f <= 1000.f)) {
                     chapter.ScaleTempo(2.f);
                     chapterStateChange = true;
                 }
                 OFS::TooltipFmt("%.1f BPM becomes %.1f, for a tempo read off a pulse half as fast as "
                                 "the beat. Kept when the chapter is measured again.",
                     chapter.bpm, chapter.bpm * 2.f);
-                if(ImGui::MenuItem("Half time (/2)", nullptr, false, chapter.bpm > 0.f && chapter.bpm / 2.f >= 1.f)) {
+                if(ImGui::MenuItem(TRS("Half time (/2)"), nullptr, false, chapter.bpm > 0.f && chapter.bpm / 2.f >= 1.f)) {
                     chapter.ScaleTempo(0.5f);
                     chapterStateChange = true;
                 }
@@ -281,7 +281,7 @@ void OFS_ChapterManager::ShowWindow(bool* open) noexcept
                     }
                     OFS::Tooltip("Type this chapter's tempo. Measure all chapters then leaves it alone.");
                 }
-                if(ImGui::MenuItem("Keep this tempo", nullptr, chapter.bpmManual, chapter.bpm > 0.f)) {
+                if(ImGui::MenuItem(TRS("Keep this tempo"), nullptr, chapter.bpmManual, chapter.bpm > 0.f)) {
                     chapter.bpmManual = !chapter.bpmManual;
                     chapterStateChange = true;
                 }
@@ -291,7 +291,7 @@ void OFS_ChapterManager::ShowWindow(bool* open) noexcept
                 // Only of use when the grid is not following chapters by
                 // itself. With auto-follow on it is what happens anyway as soon
                 // as the playhead is inside this chapter.
-                if(ImGui::MenuItem("Apply to tempo grid", nullptr, false, chapter.bpm > 0.f)) {
+                if(ImGui::MenuItem(TRS("Apply to tempo grid"), nullptr, false, chapter.bpm > 0.f)) {
                     applyChapterTempoToGrid(chapter);
                 }
                 OFS::Tooltip("Sets the tempo grid from this chapter's BPM, for when the grid is "
@@ -626,7 +626,7 @@ void OFS_ChapterManager::showRenameControls(ChapterState& chapterState) noexcept
     if(chapterState.chapters.empty()) return;
 
     constexpr const char* PopupId = "Rename chapters###renameChapters";
-    if(ImGui::Button("Rename chapters...", ImVec2(-1.f, 0.f))) {
+    if(ImGui::Button(TRS("Rename chapters..."), ImVec2(-1.f, 0.f))) {
         autoChapterNames(chapterState, renamePreview);
         ImGui::OpenPopup(PopupId);
     }
@@ -649,17 +649,17 @@ void OFS_ChapterManager::showRenameControls(ChapterState& chapterState) noexcept
 
     const float em = ImGui::GetFontSize();
     if(changed == 0) {
-        ImGui::TextUnformatted("Every chapter already has the name it would get.");
+        ImGui::TextUnformatted(TRS("Every chapter already has the name it would get."));
         ImGui::Spacing();
-        if(ImGui::Button("Close", ImVec2(em * 8.f, 0.f)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+        if(ImGui::Button(TRS("Close"), ImVec2(em * 8.f, 0.f)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
             ImGui::CloseCurrentPopup();
         }
         ImGui::EndPopup();
         return;
     }
 
-    ImGui::Text("Rename %d chapter%s?", (int)changed, changed == 1 ? "" : "s");
-    ImGui::TextDisabled("Names typed by hand are replaced too. This cannot be undone.");
+    ImGui::Text(TRS("Rename %d chapter%s?"), (int)changed, changed == 1 ? "" : "s");
+    ImGui::TextDisabled(TRS("Names typed by hand are replaced too. This cannot be undone."));
     ImGui::Spacing();
 
     const float rowHeight = ImGui::GetTextLineHeightWithSpacing() + ImGui::GetStyle().CellPadding.y * 2.f;
@@ -676,7 +676,7 @@ void OFS_ChapterManager::showRenameControls(ChapterState& chapterState) noexcept
             if(chapter.name == renamePreview[i]) continue;
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
-            if(chapter.name.empty()) ImGui::TextDisabled("(no name)");
+            if(chapter.name.empty()) ImGui::TextDisabled(TRS("(no name)"));
             else ImGui::TextUnformatted(chapter.name.c_str());
             ImGui::TableNextColumn();
             ImGui::TextUnformatted(renamePreview[i].c_str());
@@ -689,10 +689,10 @@ void OFS_ChapterManager::showRenameControls(ChapterState& chapterState) noexcept
     ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::Role().OnFill);
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::Role().OnFillHi);
     ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::Role().OnFillHi);
-    const bool rename = ImGui::Button("Rename", ImVec2(buttonWidth, 0.f));
+    const bool rename = ImGui::Button(TRS("Rename"), ImVec2(buttonWidth, 0.f));
     ImGui::PopStyleColor(3);
     ImGui::SameLine();
-    const bool cancel = ImGui::Button("Cancel", ImVec2(buttonWidth, 0.f)) || ImGui::IsKeyPressed(ImGuiKey_Escape);
+    const bool cancel = ImGui::Button(TRS("Cancel"), ImVec2(buttonWidth, 0.f)) || ImGui::IsKeyPressed(ImGuiKey_Escape);
 
     if(rename) {
         for(size_t i = 0; i < renamePreview.size(); i += 1) {
@@ -739,12 +739,12 @@ void OFS_ChapterManager::showAnalysisControls(ChapterState& chapterState,
         OFS::Spinner("##chapterAudioSpin", ImGui::GetFontSize() / 3.f, 4.f,
             ImGui::GetColorU32(ImGuiCol_TabActive));
         ImGui::SameLine();
-        ImGui::TextDisabled("Reading the audio...");
+        ImGui::TextDisabled(TRS("Reading the audio..."));
         return;
     }
 
     if(!canRun) {
-        ImGui::TextDisabled("Load a video or audio file first.");
+        ImGui::TextDisabled(TRS("Load a video or audio file first."));
         return;
     }
 
@@ -757,8 +757,8 @@ void OFS_ChapterManager::showAnalysisControls(ChapterState& chapterState,
     if(!lastAnalysis.ran) return;
 
     if(lastAnalysis.audioFailed) {
-        ImGui::TextWrapped("Could not read the audio. Check that ffmpeg is available and that "
-                           "the media actually has an audio track.");
+        ImGui::TextWrapped(TRS("Could not read the audio. Check that ffmpeg is available and that "
+                           "the media actually has an audio track."));
         return;
     }
 
@@ -783,7 +783,7 @@ void OFS_ChapterManager::showAnalysisControls(ChapterState& chapterState,
     append("%d could not be read", lastAnalysis.unreadable);
 
     if(len == 0) {
-        ImGui::TextDisabled("Nothing found. The audio may have no steady beat.");
+        ImGui::TextDisabled(TRS("Nothing found. The audio may have no steady beat."));
     }
     else {
         ImGui::TextDisabled("%s", status);

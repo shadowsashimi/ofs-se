@@ -517,30 +517,30 @@ void OFS_PreviewExport::showDialog() noexcept
     auto app = OpenFunscripter::ptr;
     const float em = ImGui::GetFontSize();
 
-    ImGui::TextDisabled("Show");
+    ImGui::TextDisabled(TRS("Show"));
     const bool picture = mediaHasPicture();
     ImGui::BeginDisabled(!picture);
-    ImGui::Checkbox("Video", &options.video);
+    ImGui::Checkbox(TRS("Video"), &options.video);
     ImGui::EndDisabled();
     if (!picture) OFS::Tooltip("This script has no picture to show; the preview has a plain background.");
     ImGui::SameLine();
-    ImGui::Checkbox("Simulator", &options.simulator);
+    ImGui::Checkbox(TRS("Simulator"), &options.simulator);
     OFS::Tooltip("The simulator as you have it set up: the 3D model, or the bar in 2D.");
     ImGui::SameLine();
-    ImGui::Checkbox("Timeline", &options.timeline);
+    ImGui::Checkbox(TRS("Timeline"), &options.timeline);
     OFS::Tooltip("A strip of the showing tracks, up to four, scrolling past a playhead.");
     ImGui::SameLine();
-    ImGui::Checkbox("Heatmap", &options.heatmap);
+    ImGui::Checkbox(TRS("Heatmap"), &options.heatmap);
     OFS::Tooltip("The whole script's heatmap along the bottom, with a mark at the moment shown.");
 
     ImGui::Spacing();
-    ImGui::TextDisabled("Range");
+    ImGui::TextDisabled(TRS("Range"));
     ImGui::SetNextItemWidth(em * 7.f);
     ImGui::InputFloat("Start (s)", &options.start, 1.f, 10.f, "%.2f");
     ImGui::SameLine();
     ImGui::SetNextItemWidth(em * 7.f);
     ImGui::InputFloat("End (s)", &options.end, 1.f, 10.f, "%.2f");
-    if (ImGui::SmallButton("Selection")) {
+    if (ImGui::SmallButton(TRS("Selection"))) {
         auto active = app->ActiveFunscript();
         if (active && active->SelectionSize() >= 2) {
             options.start = active->Selection().front().atS;
@@ -549,7 +549,7 @@ void OFS_PreviewExport::showDialog() noexcept
     }
     OFS::Tooltip("From the first to the last selected point.");
     ImGui::SameLine();
-    if (ImGui::SmallButton("Chapter")) {
+    if (ImGui::SmallButton(TRS("Chapter"))) {
         const float now = (float)app->player->CurrentTime();
         for (const auto& chapter : app->chapterMgr->State().chapters) {
             if (now >= chapter.startTime && now <= chapter.endTime) {
@@ -560,16 +560,16 @@ void OFS_PreviewExport::showDialog() noexcept
     }
     OFS::Tooltip("The chapter under the playhead.");
     ImGui::SameLine();
-    if (ImGui::SmallButton("30 s from playhead")) {
+    if (ImGui::SmallButton(TRS("30 s from playhead"))) {
         options.start = (float)app->player->CurrentTime();
         options.end = Util::Min((float)app->player->Duration(), options.start + 30.f);
     }
     const float length = Util::Max(0.f, options.end - options.start);
-    ImGui::TextDisabled("%s to %s, %s long", formatSeconds(options.start).c_str(),
+    ImGui::TextDisabled(TRS("%s to %s, %s long"), formatSeconds(options.start).c_str(),
         formatSeconds(options.end).c_str(), formatSeconds(length).c_str());
 
     ImGui::Spacing();
-    ImGui::TextDisabled("Format");
+    ImGui::TextDisabled(TRS("Format"));
     static constexpr const char* formatTips[3] = {
         "A video with the sound. Plays everywhere, and uploads to EroScripts as it is.",
         "An animated image with no sound that loops by itself in a post. Best kept short.",
@@ -584,14 +584,14 @@ void OFS_PreviewExport::showDialog() noexcept
     if (pickedSize >= 0) options.height = Heights[pickedSize];
     if (options.format != Mp4 && length > 30.f) {
         ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Role().AccentPale);
-        ImGui::TextWrapped("Animated images of more than 30 seconds get large. MP4 suits long clips.");
+        ImGui::TextWrapped(TRS("Animated images of more than 30 seconds get large. MP4 suits long clips."));
         ImGui::PopStyleColor();
     }
 
     ImGui::Spacing();
     const bool nothing = !options.video && !options.simulator && !options.timeline && !options.heatmap;
     ImGui::BeginDisabled(length < 0.1f || nothing);
-    if (ImGui::Button("Export...")) {
+    if (ImGui::Button(TRS("Export..."))) {
         auto& project = app->LoadedProject;
         auto base = Util::PathFromString(app->player->VideoPath() ? app->player->VideoPath() : project->Path());
         base.replace_extension("");
@@ -609,7 +609,7 @@ void OFS_PreviewExport::showDialog() noexcept
     }
     ImGui::EndDisabled();
     ImGui::SameLine();
-    if (ImGui::Button("Cancel") || ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
+    if (ImGui::Button(TRS("Cancel")) || ImGui::IsKeyPressed(ImGuiKey_Escape, false)) {
         dialogOpen = false;
         ImGui::CloseCurrentPopup();
     }
@@ -638,24 +638,24 @@ void OFS_PreviewExport::showProgress() noexcept
             char overlay[48];
             snprintf(overlay, sizeof(overlay), "%d / %d frames", framesDone, framesTotal);
             ImGui::ProgressBar(done, ImVec2(-1.f, 0.f), overlay);
-            if (ImGui::Button("Cancel")) finish(true);
+            if (ImGui::Button(TRS("Cancel"))) finish(true);
             break;
         }
         case Stage::Done:
-            ImGui::TextWrapped("Saved %s", name.c_str());
-            if (ImGui::Button("Show in folder")) {
+            ImGui::TextWrapped(TRS("Saved %s"), name.c_str());
+            if (ImGui::Button(TRS("Show in folder"))) {
                 auto folder = Util::PathFromString(outputPath);
                 folder.remove_filename();
                 Util::OpenFileExplorer(folder.u8string());
             }
             ImGui::SameLine();
-            if (ImGui::Button("Close")) stage = Stage::Idle;
+            if (ImGui::Button(TRS("Close"))) stage = Stage::Idle;
             break;
         case Stage::Failed:
             ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Role().AccentPale);
             ImGui::TextWrapped("%s", failure.empty() ? "The preview could not be made." : failure.c_str());
             ImGui::PopStyleColor();
-            if (ImGui::Button("Close")) stage = Stage::Idle;
+            if (ImGui::Button(TRS("Close"))) stage = Stage::Idle;
             break;
         default:
             break;

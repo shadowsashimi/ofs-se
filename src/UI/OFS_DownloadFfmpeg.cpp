@@ -147,7 +147,7 @@ void OFS_DownloadFfmpeg::DownloadFfmpegModal() noexcept
         else if(ExtractFailed) {
             ImGui::TextColored((ImColor)IM_COL32(255, 0, 0, 255), TR(EXTRACT_FAIL));
             ImGui::TextUnformatted(TR(EXTRACT_FAIL_MSG));
-            ImGui::TextDisabled("tar.exe has been part of Windows 10 since build 17063");
+            ImGui::TextDisabled(TRS("tar.exe has been part of Windows 10 since build 17063"));
         }
 
         ImGui::EndPopup();

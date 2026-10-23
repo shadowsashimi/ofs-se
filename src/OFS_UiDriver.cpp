@@ -504,6 +504,16 @@ bool OFS_UiDriver::parse(const std::string& script, const std::string& media) no
             push(op);
             frames(2);
         }
+        else if (command == "language") {
+            Op op;
+            op.type = OpType::Language;
+            op.text = rest;
+            push(op);
+            frames(2);
+        }
+        else if (command == "savetext") {
+            push(Op{ OpType::SaveTextTemplate });
+        }
         else if (command == "layout") {
             Op op;
             op.type = OpType::Layout;
@@ -659,6 +669,31 @@ void OFS_UiDriver::execute(const Op& op) noexcept
             mouseX = target.x + op.x;
             mouseY = target.y + op.y;
             io.AddMousePosEvent(mouseX, mouseY);
+            break;
+        }
+        case OpType::Language: {
+            // Into the profile's translations folder, where Preferences
+            // looks, then loaded as picking it there would.
+            log("language " + op.text);
+            const auto from = scriptDir / "lang" / Util::PathFromString(op.text);
+            const auto to = Util::PathFromString(Util::Prefpath(OFS_Translator::TranslationDir)) / Util::PathFromString(op.text);
+            std::error_code ec;
+            std::filesystem::copy_file(from, to, std::filesystem::copy_options::overwrite_existing, ec);
+            if (ec || !OFS_Translator::ptr->LoadTranslation(op.text.c_str())) {
+                log("line " + std::to_string(op.line) + ": FAIL could not load language " + op.text);
+                failed += 1;
+                break;
+            }
+            OFS_DynFontAtlas::AddTranslationText();
+            break;
+        }
+        case OpType::SaveTextTemplate: {
+            const auto path = (outDir / "text-to-translate.csv").u8string();
+            log("savetext " + path);
+            if (!OFS_Translator::ptr->SaveTextTemplate(path.c_str())) {
+                log("line " + std::to_string(op.line) + ": FAIL could not write " + path);
+                failed += 1;
+            }
             break;
         }
         case OpType::Layout:
@@ -1018,6 +1053,7 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
     add("waveform_busy", flag(app->scriptTimeline.WaveformBusy()));
     add("waveform_channel", std::to_string(app->scriptTimeline.WaveformChannelShown()));
     add("snap_beats", flag(BaseOverlay::State().SnapToBeats));
+    add("text_translations", std::to_string(OFS_Translator::ptr->TextTranslationCount()));
     add("inset_views", flag(app->simulator.InsetViewsShown));
     add("speed_colors", std::to_string(BaseOverlay::State().SpeedColors));
     add("waveform_samples", std::to_string(app->scriptTimeline.Wave.data.SampleCount()));

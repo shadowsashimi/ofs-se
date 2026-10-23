@@ -226,11 +226,11 @@ void TempoOverlay::DrawSettings() noexcept
 
         ImGui::PushTextWrapPos(0.f);
         if(chapterMgr.Busy()) {
-            ImGui::TextDisabled("Reading the audio...");
+            ImGui::TextDisabled(TRS("Reading the audio..."));
         }
         else if(chapters.empty()) {
-            ImGui::TextDisabled("No chapters yet, so there is no tempo to follow.");
-            if(ImGui::Button("Detect tempo and chapters", ImVec2(fullWidth, 0.f))) {
+            ImGui::TextDisabled(TRS("No chapters yet, so there is no tempo to follow."));
+            if(ImGui::Button(TRS("Detect tempo and chapters"), ImVec2(fullWidth, 0.f))) {
                 chapterMgr.DetectTempo();
                 app->ShowChapters();
             }
@@ -238,15 +238,15 @@ void TempoOverlay::DrawSettings() noexcept
                          "The grid then follows whichever chapter the playhead is in.");
         }
         else if(here == nullptr) {
-            ImGui::TextDisabled("The playhead is between chapters, so the grid keeps the last tempo it had.");
+            ImGui::TextDisabled(TRS("The playhead is between chapters, so the grid keeps the last tempo it had."));
         }
         else if(here->isBreak) {
-            ImGui::TextDisabled("\"%s\" is marked as having no music, so the grid keeps the last tempo it had.",
+            ImGui::TextDisabled(TRS("\"%s\" is marked as having no music, so the grid keeps the last tempo it had."),
                 here->name.c_str());
         }
         else {
-            ImGui::TextDisabled("\"%s\" has no tempo yet.", here->name.c_str());
-            if(ImGui::Button("Measure this chapter", ImVec2(fullWidth, 0.f))) {
+            ImGui::TextDisabled(TRS("\"%s\" has no tempo yet."), here->name.c_str());
+            if(ImGui::Button(TRS("Measure this chapter"), ImVec2(fullWidth, 0.f))) {
                 if(!chapterMgr.MeasureChapter(*here)) app->ShowChapters();
             }
             OFS::Tooltip("Measures this chapter's tempo from the audio. The Chapters window can measure all of them at once.");
@@ -254,7 +254,7 @@ void TempoOverlay::DrawSettings() noexcept
         ImGui::PopTextWrapPos();
     }
     if(tempo.autoTempo) {
-        if(ImGui::Button("Open the Chapters window", ImVec2(ImGui::GetContentRegionAvail().x, 0.f))) {
+        if(ImGui::Button(TRS("Open the Chapters window"), ImVec2(ImGui::GetContentRegionAvail().x, 0.f))) {
             OpenFunscripter::ptr->ShowChapters();
         }
         OFS::Tooltip("Opens the Chapters window, where the tempo of each chapter is detected, checked and corrected.");
@@ -277,13 +277,13 @@ void TempoOverlay::DrawSettings() noexcept
                 tempo.SetFromTempo(Util::Clamp(tempo.bpm * factor, 1.f, 1000.f), tempo.beatOffsetSeconds);
             }
         };
-        if(ImGui::Button("Half time /2", ImVec2(buttonWidth, 0.f))) scale(0.5f);
+        if(ImGui::Button(TRS("Half time /2"), ImVec2(buttonWidth, 0.f))) scale(0.5f);
         OFS::Tooltip(driver != nullptr
             ? "Halves this chapter's tempo, for one read off a pulse twice as fast as the beat. "
               "Kept when the chapter is measured again."
             : "Halves the tempo.");
         ImGui::SameLine();
-        if(ImGui::Button("Double time x2", ImVec2(buttonWidth, 0.f))) scale(2.f);
+        if(ImGui::Button(TRS("Double time x2"), ImVec2(buttonWidth, 0.f))) scale(2.f);
         OFS::Tooltip(driver != nullptr
             ? "Doubles this chapter's tempo, for one read off a pulse half as fast as the beat. "
               "Kept when the chapter is measured again."
@@ -303,15 +303,15 @@ void TempoOverlay::DrawSettings() noexcept
     {
         const float spacing = ImGui::GetStyle().ItemSpacing.x;
         const float buttonWidth = (ImGui::GetContentRegionAvail().x - (spacing * 2.f)) / 3.f;
-        if(ImGui::Button("-1 beat", ImVec2(buttonWidth, 0.f))) { tempo.NudgeDownbeat(-1); writePhaseToChapter(tempo); }
+        if(ImGui::Button(TRS("-1 beat"), ImVec2(buttonWidth, 0.f))) { tempo.NudgeDownbeat(-1); writePhaseToChapter(tempo); }
         OFS::Tooltip("Rotates the grid back by one beat, for when the bar lines are landing "
                      "on the wrong beat of the bar.");
         ImGui::SameLine();
-        if(ImGui::Button("+1 beat", ImVec2(buttonWidth, 0.f))) { tempo.NudgeDownbeat(1); writePhaseToChapter(tempo); }
+        if(ImGui::Button(TRS("+1 beat"), ImVec2(buttonWidth, 0.f))) { tempo.NudgeDownbeat(1); writePhaseToChapter(tempo); }
         OFS::Tooltip("Rotates the grid on by one beat, for when the bar lines are landing "
                      "on the wrong beat of the bar.");
         ImGui::SameLine();
-        if(ImGui::Button("At playhead", ImVec2(buttonWidth, 0.f))) {
+        if(ImGui::Button(TRS("At playhead"), ImVec2(buttonWidth, 0.f))) {
             tempo.SetDownbeatAt(OpenFunscripter::ptr->player->CurrentTime());
             writePhaseToChapter(tempo);
         }
@@ -329,7 +329,7 @@ void TempoOverlay::DrawSettings() noexcept
     OFS::Tooltip("Fine adjustment of the same bar line, for when it is out by less than "
                  "a beat.");
 
-    ImGui::TextDisabled("Note spacing");
+    ImGui::TextDisabled(TRS("Note spacing"));
     ImGui::SetNextItemWidth(-1.f);
     DrawNoteDivisionSelector("##TempoGrid", true);
 }
@@ -357,8 +357,8 @@ void TempoOverlay::DrawNoteDivisionSelector(const char* id, bool enabled) noexce
     ImGui::EndDisabled();
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayNormal)) {
         if (enabled && tempo.bpm > 0.f) {
-            ImGui::SetTooltip("Spacing of the tempo grid's lines: 1/4 is a line every quarter note, "
-                "1/8 every eighth note, and so on. At this tempo, a line every %.0f ms.",
+            ImGui::SetTooltip(TRS("Spacing of the tempo grid's lines: 1/4 is a line every quarter note, "
+                "1/8 every eighth note, and so on. At this tempo, a line every %.0f ms."),
                 ((60.f * 1000.f) / tempo.bpm) * beatMultiples[current]);
         }
         else {

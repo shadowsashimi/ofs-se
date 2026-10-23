@@ -21,8 +21,8 @@ void OFS_LuaExtension::ShowWindow() noexcept
 	ImGui::Begin(NameId.c_str(), &WindowOpen, ImGuiWindowFlags_None);
 	if(!Error.empty())
 	{
-		ImGui::TextWrapped("Error:\n%s", Error.c_str());
-		if (ImGui::Button("Try reloading")) {
+		ImGui::TextWrapped(TRS("Error:\n%s"), Error.c_str());
+		if (ImGui::Button(TRS("Try reloading"))) {
 			Load();
 		}
 		ImGui::End();

@@ -170,11 +170,11 @@ void FunctionRangeExtender::DrawUI() noexcept
         // Says what the tool is for before saying why it is unavailable, since
         // a greyed out slider on its own explains neither.
         ImGui::PushTextWrapPos(0.f);
-        ImGui::TextDisabled("Pushes the top of every stroke in a selection up and its bottom "
+        ImGui::TextDisabled(TRS("Pushes the top of every stroke in a selection up and its bottom "
                             "down by the same amount, keeping the timing. Negative values pull "
-                            "them in towards the middle.");
+                            "them in towards the middle."));
         ImGui::Spacing();
-        ImGui::TextDisabled("Select at least 5 points to use it. %u selected.",
+        ImGui::TextDisabled(TRS("Select at least 5 points to use it. %u selected."),
             app->ActiveFunscript()->SelectionSize());
         ImGui::PopTextWrapPos();
     }
@@ -346,10 +346,10 @@ void RamerDouglasPeucker::DrawUI() noexcept
     }
     else {
         ImGui::PushTextWrapPos(0.f);
-        ImGui::TextDisabled("Removes the points in a selection that add least to its shape. "
-                            "The higher epsilon goes, the more are removed.");
+        ImGui::TextDisabled(TRS("Removes the points in a selection that add least to its shape. "
+                            "The higher epsilon goes, the more are removed."));
         ImGui::Spacing();
-        ImGui::TextDisabled("Select at least 5 points to use it. %u selected.",
+        ImGui::TextDisabled(TRS("Select at least 5 points to use it. %u selected."),
             app->ActiveFunscript()->SelectionSize());
         ImGui::PopTextWrapPos();
     }
@@ -616,7 +616,7 @@ void MultiAxisGenerator::DrawUI() noexcept
             { "Grind", "Pitch swings through at the bottom of each stroke, so the sleeve traces a figure eight." },
             { "Orbit", "Roll and pitch a quarter stroke apart, so the sleeve circles as it strokes." },
         };
-        ImGui::TextDisabled("Presets");
+        ImGui::TextDisabled(TRS("Presets"));
         const auto& style = ImGui::GetStyle();
         const float width = (ImGui::GetContentRegionAvail().x - (style.ItemSpacing.x * 3.f)) / 4.f;
         for (int32_t i = 0; i < 4; i += 1) {
@@ -643,7 +643,7 @@ void MultiAxisGenerator::DrawUI() noexcept
     }
 
     ImGui::Spacing();
-    ImGui::TextDisabled("Axis");
+    ImGui::TextDisabled(TRS("Axis"));
     {
         static constexpr const char* labels[3] = { "Twist", "Roll", "Pitch" };
         static constexpr const char* tips[3] = {
@@ -656,7 +656,7 @@ void MultiAxisGenerator::DrawUI() noexcept
     }
 
     auto& axis = MultiAxisSettingsFor(state, shownAxis);
-    ImGui::TextDisabled("Motion");
+    ImGui::TextDisabled(TRS("Motion"));
     {
         static constexpr const char* labels[MultiAxisPatternCount] = { "Off", "Follow", "Alternate", "Circle", "Figure 8" };
         static constexpr const char* tips[MultiAxisPatternCount] = {
@@ -686,10 +686,10 @@ void MultiAxisGenerator::DrawUI() noexcept
         OFS::Tooltip("How much of the motion gathers at the bottom of the stroke. 0 moves as much at the top as at the bottom; 100 does not move at the top at all.");
         changed |= OFS::StepperInt("Shift (degrees)", "##MultiAxisShift", &axis.phase, 45, -180, 180);
         OFS::Tooltip("Moves the motion along the stroke. 180 is half a stroke, so a peak at the bottom moves to the top.");
-        changed |= ImGui::Checkbox("Scale with stroke length", &axis.scaleWithStroke);
+        changed |= ImGui::Checkbox(TRS("Scale with stroke length"), &axis.scaleWithStroke);
         OFS::Tooltip("Shorter strokes move less, in proportion to the longest stroke selected.");
         ImGui::SameLine();
-        changed |= ImGui::Checkbox("Reverse", &axis.reverse);
+        changed |= ImGui::Checkbox(TRS("Reverse"), &axis.reverse);
         OFS::Tooltip("Moves the other way.");
     }
 
@@ -719,7 +719,7 @@ void MultiAxisGenerator::DrawUI() noexcept
 
     if (!previewing) {
         ImGui::BeginDisabled(!canPreview);
-        if (ImGui::Button("Preview", ImVec2(-1.f, 0.f))) {
+        if (ImGui::Button(TRS("Preview"), ImVec2(-1.f, 0.f))) {
             previewSource = source->Selection();
             appliedAxes.clear();
             generate();
@@ -732,14 +732,14 @@ void MultiAxisGenerator::DrawUI() noexcept
         ImGui::PushStyleColor(ImGuiCol_Button, OFS_Sashimi::Role().OnFill);
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, OFS_Sashimi::Role().OnFillHi);
         ImGui::PushStyleColor(ImGuiCol_ButtonActive, OFS_Sashimi::Role().OnFillHi);
-        if (ImGui::Button("Apply", ImVec2(half, 0.f))) {
+        if (ImGui::Button(TRS("Apply"), ImVec2(half, 0.f))) {
             previewing = false;
             appliedAxes = previewAxes;
         }
         ImGui::PopStyleColor(3);
         OFS::Tooltip("Keep the preview in the scripts.");
         ImGui::SameLine();
-        if (ImGui::Button("Discard", ImVec2(half, 0.f))) {
+        if (ImGui::Button(TRS("Discard"), ImVec2(half, 0.f))) {
             discardPreview();
         }
         OFS::Tooltip("Take the preview back out, leaving the scripts as they were.");
@@ -748,28 +748,28 @@ void MultiAxisGenerator::DrawUI() noexcept
     ImGui::PushTextWrapPos(0.f);
     if (previewing) {
         ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Role().Accent);
-        ImGui::TextUnformatted("Previewing, not applied yet.");
+        ImGui::TextUnformatted(TRS("Previewing, not applied yet."));
         ImGui::PopStyleColor();
-        ImGui::TextDisabled("%s from %.2f s to %.2f s. Changes above update it; axes set to Off keep what they had. "
-            "Closing this tool discards it.",
+        ImGui::TextDisabled(TRS("%s from %.2f s to %.2f s. Changes above update it; axes set to Off keep what they had. "
+            "Closing this tool discards it."),
             previewAxes.c_str(), previewSource[0].atS, previewSource[previewSource.size() - 1].atS);
     }
     else if (selected < 3) {
-        ImGui::TextDisabled("Select the stroke points to follow, at least 3. %u selected.", selected);
-        if (!appliedAxes.empty()) ImGui::TextDisabled("Applied to %s.", appliedAxes.c_str());
+        ImGui::TextDisabled(TRS("Select the stroke points to follow, at least 3. %u selected."), selected);
+        if (!appliedAxes.empty()) ImGui::TextDisabled(TRS("Applied to %s."), appliedAxes.c_str());
     }
     else if (axesOn.empty()) {
-        ImGui::TextDisabled("Every axis is off. Pick a motion for at least one.");
-        if (!appliedAxes.empty()) ImGui::TextDisabled("Applied to %s.", appliedAxes.c_str());
+        ImGui::TextDisabled(TRS("Every axis is off. Pick a motion for at least one."));
+        if (!appliedAxes.empty()) ImGui::TextDisabled(TRS("Applied to %s."), appliedAxes.c_str());
     }
     else {
         const auto& selection = source->Selection();
-        ImGui::TextDisabled("Preview writes %s from %.2f s to %.2f s, replacing what is there and adding a script "
-            "for any axis the project does not have. Nothing is kept until you apply it.",
+        ImGui::TextDisabled(TRS("Preview writes %s from %.2f s to %.2f s, replacing what is there and adding a script "
+            "for any axis the project does not have. Nothing is kept until you apply it."),
             axesOn.c_str(), selection[0].atS, selection[selection.size() - 1].atS);
-        if (!appliedAxes.empty()) ImGui::TextDisabled("Applied to %s. Undo takes it back.", appliedAxes.c_str());
+        if (!appliedAxes.empty()) ImGui::TextDisabled(TRS("Applied to %s. Undo takes it back."), appliedAxes.c_str());
         if (MultiAxisChannel(*source) != "stroke") {
-            ImGui::TextDisabled("The selected points are not on the stroke script.");
+            ImGui::TextDisabled(TRS("The selected points are not on the stroke script."));
         }
     }
     ImGui::PopTextWrapPos();
@@ -1063,7 +1063,7 @@ void BeatFill::DrawUI() noexcept
             "Between the first and the last selected point.",
             "Every chapter with a tempo, skipping the ones marked as having no music.",
         };
-        ImGui::TextDisabled("Fill");
+        ImGui::TextDisabled(TRS("Fill"));
         const int32_t picked = OFS::SegmentedControl("##BeatFillScope", labels, tips,
             BeatFillScopeCount, state.beatFillScope);
         if (picked >= 0) state.beatFillScope = picked;
@@ -1071,11 +1071,11 @@ void BeatFill::DrawUI() noexcept
 
     // The saved patterns, with the built-in stroke first.
     {
-        ImGui::TextDisabled("With");
+        ImGui::TextDisabled(TRS("With"));
         const char* current = state.beatFillPattern.empty() ? "Up and down" : state.beatFillPattern.c_str();
         ImGui::SetNextItemWidth(-1.f);
         if (ImGui::BeginCombo("##BeatFillPattern", current)) {
-            if (ImGui::Selectable("Up and down", state.beatFillPattern.empty())) {
+            if (ImGui::Selectable(TRS("Up and down"), state.beatFillPattern.empty())) {
                 state.beatFillPattern.clear();
             }
             for (const auto& saved : state.patterns) {
@@ -1089,7 +1089,7 @@ void BeatFill::DrawUI() noexcept
     }
 
     if (state.beatFillPattern.empty()) {
-        ImGui::TextDisabled("A point every");
+        ImGui::TextDisabled(TRS("A point every"));
         ImGui::SetNextItemWidth(-1.f);
         {
             static constexpr const char* names[] = {
@@ -1106,21 +1106,21 @@ void BeatFill::DrawUI() noexcept
             }
         }
         OFS::Tooltip("Note length between points. A point every quarter note is a stroke every two beats.");
-        ImGui::Checkbox("Start at the bottom", &state.beatFillStartAtBottom);
+        ImGui::Checkbox(TRS("Start at the bottom"), &state.beatFillStartAtBottom);
     }
 
     OFS::StepperInt("Top", "##BeatFillTop", &state.beatFillTop, 5, 0, 100);
     OFS::StepperInt("Bottom", "##BeatFillBottom", &state.beatFillBottom, 5, 0, 100);
-    ImGui::Checkbox("Replace what is there", &state.beatFillReplace);
+    ImGui::Checkbox(TRS("Replace what is there"), &state.beatFillReplace);
     OFS::Tooltip("Clears the range before filling it. Without this the new points join what is already there.");
 
     ImGui::Spacing();
-    if (ImGui::Button("Fill", ImVec2(-1.f, 0.f))) fill();
+    if (ImGui::Button(TRS("Fill"), ImVec2(-1.f, 0.f))) fill();
 
     // Saving a pattern is part of the same tool: a passage is selected, named,
     // and from then on it is in the list above.
     if (!savingPattern) {
-        if (ImGui::Button("Save selection as a pattern", ImVec2(-1.f, 0.f))) {
+        if (ImGui::Button(TRS("Save selection as a pattern"), ImVec2(-1.f, 0.f))) {
             savingPattern = true;
             patternName.clear();
         }
@@ -1129,11 +1129,11 @@ void BeatFill::DrawUI() noexcept
     else {
         ImGui::SetNextItemWidth(-1.f);
         ImGui::InputTextWithHint("##PatternName", "Name for this pattern", &patternName);
-        if (ImGui::Button("Save")) savePattern();
+        if (ImGui::Button(TRS("Save"))) savePattern();
         ImGui::SameLine();
-        if (ImGui::Button("Cancel")) savingPattern = false;
+        if (ImGui::Button(TRS("Cancel"))) savingPattern = false;
     }
-    if (!state.beatFillPattern.empty() && ImGui::Button("Delete this pattern", ImVec2(-1.f, 0.f))) {
+    if (!state.beatFillPattern.empty() && ImGui::Button(TRS("Delete this pattern"), ImVec2(-1.f, 0.f))) {
         auto& patterns = state.patterns;
         const std::string removed = state.beatFillPattern;
         patterns.erase(std::remove_if(patterns.begin(), patterns.end(),
@@ -1272,8 +1272,8 @@ void LoudnessDepth::DrawUI() noexcept
     auto& state = SpecialFunctionState::State(stateHandle);
 
     ImGui::PushTextWrapPos(0.f);
-    ImGui::TextDisabled("Scales the selected strokes by how loud the audio is under them. "
-                        "Quiet passages end up shallower, loud ones keep their full depth.");
+    ImGui::TextDisabled(TRS("Scales the selected strokes by how loud the audio is under them. "
+                        "Quiet passages end up shallower, loud ones keep their full depth."));
     ImGui::PopTextWrapPos();
     ImGui::Spacing();
 
@@ -1288,7 +1288,7 @@ void LoudnessDepth::DrawUI() noexcept
             "Bottoms stay put and tops come down.",
             "Tops stay put and bottoms come up.",
         };
-        ImGui::TextDisabled("Shrink towards");
+        ImGui::TextDisabled(TRS("Shrink towards"));
         const int32_t picked = OFS::SegmentedControl("##LoudnessAnchor", labels, tips, 3, state.loudnessAnchor);
         if (picked >= 0) state.loudnessAnchor = picked;
     }
@@ -1299,7 +1299,7 @@ void LoudnessDepth::DrawUI() noexcept
             "Follows the shape of the track over a couple of seconds.",
             "Follows single hits, so one stroke can differ from the next.",
         };
-        ImGui::TextDisabled("Follow");
+        ImGui::TextDisabled(TRS("Follow"));
         const int32_t picked = OFS::SegmentedControl("##LoudnessFollow", labels, tips, 2,
             state.loudnessSections ? 0 : 1);
         if (picked >= 0) state.loudnessSections = (picked == 0);
@@ -1308,10 +1308,10 @@ void LoudnessDepth::DrawUI() noexcept
     ImGui::Spacing();
     const bool haveWaveform = app->scriptTimeline.Wave.data.SampleCount() > 0;
     ImGui::BeginDisabled(!haveWaveform);
-    if (ImGui::Button("Apply", ImVec2(-1.f, 0.f))) apply();
+    if (ImGui::Button(TRS("Apply"), ImVec2(-1.f, 0.f))) apply();
     ImGui::EndDisabled();
     if (!haveWaveform) {
-        if (ImGui::Button("Make waveform", ImVec2(-1.f, 0.f))) {
+        if (ImGui::Button(TRS("Make waveform"), ImVec2(-1.f, 0.f))) {
             app->scriptTimeline.RequestWaveform();
         }
         OFS::Tooltip("Reads the audio once, which is what the loudness is taken from.");

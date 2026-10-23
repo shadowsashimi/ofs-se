@@ -337,11 +337,11 @@ void OFS_DeviceLink::drawIntifaceSettings() noexcept
 {
     auto& state = DeviceLinkState::State(stateHandle);
     ImGui::PushTextWrapPos(0.f);
-    ImGui::TextDisabled("Through Intiface Central, which holds the bluetooth connection. Start its "
-                        "server, then connect here.");
+    ImGui::TextDisabled(TRS("Through Intiface Central, which holds the bluetooth connection. Start its "
+                        "server, then connect here."));
     ImGui::PopTextWrapPos();
 
-    ImGui::TextDisabled("Address");
+    ImGui::TextDisabled(TRS("Address"));
     ImGui::SetNextItemWidth(-1.f);
     ImGui::InputText("##DeviceAddress", &state.address);
     OFS::StepperInt("Port", "##DevicePort", &state.port, 1, 1, 65535);
@@ -353,11 +353,11 @@ void OFS_DeviceLink::drawTCodeSettings() noexcept
 
     if (state.backend == DeviceBackendSerial) {
         ImGui::PushTextWrapPos(0.f);
-        ImGui::TextDisabled("Straight down a serial port. A machine on USB is one of these, and so "
-                            "is one paired over Bluetooth, which Windows gives a port of its own.");
+        ImGui::TextDisabled(TRS("Straight down a serial port. A machine on USB is one of these, and so "
+                            "is one paired over Bluetooth, which Windows gives a port of its own."));
         ImGui::PopTextWrapPos();
 
-        ImGui::TextDisabled("Port");
+        ImGui::TextDisabled(TRS("Port"));
         ImGui::SetNextItemWidth(-1.f);
         if (ImGui::BeginCombo("##SerialPort", state.serialPort.c_str())) {
             // Read when the list is opened rather than every frame: it asks
@@ -368,7 +368,7 @@ void OFS_DeviceLink::drawTCodeSettings() noexcept
                     state.serialPort = port;
                 }
             }
-            if (serialPorts.empty()) ImGui::TextDisabled("No serial ports found.");
+            if (serialPorts.empty()) ImGui::TextDisabled(TRS("No serial ports found."));
             ImGui::EndCombo();
         }
         OFS::Tooltip("A Bluetooth machine appears here once it is paired in Windows.");
@@ -380,11 +380,11 @@ void OFS_DeviceLink::drawTCodeSettings() noexcept
     }
     else {
         ImGui::PushTextWrapPos(0.f);
-        ImGui::TextDisabled("Over the network, to a machine on wifi. Which of UDP and TCP, and "
-                            "which port, is whatever its firmware was set up for.");
+        ImGui::TextDisabled(TRS("Over the network, to a machine on wifi. Which of UDP and TCP, and "
+                            "which port, is whatever its firmware was set up for."));
         ImGui::PopTextWrapPos();
 
-        ImGui::TextDisabled("Address");
+        ImGui::TextDisabled(TRS("Address"));
         ImGui::SetNextItemWidth(-1.f);
         ImGui::InputText("##TCodeHost", &state.tcodeHost);
         OFS::StepperInt("Port", "##TCodePort", &state.tcodePort, 1, 1, 65535);
@@ -470,7 +470,7 @@ static void drawMachinePicker(OFS_DeviceLink* link) noexcept
     }
     if (missing.empty()) return;
     ImGui::SameLine();
-    if (ImGui::Button("Add its tracks")) app->AddMachineTracks(current);
+    if (ImGui::Button(TRS("Add its tracks"))) app->AddMachineTracks(current);
     OFS::TooltipFmt("Adds a track for each axis the project has none for yet: %s.", missing.c_str());
 }
 
@@ -528,7 +528,7 @@ void OFS_DeviceLink::drawAxisTable() noexcept
         OFS::Tooltip("The fastest this axis may move, in percent of its travel a second. "
                      "Off lets the script ask for whatever it likes.");
         ImGui::SameLine();
-        ImGui::Checkbox("flip", &axis.invert);
+        ImGui::Checkbox(TRS("flip"), &axis.invert);
         OFS::Tooltip("Sends this axis upside down.");
 
         ImGui::PopID();
@@ -551,26 +551,26 @@ void OFS_DeviceLink::drawSafetyNote() noexcept
 
     const float em = ImGui::GetFontSize();
     ImGui::PushTextWrapPos(em * 30.f);
-    ImGui::TextUnformatted("Device playback is new, and has not been tested on every device, "
+    ImGui::TextUnformatted(TRS("Device playback is new, and has not been tested on every device, "
                            "firmware or connection type. The motion might not always be what "
-                           "you expect.");
+                           "you expect."));
     ImGui::Spacing();
-    ImGui::TextUnformatted("Before using it on yourself:");
-    ImGui::BulletText("Try it first with nobody attached.");
-    ImGui::BulletText("Start with a low speed limit and narrow travel limits.");
-    ImGui::BulletText("Keep the power switch, or Stop the devices, within reach.");
+    ImGui::TextUnformatted(TRS("Before using it on yourself:"));
+    ImGui::BulletText(TRS("Try it first with nobody attached."));
+    ImGui::BulletText(TRS("Start with a low speed limit and narrow travel limits."));
+    ImGui::BulletText(TRS("Keep the power switch, or Stop the devices, within reach."));
     ImGui::Spacing();
-    ImGui::TextDisabled("You use it at your own risk. This is only shown once.");
+    ImGui::TextDisabled(TRS("You use it at your own risk. This is only shown once."));
     ImGui::PopTextWrapPos();
     ImGui::Spacing();
 
-    if (ImGui::Button("I understand, connect", ImVec2(em * 12.f, 0.f))) {
+    if (ImGui::Button(TRS("I understand, connect"), ImVec2(em * 12.f, 0.f))) {
         DeviceLinkState::State(stateHandle).safetyNoteAccepted = true;
         ImGui::CloseCurrentPopup();
         Connect();
     }
     ImGui::SameLine();
-    if (ImGui::Button("Cancel", ImVec2(em * 8.f, 0.f)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+    if (ImGui::Button(TRS("Cancel"), ImVec2(em * 8.f, 0.f)) || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
         ImGui::CloseCurrentPopup();
     }
     ImGui::EndPopup();
@@ -632,13 +632,13 @@ void OFS_DeviceLink::DrawWindow(bool* open) noexcept
 
     ImGui::Spacing();
     if (connected) {
-        if (ImGui::Button("Disconnect", ImVec2(-1.f, 0.f))) Disconnect();
+        if (ImGui::Button(TRS("Disconnect"), ImVec2(-1.f, 0.f))) Disconnect();
         if (state.backend == DeviceBackendIntiface
-            && ImGui::Button("Look for devices", ImVec2(-1.f, 0.f))) {
+            && ImGui::Button(TRS("Look for devices"), ImVec2(-1.f, 0.f))) {
             StartScanning();
         }
     }
-    else if (ImGui::Button("Connect", ImVec2(-1.f, 0.f))) {
+    else if (ImGui::Button(TRS("Connect"), ImVec2(-1.f, 0.f))) {
         if (state.safetyNoteAccepted) Connect();
         else ImGui::OpenPopup(SafetyNoteId);
     }
@@ -656,7 +656,7 @@ void OFS_DeviceLink::DrawWindow(bool* open) noexcept
     ImGui::Separator();
 
     if (state.backend == DeviceBackendIntiface) {
-        ImGui::TextDisabled("Devices");
+        ImGui::TextDisabled(TRS("Devices"));
         if (currentDevices.empty()) {
             ImGui::TextDisabled(connected
                 ? "None yet. Look for devices, or pair one in Intiface."
@@ -675,7 +675,7 @@ void OFS_DeviceLink::DrawWindow(bool* open) noexcept
             ImGui::EndDisabled();
             if (!currentDevices[i].canMove) {
                 ImGui::SameLine();
-                ImGui::TextDisabled("(cannot be told a position)");
+                ImGui::TextDisabled(TRS("(cannot be told a position)"));
             }
             ImGui::PopID();
         }
@@ -689,12 +689,12 @@ void OFS_DeviceLink::DrawWindow(bool* open) noexcept
         OFS::Tooltip("The part of the device's travel the script is mapped into.");
     }
     else {
-        ImGui::TextDisabled("Axes");
+        ImGui::TextDisabled(TRS("Axes"));
         drawMachinePicker(this);
         drawAxisTable();
 
         ImGui::Spacing();
-        ImGui::TextDisabled("Easing home");
+        ImGui::TextDisabled(TRS("Easing home"));
         OFS::StepperFloat("After (s)", "##AutoHomeDelay", &state.autoHomeDelaySeconds, 0.5f, 0.f, 30.f, "%.1f");
         OFS::Tooltip("How long an axis waits, with nothing driving it, before it goes back to its "
                      "rest position. Nothing drives an axis while the playhead is outside its "
@@ -704,23 +704,23 @@ void OFS_DeviceLink::DrawWindow(bool* open) noexcept
     }
 
     ImGui::Spacing();
-    ImGui::Checkbox("Follow while paused", &state.followWhilePaused);
+    ImGui::Checkbox(TRS("Follow while paused"), &state.followWhilePaused);
     OFS::Tooltip("Moves the device as you scrub, instead of only while playing.");
 
     ImGui::Spacing();
     ImGui::BeginDisabled(!connected);
-    if (ImGui::Button("Stop the devices", ImVec2(-1.f, 0.f))) StopDevices();
+    if (ImGui::Button(TRS("Stop the devices"), ImVec2(-1.f, 0.f))) StopDevices();
     ImGui::EndDisabled();
     OFS::Tooltip("Everything back to its rest position.");
 
     if (connected) {
         if (state.backend == DeviceBackendIntiface) {
-            ImGui::TextDisabled("%d sent", currentMoves);
+            ImGui::TextDisabled(TRS("%d sent"), currentMoves);
         }
         else {
             // The rate asked for and the rate reached, since the second is
             // what the machine feels and the two are not the same.
-            ImGui::TextDisabled("%d lines sent, %.0f a second", currentMoves, sendsPerSecond);
+            ImGui::TextDisabled(TRS("%d lines sent, %.0f a second"), currentMoves, sendsPerSecond);
             OFS::Tooltip("Lines go out from the frame loop, so the interval above is a floor: "
                          "the app cannot send more often than it draws.");
         }

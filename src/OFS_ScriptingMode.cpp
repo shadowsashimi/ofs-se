@@ -546,10 +546,10 @@ void RecordingMode::DrawModeSettings() noexcept
         auto& simState = SimulatorState::State(app->simulator.StateHandle());
         if (!simState.ShowMultiAxis) {
             ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Role().TextFaint);
-            ImGui::TextWrapped("Switch the simulator to 3D to see the model's handles.");
+            ImGui::TextWrapped(TRS("Switch the simulator to 3D to see the model's handles."));
             ImGui::PopStyleColor();
         }
-        ImGui::Checkbox("Armed", &app->simulator.PuppetArmed);
+        ImGui::Checkbox(TRS("Armed"), &app->simulator.PuppetArmed);
         OFS::Tooltip("While the video plays, hold a handle on the model and move it: the case for "
                      "stroke, the ring for twist, the tip for roll and pitch, the floor square for "
                      "surge and sway. Letting go writes what you did over the points already there.");

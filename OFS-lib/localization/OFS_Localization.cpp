@@ -16,6 +16,12 @@ OFS_Translator::OFS_Translator() noexcept
 void OFS_Translator::LoadDefaults() noexcept
 {
     StringData = std::vector<char>();
+    texts.clear();
+    composed.clear();
+    keyedDefaults.clear();
+    for (const char* text : OFS_DefaultStrings::Default) {
+        if (text != nullptr) keyedDefaults.insert(text);
+    }
     memcpy(Translation.data(), OFS_DefaultStrings::Default.data(), Translation.size() * sizeof(const char*));
 }
 
@@ -54,6 +60,7 @@ bool OFS_Translator::LoadTranslation(const char* name) noexcept
     
     std::vector<int> tmpTrIndices;
     tmpTrIndices.resize(OFS_DefaultStrings::Default.size(), -1);
+    std::unordered_map<std::string, std::string> tmpTexts;
 
     auto row = doc.GetRow<std::string>(0);
     if(row.size() != 3) {        
@@ -73,6 +80,10 @@ bool OFS_Translator::LoadTranslation(const char* name) noexcept
         value = Util::trim(value);
 
         if(value.empty()) {
+            continue;
+        }
+        if(key == "#TEXT") {
+            if(!row[1].empty()) tmpTexts[row[1]] = value;
             continue;
         }
 
@@ -103,7 +114,57 @@ bool OFS_Translator::LoadTranslation(const char* name) noexcept
 
     StringData = std::move(tmpData);
     memcpy(Translation.data(), tmpTranslation.data(), Translation.size() * sizeof(const char*));
+    texts = std::move(tmpTexts);
+    composed.clear();
+    // The keyed strings as this language has them, so they are not taken
+    // for text to translate when they pass through a helper that asks.
+    for (const char* text : Translation) {
+        if (text != nullptr) keyedDefaults.insert(text);
+    }
+    LOGF_INFO("Loaded %d keyed and %d text translations from %s", (int)Translation.size(), (int)texts.size(), name);
     return true;
+}
+
+const char* OFS_Translator::Text(const char* english) noexcept
+{
+    if (english == nullptr || english[0] == '\0') return english;
+    const char* idAt = strstr(english, "##");
+    const std::string visible = idAt ? std::string(english, idAt) : std::string(english);
+    if (visible.empty()) return english;
+    if (keyedDefaults.find(visible) == keyedDefaults.end()) seen.insert(visible);
+    if (texts.empty()) return english;
+    auto it = texts.find(visible);
+    if (it == texts.end()) return english;
+    if (idAt == nullptr) return it->second.c_str();
+    auto& whole = composed[english];
+    if (whole.empty()) whole = it->second + idAt;
+    return whole.c_str();
+}
+
+static std::string csvField(const std::string& text) noexcept
+{
+    std::string out = "\"";
+    for (char c : text) {
+        if (c == '"') out += '"';
+        out += c;
+    }
+    out += '"';
+    return out;
+}
+
+bool OFS_Translator::SaveTextTemplate(const char* path) const noexcept
+{
+    std::vector<std::string> all(seen.begin(), seen.end());
+    for (const auto& [english, translation] : texts) {
+        if (seen.find(english) == seen.end()) all.push_back(english);
+    }
+    std::sort(all.begin(), all.end());
+    std::string out = "Key (do not touch),Default,Translation\n";
+    for (const auto& english : all) {
+        auto it = texts.find(english);
+        out += "#TEXT," + csvField(english) + "," + csvField(it != texts.end() ? it->second : std::string()) + "\n";
+    }
+    return Util::WriteFile(path, out.data(), out.size()) == out.size();
 }
 
 bool OFS_Translator::MergeIntoOne(const char* inputPath1, const char* inputPath2, const char* outputPath) noexcept

@@ -6019,7 +6019,7 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
     }
     OFS::Tooltip("Swap the two ends, so 100 is drawn where 0 was.");
 
-    ImGui::Checkbox("Fit to video", &state.FitToPlayer);
+    ImGui::Checkbox(TRS("Fit to video"), &state.FitToPlayer);
     OFS::Tooltip("Keep the simulator inside the video player, sized to it, and follow the "
                  "player as its window is moved or resized. Moving or resizing the simulator "
                  "by hand turns this off.");
@@ -6070,7 +6070,7 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
             for (int32_t i = 0; i < 3; i += 1) {
                 if (std::abs(state.CameraYaw - yaws[i]) < 0.5f && std::abs(state.CameraElevation - heights[i]) < 0.5f) current = i;
             }
-            ImGui::TextDisabled("View");
+            ImGui::TextDisabled(TRS("View"));
             const int32_t picked = OFS::SegmentedControl("##CameraView", labels, tips, 3, current);
             if (picked >= 0) {
                 state.CameraYaw = yaws[picked];
@@ -6095,39 +6095,39 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
         OFS::Tooltip("Where the model is at stroke 100, as a share of its full travel. "
                      "Like the L0 upper limit of a machine.");
 
-        ImGui::Checkbox("Pose with handles (experimental)", &state.PoseHandles);
+        ImGui::Checkbox(TRS("Pose with handles (experimental)"), &state.PoseHandles);
         OFS::Tooltip("Handles on the model to pose it while paused: drag the case for stroke, the ring for "
                      "twist, the tip for roll and pitch, and the square on the floor for surge and sway. "
                      "Letting go adds a point at the playhead to each axis you moved. Ctrl drags slowly, "
                      "Ctrl+Shift snaps to steps of 5. Experimental, so it may change.");
-        ImGui::Checkbox("Puppet recording", &PuppetArmed);
+        ImGui::Checkbox(TRS("Puppet recording"), &PuppetArmed);
         OFS::Tooltip("While the video plays, hold a handle on the model and move it: every axis it "
                      "moves is recorded until you let go, replacing the points already there. The "
                      "Record button under the model does the same.");
         OFS::StepperInt("Reaction offset (ms)", "##PuppetOffset", &state.PuppetOffsetMs, 10, 0, 1000);
         OFS::Tooltip("Writes recorded takes this much earlier than your hand moved, to make up for "
                      "reacting a little after what you see.");
-        ImGui::Checkbox("Top and side views", &state.InsetViews);
+        ImGui::Checkbox(TRS("Top and side views"), &state.InsetViews);
         OFS::Tooltip("Two small views beside the model, from straight above and from the side, so "
                      "surge, sway and twist, and pitch, can be read without turning the camera.");
-        ImGui::Checkbox("Cutaway case", &state.CutawayCase);
+        ImGui::Checkbox(TRS("Cutaway case"), &state.CutawayCase);
         OFS::Tooltip("Remove the near half of the case so the sleeve inside is visible.");
-        ImGui::Checkbox("Highlight ring", &state.ShowRim);
+        ImGui::Checkbox(TRS("Highlight ring"), &state.ShowRim);
         OFS::Tooltip("Outline the opening of the vulva where it comes round, inside the lips.");
         ImGui::SameLine();
-        ImGui::Checkbox("Show rod", &state.ShowRod);
+        ImGui::Checkbox(TRS("Show rod"), &state.ShowRod);
         OFS::Tooltip("Draw the rod. Hidden, it still strokes and shapes the sleeve, so the vulva and canal can be watched deforming with nothing in the way.");
         ImGui::SameLine();
         ImGui::ColorEdit3("Rod colour", &state.RodColor.Value.x, ImGuiColorEditFlags_NoInputs);
         OFS::Tooltip("The colour of the rod in the 3D model.");
         OFS::SameLineIfCheckboxFits("Twist direction");
-        ImGui::Checkbox("Twist direction", &state.ShowTwistIndicator);
+        ImGui::Checkbox(TRS("Twist direction"), &state.ShowTwistIndicator);
         OFS::Tooltip("Mark which way the front of the case faces, so twist can be read at a glance.");
         OFS::SameLineIfCheckboxFits("Axis readout");
-        ImGui::Checkbox("Axis readout", &state.ShowAxisReadout);
+        ImGui::Checkbox(TRS("Axis readout"), &state.ShowAxisReadout);
         OFS::Tooltip("List each axis that has a script, with its current value, beside the model.");
 
-        if (ImGui::Checkbox("Easter egg", &FinishEasterEgg) && !FinishEasterEgg) {
+        if (ImGui::Checkbox(TRS("Easter egg"), &FinishEasterEgg) && !FinishEasterEgg) {
             FinishDrops.clear();
             FinishStimulation = 0.f;
         }
@@ -6146,13 +6146,13 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
         ImGui::Spacing();
         if (mapped <= 1) {
             ImGui::PushTextWrapPos(0.f);
-            ImGui::TextDisabled("Only the stroke axis is loaded, so the model only moves up "
+            ImGui::TextDisabled(TRS("Only the stroke axis is loaded, so the model only moves up "
                                 "and down. Add .surge, .sway, .twist, .roll or .pitch scripts "
-                                "to the project, from Project > Add, to drive the rest.");
+                                "to the project, from Project > Add, to drive the rest."));
             ImGui::PopTextWrapPos();
         }
         else {
-            ImGui::TextDisabled("%d of 6 axes driven by a script", mapped);
+            ImGui::TextDisabled(TRS("%d of 6 axes driven by a script"), mapped);
         }
     }
     else {
@@ -6172,7 +6172,7 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
     }
 
     ImGui::Spacing();
-    if (ImGui::CollapsingHeader("Appearance", ImGuiTreeNodeFlags_SpanAvailWidth)) {
+    if (ImGui::CollapsingHeader(TRS("Appearance"), ImGuiTreeNodeFlags_SpanAvailWidth)) {
         ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.55f);
         ImGui::ColorEdit4(TR(FRONT), &state.Front.Value.x, ImGuiColorEditFlags_NoInputs);
         ImGui::SameLine();

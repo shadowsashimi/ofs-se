@@ -95,8 +95,8 @@ void UndoSystem::ShowUndoRedoHistory(bool* open) noexcept
 
     if (UndoStack.empty() && RedoStack.empty()) {
         ImGui::PushTextWrapPos(0.f);
-        ImGui::TextDisabled("Nothing to undo yet. Each edit is listed here as it is made, "
-                            "newest first, with repeats of the same edit counted together.");
+        ImGui::TextDisabled(TRS("Nothing to undo yet. Each edit is listed here as it is made, "
+                            "newest first, with repeats of the same edit counted together."));
         ImGui::PopTextWrapPos();
         ImGui::End();
         return;
@@ -137,7 +137,7 @@ void UndoSystem::ShowUndoRedoHistory(bool* open) noexcept
 
     ImGui::Spacing();
     ImGui::PushTextWrapPos(0.f);
-    ImGui::TextDisabled("Click an entry to undo back to before it, or to redo up to it.");
+    ImGui::TextDisabled(TRS("Click an entry to undo back to before it, or to redo up to it."));
     ImGui::PopTextWrapPos();
     ImGui::End();
 }

@@ -131,7 +131,7 @@ namespace OFS {
 	{
 		ImGui::BeginTooltip();
 		ImGui::PushTextWrapPos(ImGui::GetFontSize() * TooltipWrapEm);
-		ImGui::TextUnformatted(tip);
+		ImGui::TextUnformatted(TRS(tip));
 		ImGui::PopTextWrapPos();
 		ImGui::EndTooltip();
 	}
@@ -144,7 +144,7 @@ namespace OFS {
 		if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
 			ImGui::BeginTooltip();
 			ImGui::PushTextWrapPos(ImGui::GetFontSize() * TooltipWrapEm);
-			ImGui::TextUnformatted(tip);
+			ImGui::TextUnformatted(TRS(tip));
 			ImGui::PopTextWrapPos();
 			ImGui::EndTooltip();
 		}
@@ -163,7 +163,7 @@ namespace OFS {
 			va_start(args, fmt);
 			ImGui::BeginTooltip();
 			ImGui::PushTextWrapPos(ImGui::GetFontSize() * TooltipWrapEm);
-			ImGui::TextV(fmt, args);
+			ImGui::TextV(TRS(fmt), args);
 			ImGui::PopTextWrapPos();
 			ImGui::EndTooltip();
 			va_end(args);
@@ -178,7 +178,7 @@ namespace OFS {
 	{
 		const auto& style = ImGui::GetStyle();
 		const float width = ImGui::GetFrameHeight() + style.ItemInnerSpacing.x
-			+ ImGui::CalcTextSize(nextLabel, nullptr, true).x;
+			+ ImGui::CalcTextSize(TRS(nextLabel), nullptr, true).x;
 		ImGui::SameLine();
 		if (ImGui::GetContentRegionAvail().x < width) ImGui::NewLine();
 	}
@@ -188,7 +188,7 @@ namespace OFS {
 	// after the version vendored here.
 	inline void SeparatorText(const char* text) noexcept
 	{
-		ImGui::TextUnformatted(text);
+		ImGui::TextUnformatted(TRS(text));
 		ImGui::SameLine();
 		const float lineHeight = ImGui::GetTextLineHeight();
 		const float available = ImGui::GetContentRegionAvail().x;
@@ -223,7 +223,7 @@ namespace OFS {
 			ImGui::PushStyleColor(ImGuiCol_Border, OFS_Sashimi::Role().OffBorder);
 			ImGui::PushStyleColor(ImGuiCol_Text, OFS_Sashimi::Role().OffText);
 		}
-		const bool clicked = ImGui::Button(label, size);
+		const bool clicked = ImGui::Button(TRS(label), size);
 		ImGui::PopStyleColor(5);
 		ImGui::PopStyleVar();
 		return clicked;
@@ -254,7 +254,7 @@ namespace OFS {
 
 		float widest = 0.f;
 		for (int32_t i = 0; i < count; i += 1) {
-			const float w = ImGui::CalcTextSize(labels[i]).x;
+			const float w = ImGui::CalcTextSize(TRS(labels[i]), nullptr, true).x;
 			if (w > widest) widest = w;
 		}
 		const float segmentMin = widest + (style.FramePadding.x * 2.f);
@@ -302,7 +302,7 @@ namespace OFS {
 			}
 
 			ImGui::PushID(i);
-			if (ImGui::Button(labels[i], ImVec2(width, 0.f))) clicked = i;
+			if (ImGui::Button(TRS(labels[i]), ImVec2(width, 0.f))) clicked = i;
 			ImGui::PopID();
 			ImGui::PopStyleColor(4);
 
@@ -333,7 +333,7 @@ namespace OFS {
 		float minValue, float maxValue, const char* format = "%.2f") noexcept
 	{
 		const auto& style = ImGui::GetStyle();
-		if (label != nullptr) ImGui::TextDisabled("%s", label);
+		if (label != nullptr) ImGui::TextDisabled("%s", TRS(label));
 		ImGui::PushID(id);
 		char minus[32];
 		char plus[32];
@@ -360,7 +360,7 @@ namespace OFS {
 		int32_t minValue, int32_t maxValue) noexcept
 	{
 		const auto& style = ImGui::GetStyle();
-		if (label != nullptr) ImGui::TextDisabled("%s", label);
+		if (label != nullptr) ImGui::TextDisabled("%s", TRS(label));
 		ImGui::PushID(id);
 		char minus[32];
 		char plus[32];

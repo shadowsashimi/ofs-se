@@ -67,6 +67,11 @@ void OFS_DynFontAtlas::AddTranslationText() noexcept
     for (auto defaultStr : OFS_Translator::ptr->Translation) {
         atlas->builder.AddText(defaultStr);
     }
+    // The text translated by its English too, or a language in another
+    // script shows those as empty boxes.
+    for (const auto& [english, translation] : OFS_Translator::ptr->Texts()) {
+        atlas->builder.AddText(translation.c_str());
+    }
     atlas->checkIfRebuildNeeded = true;
 }
 
