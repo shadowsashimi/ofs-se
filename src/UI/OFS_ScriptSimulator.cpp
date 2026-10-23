@@ -2019,6 +2019,9 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
     const float planeFloorY = rodBaseY - RodFootHeight;
     constexpr float PlaneHalf = 0.90f;
     const float planeWallTop = HalfLength + StrokeTravel + 0.15f;
+    // Seen from well above or below, the wall is a slanted band across the
+    // view that says nothing about the model, so it is left out.
+    const bool showWall = std::abs(state.CameraElevation) < 60.f;
     auto planePoint = [&](float x, float y, float z) noexcept {
         return project(camera(Vec3{ x, y, z }), center, scale);
     };
@@ -2032,6 +2035,7 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
         const float lineThick = Util::Max(1.f, scale * 0.004f);
 
         // The wall, then the floor over its foot.
+        if (showWall) {
         drawList->AddQuadFilled(
             planePoint(-PlaneHalf, planeFloorY, PlaneHalf), planePoint(PlaneHalf, planeFloorY, PlaneHalf),
             planePoint(PlaneHalf, planeWallTop, PlaneHalf), planePoint(-PlaneHalf, planeWallTop, PlaneHalf), planeFill);
@@ -2043,7 +2047,8 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
             const float y = planeFloorY + (Step * (float)j);
             drawList->AddLine(planePoint(-PlaneHalf, y, PlaneHalf), planePoint(PlaneHalf, y, PlaneHalf), gridLine, lineThick);
         }
-        {
+        }
+        if (showWall) {
             const ImVec2 wall[4] = {
                 planePoint(-PlaneHalf, planeFloorY, PlaneHalf), planePoint(PlaneHalf, planeFloorY, PlaneHalf),
                 planePoint(PlaneHalf, planeWallTop, PlaneHalf), planePoint(-PlaneHalf, planeWallTop, PlaneHalf) };
@@ -2132,9 +2137,11 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
                 lo = ImMin(lo, at);
                 hi = ImMax(hi, at);
             }
-            const ImVec2 top = planePoint(x, planeWallTop, PlaneHalf);
-            lo = ImMin(lo, top);
-            hi = ImMax(hi, top);
+            if (showWall) {
+                const ImVec2 top = planePoint(x, planeWallTop, PlaneHalf);
+                lo = ImMin(lo, top);
+                hi = ImMax(hi, top);
+            }
         }
         const float margin = scale * 0.04f;
         ModelDrawnMin = lo - ImVec2(margin, margin);
@@ -5186,11 +5193,12 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
 namespace {
 struct InsetView { const char* name; float yaw; float elevation; float zoom; };
 // From straight above with the front toward the bottom, and from the viewer's
-// right. The top view is drawn closer in than the whole of the floor and wall,
-// which left the model small in the middle; the box clips what reaches past
-// it. The side view is taller than it is wide and fits as it is, or the case
+// right. Above is a negative elevation: positive raises the camera from below,
+// and at 89 the view was of the model's underside. The top view shows the
+// whole floor, since the case's closed end is near the camera from above and
+// a full slide and lean otherwise took it out of the box. The side view is taller than it is wide and fits as it is, or the case
 // is cut off at the top.
-constexpr InsetView InsetViews[2] = { { "Top", 0.f, 89.f, 1.35f }, { "Side", 90.f, 0.f, 0.95f } };
+constexpr InsetView InsetViews[2] = { { "Top", 0.f, -89.f, 0.9f }, { "Side", 90.f, 0.f, 0.95f } };
 }
 
 bool ScriptSimulator::insetLayout(int32_t v, const SimulatorState& state, ImVec2 modelCenter, float modelScale,
