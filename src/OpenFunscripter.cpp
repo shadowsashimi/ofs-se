@@ -3996,6 +3996,19 @@ void OpenFunscripter::ShowToolbar() noexcept
                         ? "Snap times to the grid lines. Hold Alt to place one point off the grid."
                         : "There is no grid to snap to. Pick Frame or Tempo.");
                 }
+                ImGui::SameLine(0.f, 0.f);
+                const bool beats = scriptTimeline.BeatTicksAvailable();
+                ImGui::BeginDisabled(!beats);
+                if (OFS::ToggleButton("Beats###ToolbarSnapBeats", overlayState.SnapToBeats && beats)) {
+                    overlayState.SnapToBeats = !overlayState.SnapToBeats;
+                }
+                ImGui::EndDisabled();
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayNormal)) {
+                    ImGui::SetTooltip("%s", beats
+                        ? "Snap times onto a beat tick, a hit found in the waveform, when one is close. "
+                          "Ahead of the grid. Hold Alt to place one point freely."
+                        : "There are no beat ticks to snap to. Show the waveform and its beat ticks.");
+                }
 
                 ImGui::SameLine();
                 ImGui::TextDisabled("Round position");

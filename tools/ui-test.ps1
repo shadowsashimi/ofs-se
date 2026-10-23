@@ -89,6 +89,11 @@ $generated = [ordered]@{
         '-c:a', 'pcm_u8') }
     # Named in Japanese, as sound effect packs often are: four seconds of a
     # tone switching on and off every half second.
+    # Binaural, as ASMR is: a click every half second on the left and a soft hum
+    # swelling and fading every few seconds on the right.
+    'stereo-split' = @{ File = 'binaural.wav'; Args = @(
+        '-f', 'lavfi', '-i', "aevalsrc='0.8*sin(2*PI*880*t)*exp(-40*mod(t,0.5))|0.3*sin(2*PI*220*t)*(0.5+0.5*sin(2*PI*0.25*t))':s=44100:d=20",
+        '-c:a', 'pcm_s16le') }
     'wav-japanese' = @{ File = '効果音 テスト.wav'; Args = @(
         '-f', 'lavfi', '-i', "aevalsrc='0.8*sin(2*PI*440*t)*mod(floor(t*2),2)':s=44100:d=4",
         '-c:a', 'pcm_s16le') }

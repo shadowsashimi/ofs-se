@@ -60,19 +60,26 @@ private:
 	// Only the low end of the audio, where the beat usually is. Needs its own
 	// pass of ffmpeg, so changing it regenerates the waveform.
 	bool BassWaveform = false;
+	// Which channel the waveform is of: 0 both, 1 left, 2 right. Also its own
+	// pass of ffmpeg.
+	int32_t WaveformChannel = 0;
 	// Marks under the waveform where a hit lands, found from the same envelope.
 	bool ShowBeatTicks = true;
 	std::vector<float> beatTicks;
-	// The sample count the ticks were found from, so they are found again when
-	// a new waveform arrives and not on every frame.
-	size_t beatTicksFrom = 0;
+	// The waveform the ticks were found from, so they are found again when a
+	// new waveform arrives and not on every frame.
+	uint32_t beatTicksFrom = 0xFFFF'FFFF;
 	float ScaleAudio = 1.f;
 
-	// What the cached waveform belongs to: the file, and which of its two
+	// What the cached waveform belongs to: the file, and which of its
 	// waveforms it is.
 	inline std::string waveformCacheKey() const noexcept
 	{
-		return BassWaveform ? videoPath + "|bass" : videoPath;
+		std::string key = videoPath;
+		if (WaveformChannel == 1) key += "|left";
+		if (WaveformChannel == 2) key += "|right";
+		if (BassWaveform) key += "|bass";
+		return key;
 	}
 
 	void updateBeatTicks(float totalDuration) noexcept;
@@ -127,6 +134,9 @@ public:
 	inline const std::string& MediaPath() const noexcept { return videoPath; }
 	inline bool WaveformShown() const noexcept { return ShowAudioWaveform; }
 	inline bool WaveformIsBass() const noexcept { return BassWaveform; }
+	inline int32_t WaveformChannelShown() const noexcept { return WaveformChannel; }
+	// Beat ticks there to snap to: shown, over a waveform that is shown.
+	inline bool BeatTicksAvailable() const noexcept { return ShowBeatTicks && ShowAudioWaveform && !beatTicks.empty(); }
 	inline int32_t BeatTickCount() const noexcept { return (int32_t)beatTicks.size(); }
 
 	inline void ClearAudioWaveform() noexcept
@@ -134,7 +144,7 @@ public:
 		ShowAudioWaveform = false;
 		Wave.data.Clear();
 		beatTicks.clear();
-		beatTicksFrom = 0;
+		beatTicksFrom = 0xFFFF'FFFF;
 	}
 
 	// Show, scale, colour and regenerate, for the Preferences window. The

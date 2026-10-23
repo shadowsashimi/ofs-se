@@ -3,7 +3,7 @@
 # every half second, so there is a hit to find twice a second.
 # Preferences at 1600x900: Options 327,13 with Preferences at 380,86; the
 # sidebar's Timeline section 460,339; after scrolling to the bottom of it,
-# Bass only 1026,572.
+# Bass only 1026,517.
 #! media mp3
 #! covers OFS-lib/UI/OFS_Waveform.* OFS-lib/UI/OFS_ScriptTimeline.*
 size 1600 900
@@ -40,7 +40,7 @@ shot 03-waveform-settings
 windows 03-waveform-settings
 
 note bass only reads the audio again, and the ticks are found from that instead
-click 1026 572
+click 1026 517
 wait 10
 expect waveform_bass 1
 waituntil waveform_shown >= 1 900

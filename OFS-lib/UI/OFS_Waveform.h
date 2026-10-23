@@ -15,21 +15,31 @@ class OFS_Waveform
 {
 	bool generating = false;
 	std::vector<float> samples;
+	// Goes up whenever the samples change. What is drawn from them, and the
+	// beat ticks found in them, are made again when it does. They used to be
+	// made again when the sample count changed, which another waveform of the
+	// same file, its bass or one channel of it, does not do, so switching
+	// between them showed the old picture.
+	uint32_t version = 0;
 public:
+	inline uint32_t Version() const noexcept { return version; }
 
 	inline bool BusyGenerating() noexcept { return generating; }
 	// bassOnly keeps the low end alone, where the beat usually is.
+	// channel: 0 both mixed, 1 the left alone, 2 the right alone.
 	bool GenerateAndLoadFlac(const std::string& ffmpegPath, const std::string& videoPath,
-		const std::string& output, bool bassOnly = false) noexcept;
+		const std::string& output, bool bassOnly = false, int32_t channel = 0) noexcept;
 	bool LoadFlac(const std::string& path) noexcept;
 
 	inline void Clear() noexcept {
 		samples.clear();
+		version += 1;
 	}
 
 	inline void SetSamples(std::vector<float>&& samples) noexcept
 	{
 		this->samples = std::move(samples);
+		version += 1;
 	}
 
 	inline const std::vector<float>& Samples() const noexcept { return samples; }
@@ -60,6 +70,7 @@ struct OFS_WaveformLOD
 	int32_t lastEveryNth = 0;
 	int32_t lastFirstTexel = 0;
 	int32_t lastSampleCount = -1;
+	uint32_t lastVersion = 0xFFFF'FFFF;
 
 	OFS_Waveform data;
 

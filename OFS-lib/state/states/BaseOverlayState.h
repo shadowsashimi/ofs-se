@@ -19,6 +19,9 @@ struct BaseOverlayState
     // Position increment to snap to, or zero for none. 25 gives quarters,
     // which is what shaping a stroke usually wants.
     int32_t SnapPositionStep = 0;
+    // Snap points placed or dragged with the mouse onto a beat tick, the hits
+    // found in the waveform, when one is near enough. Ahead of the grid.
+    bool SnapToBeats = false;
 
     inline static uint32_t RegisterStatic() noexcept
     {
@@ -39,4 +42,5 @@ REFL_TYPE(BaseOverlayState)
     REFL_FIELD(SplineMode)
     REFL_FIELD(SnapToGrid)
     REFL_FIELD(SnapPositionStep)
+    REFL_FIELD(SnapToBeats)
 REFL_END

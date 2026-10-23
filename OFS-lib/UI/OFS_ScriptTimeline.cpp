@@ -29,7 +29,7 @@
 // and an overlay without a grid returns the time unchanged. Position snapping
 // is not a property of any grid, so it is handled directly.
 inline static FunscriptAction getActionForPoint(const OverlayDrawingCtx& ctx, ImVec2 point,
-	BaseOverlay* overlay, const BaseOverlayState& state) noexcept
+	BaseOverlay* overlay, const BaseOverlayState& state, const std::vector<float>* beatTicks) noexcept
 {
 	auto localCoord = point - ctx.canvasPos;
 	float relativeX = localCoord.x / ctx.canvasSize.x;
@@ -40,7 +40,23 @@ inline static FunscriptAction getActionForPoint(const OverlayDrawingCtx& ctx, Im
 	// Alt is the usual hold-to-ignore-the-grid modifier, and Shift is already
 	// taken here for add and move.
 	if(!ImGui::GetIO().KeyAlt) {
-		if(state.SnapToGrid && overlay != nullptr) {
+		// A beat tick within reach wins: it is where the hit actually is,
+		// which a grid only approximates. Within reach is measured on screen,
+		// so it feels the same at any zoom.
+		bool onBeat = false;
+		if(state.SnapToBeats && beatTicks != nullptr && !beatTicks->empty()) {
+			constexpr float ReachPixels = 10.f;
+			const float reach = (ReachPixels / ctx.canvasSize.x) * ctx.visibleTime;
+			auto it = std::lower_bound(beatTicks->begin(), beatTicks->end(), atTime);
+			float nearest = -1.f;
+			if(it != beatTicks->end()) nearest = *it;
+			if(it != beatTicks->begin() && (nearest < 0.f || atTime - *(it - 1) < nearest - atTime)) nearest = *(it - 1);
+			if(nearest >= 0.f && std::abs(nearest - atTime) <= reach) {
+				atTime = nearest;
+				onBeat = true;
+			}
+		}
+		if(!onBeat && state.SnapToGrid && overlay != nullptr) {
 			atTime = overlay->SnapTime(atTime);
 		}
 		if(state.SnapPositionStep > 0) {
@@ -141,7 +157,7 @@ int ScriptTimeline::generateWaveformThread(void* userData) noexcept
 	}
 
 	outputPath = (Util::PathFromString(outputPath) / "audio.flac").u8string();
-	ctx.Wave.data.GenerateAndLoadFlac(ffmpegPath.u8string(), ctx.videoPath, outputPath, ctx.BassWaveform);
+	ctx.Wave.data.GenerateAndLoadFlac(ffmpegPath.u8string(), ctx.videoPath, outputPath, ctx.BassWaveform, ctx.WaveformChannel);
 	EV::Enqueue<WaveformProcessingFinishedEvent>();
 	return 0;
 }
@@ -196,6 +212,21 @@ void ScriptTimeline::DrawWaveformSettings() noexcept
 			if (!videoPath.empty()) RequestWaveform();
 		}
 	}
+	{
+		static constexpr const char* labels[3] = { "Both", "Left", "Right" };
+		static constexpr const char* tips[3] = {
+			"Both channels together.",
+			"The left channel alone. For binaural audio with the stroking sounds on one "
+			"side and voices on the other. Reads the audio again.",
+			"The right channel alone. Reads the audio again.",
+		};
+		ImGui::TextDisabled("Channel");
+		const int32_t picked = OFS::SegmentedControl("##WaveformChannel", labels, tips, 3, WaveformChannel);
+		if (picked >= 0 && picked != WaveformChannel) {
+			WaveformChannel = picked;
+			if (!videoPath.empty()) RequestWaveform();
+		}
+	}
 	ImGui::EndDisabled();
 
 	OFS::StepperFloat("Waveform height", "##WaveformScale", &ScaleAudio, 0.25f, 0.01f, 10.f, "%.2fx");
@@ -219,7 +250,7 @@ void ScriptTimeline::FfmpegAudioProcessingFinished(const WaveformProcessingFinis
 {
 	ShowAudioWaveform = true;
 	beatTicks.clear();
-	beatTicksFrom = 0;
+	beatTicksFrom = 0xFFFF'FFFF;
 	// Update cache
 	auto& waveCache = WaveformState::StaticStateSlow();
 	waveCache.Filename = waveformCacheKey();
@@ -307,7 +338,7 @@ void ScriptTimeline::videoLoaded(const VideoLoadedEvent* ev) noexcept
 		Wave.data.SetSamples(std::move(samples));
 		ShowAudioWaveform = true;
 		beatTicks.clear();
-		beatTicksFrom = 0;
+		beatTicksFrom = 0xFFFF'FFFF;
 	}
 	else 
 	{
@@ -397,7 +428,8 @@ bool ScriptTimeline::handleTimelineClicks(const OverlayDrawingCtx& ctx) noexcept
 
 	if(moveOrAddPointModifer && leftMouseClicked)
 	{
-		auto newAction = getActionForPoint(ctx, mousePos, activeOverlay, BaseOverlayState::State(overlayStateHandle));
+		auto newAction = getActionForPoint(ctx, mousePos, activeOverlay, BaseOverlayState::State(overlayStateHandle),
+			BeatTicksAvailable() ? &beatTicks : nullptr);
 		EV::Enqueue<FunscriptActionShouldCreateEvent>(newAction, ctx.DrawingScript());
 		return true;
 	}
@@ -437,9 +469,18 @@ void ScriptTimeline::drawSnapIndicator() noexcept
 	// so Default mode reports off rather than claiming a snap it will not do.
 	const bool gridSnap = state.SnapToGrid && activeOverlay != nullptr && activeOverlay->HasSnapGrid();
 	const bool posSnap = state.SnapPositionStep > 0;
+	const bool beatSnap = state.SnapToBeats && BeatTicksAvailable();
 
 	char label[96];
-	if(gridSnap && posSnap) {
+	if(beatSnap) {
+		stbsp_snprintf(label, sizeof(label), "snap  beats%s%s", gridSnap ? "  /  " : "",
+			gridSnap ? activeOverlay->SnapGridLabel() : "");
+		if(posSnap) {
+			const size_t used = strlen(label);
+			stbsp_snprintf(label + used, sizeof(label) - used, "  +  %d", state.SnapPositionStep);
+		}
+	}
+	else if(gridSnap && posSnap) {
 		stbsp_snprintf(label, sizeof(label), "snap  %s  +  %d", activeOverlay->SnapGridLabel(), state.SnapPositionStep);
 	}
 	else if(gridSnap) {
@@ -470,7 +511,7 @@ void ScriptTimeline::drawSnapIndicator() noexcept
 		state.SnapToGrid = !state.SnapToGrid;
 	}
 
-	const bool active = gridSnap || posSnap;
+	const bool active = gridSnap || posSnap || beatSnap;
 	auto drawList = ImGui::GetWindowDrawList();
 	drawList->AddRectFilled(snapIndicatorRect.Min, snapIndicatorRect.Max,
 		active ? IM_COL32(0x2E, 0x5D, 0x4E, 0xE0) : IM_COL32(0x26, 0x26, 0x26, 0xB0), 3.f);
@@ -703,7 +744,8 @@ void ScriptTimeline::ShowScriptPositions(
 			{
 				// Update dragged action
 				auto mousePos = ImGui::GetMousePos();
-				auto newAction = getActionForPoint(drawingCtx, mousePos, activeOverlay, BaseOverlayState::State(overlayStateHandle));
+				auto newAction = getActionForPoint(drawingCtx, mousePos, activeOverlay, BaseOverlayState::State(overlayStateHandle),
+					BeatTicksAvailable() ? &beatTicks : nullptr);
 				EV::Enqueue<FunscriptActionShouldMoveEvent>(newAction, scripts[i], false);
 			}
 			else
@@ -769,6 +811,9 @@ void ScriptTimeline::ShowScriptPositions(
 					activeOverlay != nullptr && activeOverlay->HasSnapGrid());
 				OFS::Tooltip("Snaps points placed or dragged with the mouse onto the grid of "
 							 "the current mode. Hold Alt to place one point off the grid.");
+				ImGui::MenuItem("Snap to beats", 0, &overlayState.SnapToBeats, BeatTicksAvailable());
+				OFS::Tooltip("Snaps points placed or dragged with the mouse onto a beat tick when "
+							 "one is close, ahead of the grid. Needs the waveform and its beat ticks.");
 			}
 			if (Wave.data.BusyGenerating()) {
 				ImGui::MenuItem(TR(PROCESSING_AUDIO), NULL, false, false);
@@ -944,8 +989,8 @@ void ScriptTimeline::updateBeatTicks(float totalDuration) noexcept
 {
 	OFS_PROFILE(__FUNCTION__);
 	const auto& samples = Wave.data.Samples();
-	if (samples.size() == beatTicksFrom) return;
-	beatTicksFrom = samples.size();
+	if (Wave.data.Version() == beatTicksFrom) return;
+	beatTicksFrom = Wave.data.Version();
 	beatTicks.clear();
 	if (samples.size() < 8 || totalDuration <= 0.f) return;
 

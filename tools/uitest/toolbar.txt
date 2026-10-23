@@ -3,7 +3,8 @@
 # Mode  Manual 99, Alternating 212, Auto peak 324, Recording 435
 # Grid  None 584, Frame 685, Tempo 786
 # Note  dropdown 910
-# Snap  Grid toggle 1020, Round position dropdown 1260
+# Snap  Grid toggle 1020, Beats toggle 1076, Round position dropdown 1260
+#       (its list from x 1237)
 # Simulator  2D 1489, 3D 1560
 #! covers OFS-lib/UI/OFS_ImGui.* src/OFS_ScriptingMode.* src/OpenFunscripter.cpp:ShowToolbar src/OpenFunscripter.cpp:ToolbarVisible
 size 1600 900
@@ -58,12 +59,12 @@ click 1260 43
 wait 10
 shot 05-round-position
 expect open_popups 1
-click 1220 138
+click 1290 138
 wait 5
 expect snap_position_step 25
 click 1260 43
 wait 10
-click 1220 72
+click 1290 72
 wait 5
 expect snap_position_step 0
 click 1020 43

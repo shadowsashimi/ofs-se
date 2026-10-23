@@ -51,6 +51,7 @@ bool OFS_Waveform::LoadFlac(const std::string& output) noexcept
 	}
 	drflac_close(flac);
 	samples.shrink_to_fit();
+	version += 1;
 
 	if(std::abs(minSample) > std::abs(maxSample)) {
 		maxSample = std::abs(minSample);
@@ -67,7 +68,7 @@ bool OFS_Waveform::LoadFlac(const std::string& output) noexcept
 }
 
 bool OFS_Waveform::GenerateAndLoadFlac(const std::string& ffmpegPath, const std::string& videoPath,
-	const std::string& output, bool bassOnly) noexcept
+	const std::string& output, bool bassOnly, int32_t channel) noexcept
 {
 	generating = true;
 
@@ -93,9 +94,22 @@ bool OFS_Waveform::GenerateAndLoadFlac(const std::string& ffmpegPath, const std:
 		"-vn",
 		"-ac", "1",
 	};
+	// One side of a binaural recording, where the strokes are in one ear and
+	// whispers in the other. Made stereo first, so a mono file has the same
+	// sound on both sides and surround is folded down, then that side kept.
+	std::string filters;
+	if (channel == 1 || channel == 2) {
+		filters = channel == 1
+			? "aformat=channel_layouts=stereo,pan=mono|c0=c0"
+			: "aformat=channel_layouts=stereo,pan=mono|c0=c1";
+	}
 	if (bassOnly) {
+		if (!filters.empty()) filters += ",";
+		filters += "lowpass=f=150";
+	}
+	if (!filters.empty()) {
 		args.push_back("-af");
-		args.push_back("lowpass=f=150");
+		args.push_back(filters.c_str());
 	}
 	args.push_back(output.c_str());
 	args.push_back(nullptr);
@@ -195,7 +209,8 @@ void OFS_WaveformLOD::Update(const OverlayDrawingCtx& ctx) noexcept
 
 	const bool layoutChanged = everyNth != lastEveryNth
 		|| texelCount != (int32_t)lineBuf.size()
-		|| totalSampleCount != lastSampleCount;
+		|| totalSampleCount != lastSampleCount
+		|| data.Version() != lastVersion;
 	const int32_t scrollBy = firstTexel - lastFirstTexel;
 
 	if(layoutChanged) {
@@ -235,6 +250,7 @@ void OFS_WaveformLOD::Update(const OverlayDrawingCtx& ctx) noexcept
 	lastEveryNth = everyNth;
 	lastFirstTexel = firstTexel;
 	lastSampleCount = totalSampleCount;
+	lastVersion = data.Version();
 
 	// Map the canvas onto the slice of the texture it actually covers. Sampling
 	// at texel centres (the +0.5) lines each bucket up with the audio it came

@@ -306,6 +306,10 @@ bool OFS_Preferences::ShowPreferenceWindow() noexcept
 				OFS::Tooltip("Snaps points placed or dragged with the mouse onto the grid of the "
 							 "current mode: frames, or the tempo grid's division. Hold Alt to place "
 							 "one point off the grid.");
+				ImGui::Checkbox("Snap to beats", &overlayState.SnapToBeats);
+				OFS::Tooltip("Snaps points placed or dragged with the mouse onto a beat tick, a hit "
+							 "found in the waveform, when one is close. Ahead of the grid. Needs the "
+							 "waveform and its beat ticks showing.");
 				{
 					ImGui::AlignTextToFramePadding();
 					ImGui::TextUnformatted("Round position");

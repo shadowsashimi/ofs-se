@@ -1,0 +1,108 @@
+# The waveform of one channel, for binaural audio with the stroking sounds on
+# one side and voices on the other, and snapping points onto the beat ticks.
+# The test media clicks every half second on the left and hums, swelling
+# slowly, on the right. Preferences at 1600x900: Options 327,13, Preferences
+# 380,86, the Timeline section 460,339; scrolled to its bottom, Channel Both
+# 681,573, Left 878,573, Right 1075,573, and its close button 1178,224.
+# Snap to beats is on the toolbar at 1076,45.
+#! media stereo-split
+#! covers OFS-lib/UI/OFS_Waveform.* OFS-lib/UI/OFS_ScriptTimeline.* OFS-lib/state/states/BaseOverlayState.h
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+waituntil waveform_shown >= 1 600
+wait 20
+expect waveform_channel 0
+shot 01-both
+
+note the left channel alone: the clicks, two a second for twenty seconds
+click 327 13
+wait 5
+click 380 86
+wait 20
+click 460 339
+wait 20
+move 880 583
+wheel -10
+wait 10
+click 878 573
+wait 10
+expect waveform_channel 1
+click 1178 224
+wait 10
+waituntil waveform_shown >= 1 900
+wait 30
+shot 02-left
+waituntil beat_ticks >= 36 60
+
+note the right channel alone: the hum, with hardly a hit in it
+click 327 13
+wait 5
+click 380 86
+wait 20
+click 460 339
+wait 20
+move 880 583
+wheel -10
+wait 10
+click 1075 573
+wait 10
+expect waveform_channel 2
+click 1178 224
+wait 10
+waituntil waveform_shown >= 1 900
+wait 30
+shot 03-right
+waituntil beat_ticks <= 6 60
+
+note back to the left, then snap to beats: a point placed 30ms after the
+note click at 5 seconds lands on it, about 8 pixels away at this zoom
+click 327 13
+wait 5
+click 380 86
+wait 20
+click 460 339
+wait 20
+move 880 583
+wheel -10
+wait 10
+click 878 573
+wait 10
+click 1178 224
+wait 10
+waituntil waveform_shown >= 1 900
+wait 30
+expect snap_beats 0
+click 1076 45
+wait 5
+expect snap_beats 1
+hold shift
+lanemove 5.03 50
+tap
+let shift
+wait 5
+expect actions 1
+waituntil first_time >= 4.99 5
+waituntil first_time <= 5.01 5
+shot 04-snapped
+
+note off again, the same click keeps its own time
+click 1076 45
+wait 5
+expect snap_beats 0
+key ctrl+z
+wait 5
+expect actions 0
+hold shift
+lanemove 5.03 50
+tap
+let shift
+wait 5
+expect actions 1
+waituntil first_time >= 5.02 5
+shot 05-unsnapped
+quit
