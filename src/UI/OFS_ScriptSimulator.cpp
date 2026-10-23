@@ -5228,6 +5228,9 @@ void ScriptSimulator::drawInsetViews(ImDrawList* drawList, const SimulatorState&
         view.CameraYaw = Views[v].yaw;
         view.CameraElevation = Views[v].elevation;
         view.ShowAxisReadout = false;
+        // Whole from above: cut away, the case seen from the top is a shell
+        // sliced in half, and the twist and slide it is there for are lost.
+        if (v == 0) view.CutawayCase = false;
         if (measure) measureAt(view, MultiAxisValues(), insetRelMin[v], insetRelMax[v]);
         const ImVec2 min = boxes[v][0], max = boxes[v][1];
         const float round = ImGui::GetStyle().FrameRounding > 0.f ? 6.f : 0.f;
