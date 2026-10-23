@@ -813,7 +813,15 @@ void OFS_DeviceLink::sendTCode(float deltaTime) noexcept
         // asking at all.
         bool driven = false;
         float wanted = (float)settings.restPosition / 100.f;
-        if (auto script = scriptForAxis(settings.script)) {
+        auto script = scriptForAxis(settings.script);
+        // A handle on the model being dragged, posing or recording a take:
+        // the machine follows the hand, so it can be felt as it is done.
+        const float posed = app->simulator.PoseValueFor(script.get());
+        if (posed >= 0.f) {
+            wanted = Util::Clamp(posed / 100.f, 0.f, 1.f);
+            driven = true;
+        }
+        else if (script) {
             if (!script->Actions().empty()) {
                 const float first = script->Actions().front().atS;
                 const float last = script->Actions().back().atS;

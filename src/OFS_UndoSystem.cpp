@@ -55,7 +55,8 @@ static std::array<const char*, (int32_t)StateType::TOTAL_UNDOSTATE_TYPES
     "Beat fill",
     "Depth from loudness",
     "Slow the fast strokes",
-    "Thin out close points"
+    "Thin out close points",
+    "Puppet recording"
 };
 
 static const char* describeState(uint32_t typeIdx) noexcept

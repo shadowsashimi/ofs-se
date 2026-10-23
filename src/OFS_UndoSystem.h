@@ -42,6 +42,7 @@ enum StateType : int32_t {
     LOUDNESS_DEPTH = 24,
     LIMIT_SPEED = 25,
     THIN_OUT = 26,
+    PUPPET_RECORDING = 27,
     // add more here & name them in stateDescriptions in OFS_UndoSystem.cpp
 
 

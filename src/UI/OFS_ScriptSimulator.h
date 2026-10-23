@@ -232,7 +232,66 @@ public:
 	bool PoseHintShown = false;
 	// The pose being dragged to on an axis, or below zero when none is.
 	inline float PoseValue(int32_t axis) const noexcept { return poseOverride[axis]; }
+	// The same for whichever axis a script drives, or below zero.
+	float PoseValueFor(const class Funscript* script) const noexcept;
+
+	// Puppet recording. Armed, the handles stay up while the video plays, and
+	// holding one records the axes it moves for as long as it is held: a take.
+	// Letting go writes the take, simplified, over the points it covers.
+	bool PuppetArmed = false;
+	inline bool PuppetTaking() const noexcept { return takeActive; }
+	// Where the record button under the model was drawn, for the UI tests.
+	ImVec2 PuppetButtonCenter = ImVec2(0.f, 0.f);
+	bool PuppetButtonShown = false;
+
+	// One frame of the simulator for a preview video: the model, or the bar
+	// in 2D, at a time in the scripts, fitted into an area of an image being
+	// drawn off screen. The model's springs and pools are stepped by dt, a
+	// frame of the video, with motion of their own, kept apart from what is
+	// on screen; restart starts that motion afresh, for a new video.
+	void DrawExportFrame(struct ImDrawList* drawList, ImVec2 areaMin, ImVec2 areaMax,
+		float time, float dt, bool restart) noexcept;
 private:
+	// Everything about the model that moves on from one frame to the next:
+	// the springs in the flesh and the slosh of the pools, listed once, so the
+	// copy the preview video keeps and the live one cannot drift apart.
+#define OFS_MODEL_MOTION(X) \
+	X(float, ribDrag, 0.f) X(float, ribDragVel, 0.f) \
+	X(float, fleshJiggle, 0.f) X(float, fleshJiggleVel, 0.f) \
+	X(float, fleshLastStroke, 0.f) X(float, fleshLastStrokeVel, 0.f) X(bool, fleshPrimed, false) \
+	X(float, cervixPress, 0.f) X(float, cervixPressVel, 0.f) \
+	X(float, UterusDistension, 0.f) X(float, uterusDistensionVel, 0.f) \
+	X(float, lastInsertion, -1.f) \
+	X(std::vector<float>, lipGape, {}) X(std::vector<float>, lipGapeVel, {}) \
+	X(float, poolTiltX, 0.f) X(float, poolTiltZ, 0.f) X(float, poolTiltVelX, 0.f) X(float, poolTiltVelZ, 0.f) \
+	X(float, poolBob, 0.f) X(float, poolBobVel, 0.f) X(float, canalBob, 0.f) X(float, canalBobVel, 0.f) \
+	X(float, poolLastStroke, 0.f) X(float, poolLastStrokeVel, 0.f) \
+	X(float, poolLastSway, 0.f) X(float, poolLastSwayVel, 0.f) \
+	X(float, poolLastSurge, 0.f) X(float, poolLastSurgeVel, 0.f) \
+	X(float, poolLastTipVel, 0.f) X(bool, poolMotionPrimed, false)
+	struct ModelMotion {
+#define OFS_MOTION_FIELD(type, name, init) type name = init;
+		OFS_MODEL_MOTION(OFS_MOTION_FIELD)
+#undef OFS_MOTION_FIELD
+	};
+	ModelMotion captureMotion() const noexcept;
+	void restoreMotion(const ModelMotion& motion) noexcept;
+	// The preview video's own motion, and how its model is fitted.
+	ModelMotion exportMotion;
+	ImVec2 exportRelMin = ImVec2(0.f, 0.f);
+	ImVec2 exportRelMax = ImVec2(0.f, 0.f);
+	// The frame time the model steps by: the preview video's while one is
+	// drawn, otherwise the app's.
+	float motionDtOverride = -1.f;
+	float modelDeltaTime() const noexcept;
+
+	// The take being recorded: each axis's samples, time and value.
+	bool takeActive = false;
+	std::vector<std::pair<float, float>> takeSamples[(int32_t)Axis::Count];
+	void startTake(const bool* hasTrack) noexcept;
+	void sampleTake(const bool* hasTrack) noexcept;
+	void commitTake(const bool* hasTrack) noexcept;
+	void drawPuppetButton(struct ImDrawList* drawList, ImGuiID simId, bool playing) noexcept;
 	// The pose being dragged to: each axis as dragged, before any snapping,
 	// and where it started, so letting go writes only the axes that moved.
 	float poseRaw[(int32_t)Axis::Count] = {};

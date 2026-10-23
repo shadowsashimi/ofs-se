@@ -1,0 +1,44 @@
+# A preview video of the script, for sharing: the video with the simulator,
+# a strip of the tracks and the heatmap drawn over it by ffmpeg. Started
+# without the dialog, whose save picker is the system's. Four seconds of MP4
+# at 30 frames a second is 120 frames; a second and a half of GIF at 20 is 30.
+#! covers src/UI/OFS_PreviewExport.* src/UI/OFS_ScriptSimulator.cpp:DrawExportFrame
+size 1600 900
+wait 20
+open $MEDIA
+wait 120
+pause
+seek 5
+wait 10
+
+note a few strokes, so there is motion to show
+hold shift
+lanemove 4.0 10
+tap
+lanemove 4.5 90
+tap
+lanemove 5.0 10
+tap
+lanemove 5.5 90
+tap
+lanemove 6.0 10
+tap
+lanemove 6.5 90
+tap
+let shift
+wait 5
+expect actions 6
+
+note four seconds as MP4, everything shown
+preview $OUT/preview.mp4 mp4 480 3 7
+wait 5
+expect preview_stage rendering
+waituntil preview_stage = done 3000
+expect preview_frames 120/120
+shot 01-done
+
+note a short GIF of the model alone
+preview $OUT/preview.gif gif 480 4 5.5 simulator
+waituntil preview_stage = done 3000
+expect preview_frames 30/30
+quit

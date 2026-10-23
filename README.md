@@ -69,6 +69,10 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
   down, and exports a copy within the limits you set.
 - **No video needed** - start a script on a blank timeline of a chosen
   length.
+- **Preview videos** - *File → Export → Export preview video* makes a clip
+  for sharing: the video with the simulator, a strip of the tracks and the
+  heatmap over it, any of them switched off. MP4 with the sound, or an
+  animated WebP or GIF. It renders in the background while you keep working.
 - **Funscript 2.0 and 1.1** - full read and write support for the latest
   funscript formats.
 
@@ -99,6 +103,14 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
   2D bars.
 - One simulator setup for every project, kept with your settings, instead of
   a separate one saved in each project.
+- Pose the model with handles (experimental): drag the case, twist ring, tip
+  or floor square and a point lands on each axis you moved. A guide on the
+  floor shows which way the tip leans and which way the front faces.
+- **Puppet recording** - arm *Record* under the model, play the video, and
+  hold a handle while you move it in time with the action. Every axis it
+  moves is recorded until you let go, simplified, and written over what was
+  there, as one undo. A connected machine follows your hand while you do it.
+  Recording mode's *3D model* input does the same.
 - Axes are read from file names: `name.roll.funscript` is roll, and the
   script named after the video is the stroke. Video names with dots of their
   own, like `Site.com - clip.mp4`, work.

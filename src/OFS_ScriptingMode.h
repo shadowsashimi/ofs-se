@@ -96,6 +96,9 @@ private:
     bool inverted = false;
 
     bool twoAxesMode = false;
+    // Puppet recording was armed by picking the 3D model here, so leaving
+    // the input or the mode disarms it again.
+    bool armedPuppet = false;
 
     bool recordingActive = false;
     std::shared_ptr<Funscript> recordingAxisX;
@@ -111,6 +114,7 @@ public:
     enum RecordingType : int32_t {
         Mouse,
         Controller,
+        Model,
     };
     RecordingType activeType = RecordingType::Mouse;
     RecordingMode() noexcept;

@@ -17,6 +17,7 @@ set(OPEN_FUNSCRIPTER_SOURCES
   "UI/OFS_FunscriptMetadataEditor.cpp"
   "UI/OFS_ChapterManager.cpp"
   "UI/OFS_ScriptCheck.cpp"
+  "UI/OFS_PreviewExport.cpp"
 
   "api/OFS_DeviceLink.cpp"
   "api/OFS_TCode.cpp"

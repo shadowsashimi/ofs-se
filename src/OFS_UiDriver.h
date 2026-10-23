@@ -64,6 +64,9 @@
 //                            section say which panels are open, the rest as a fresh profile.
 //                            At the top of a script (after size), it is loaded before the
 //                            first frame, so the run starts as a profile that always had it
+//   preview PATH FORMAT HEIGHT START END [parts]
+//                            export a preview video without the dialog; FORMAT mp4|webp|gif,
+//                            parts any of video,simulator,timeline,heatmap (all by default)
 //   kill                     end at once, as a crash would, without the app's shutdown
 //
 // The script ends with quit whether it says so or not.
@@ -117,6 +120,7 @@ private:
         Quit,
         Kill,
         Layout,
+        PreviewExport,
     };
 
     struct Op

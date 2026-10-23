@@ -1035,6 +1035,18 @@ void OpenFunscripter::registerBindings()
                 false },
             "Pose the 3D simulator with handles (experimental)", "Utility");
 
+        keys->RegisterAction(
+            { "toggle_puppet_recording",
+                [this]() { simulator.PuppetArmed = !simulator.PuppetArmed; },
+                false },
+            "Arm or disarm puppet recording on the 3D simulator", "Utility");
+
+        keys->RegisterAction(
+            { "export_preview_video",
+                [this]() { if (LoadedProject->IsValid()) previewExport.OpenDialog(); },
+                false },
+            "Export a preview video of the script", "Utility");
+
         // The 3D model's easter egg, also on a checkbox in its settings.
         keys->RegisterAction(
             { "toggle_simulator_finish",
@@ -1749,6 +1761,7 @@ void OpenFunscripter::PlayPauseChange(const PlayPauseChangeEvent* ev) noexcept
 
 void OpenFunscripter::update() noexcept
 {
+    previewExport.Step();
     stateSaveTimer += ImGui::GetIO().DeltaTime;
     if (stateSaveTimer >= 5.f) {
         stateSaveTimer = 0.f;
@@ -1921,6 +1934,7 @@ void OpenFunscripter::Step() noexcept
             CreateDockspace();
             blockingTask.ShowBlockingTask();
             showSaveLayoutPrompt();
+            previewExport.Show();
 
             auto& ofsState = OpenFunscripterState::State(stateHandle);
 #ifdef WIN32
@@ -2096,6 +2110,8 @@ int OpenFunscripter::Run() noexcept
 
 void OpenFunscripter::Shutdown() noexcept
 {
+    // While the GL context is still there to free its picture.
+    previewExport.Cancel();
     SaveState(true);
 
     OFS_DynFontAtlas::Shutdown();
@@ -3503,6 +3519,13 @@ void OpenFunscripter::ShowMainMenuBar() noexcept
                         },
                         { "*.png" }, "PNG");
                 }
+
+                ImGui::Separator();
+                if (ImGui::MenuItem(FMT(ICON_SHARE " %s", "Export preview video..."), nullptr, false, !previewExport.Busy())) {
+                    previewExport.OpenDialog();
+                }
+                OFS::Tooltip("A short video of the script for sharing: the video with the simulator, "
+                             "the tracks and the heatmap over it, as an MP4, WebP or GIF.");
                 ImGui::EndMenu();
             }
             ImGui::Separator();
