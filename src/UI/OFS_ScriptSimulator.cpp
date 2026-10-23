@@ -4438,6 +4438,8 @@ constexpr float PoseRingRadius = 1.25f * ModelRadius;
 constexpr float PoseFloorY = -ModelStrokeTravel + ModelLipSeatDepth;  // plus the vulva's height, below
 constexpr float PoseFloorHalf = 0.13f;
 constexpr int32_t PoseRingSamples = 64;
+// How far an axis has to have moved, in units, for letting go to write it.
+constexpr float PoseMovedAtLeast = 2.f;
 // Half the length of the case's grip on screen, in pixels.
 constexpr float PoseCaseHalfLength = 12.f;
 
@@ -4519,10 +4521,24 @@ void poseLean(PoseHandle handle, const SimulatorState& state, const float* value
     const float pixels = std::sqrt((gx * gx) + (gz * gz));
     if (pixels < 1e-3f) return;
     const float rightX = gx / pixels, rightZ = gz / pixels;
-    // Away from the viewer: square to that on the floor, the way that takes
-    // the handle further from the camera.
+    // Up the screen: square to that on the floor. Seen from well above, as
+    // in the top view, the floor faces the viewer and up the screen is simply
+    // the floor direction that moves the handle up it, at the rate it does.
+    // Seen nearer edge on, that direction hardly moves the handle at all, and
+    // up is taken to mean away from the viewer instead, at the rate across.
     float awayX = -rightZ, awayZ = rightX;
-    if (f.camera(Vec3{ at.x + awayX, at.y, at.z + awayZ }).z < f.camera(at).z) {
+    const float upX = (screenAt(Vec3{ at.x + Step, at.y, at.z }).y - here.y) / Step;
+    const float upZ = (screenAt(Vec3{ at.x, at.y, at.z + Step }).y - here.y) / Step;
+    const float screenUp = (awayX * upX) + (awayZ * upZ);
+    float awayPixels = pixels;
+    if (std::abs(screenUp) > 0.5f * pixels) {
+        if (screenUp > 0.f) {
+            awayX = -awayX;
+            awayZ = -awayZ;
+        }
+        awayPixels = std::abs(screenUp);
+    }
+    else if (f.camera(Vec3{ at.x + awayX, at.y, at.z + awayZ }).z < f.camera(at).z) {
         awayX = -awayX;
         awayZ = -awayZ;
     }
@@ -4546,7 +4562,7 @@ void poseLean(PoseHandle handle, const SimulatorState& state, const float* value
         const Vec3 b = poseAnchorWorld(handle, state, minus);
         const float dx = (a.x - b.x) / span, dy = (a.y - b.y) / span, dz = (a.z - b.z) / span;
         across[k] = ((rightX * dx) + (rightZ * dz)) * pixels;
-        down[k] = (rise * dy) - (((awayX * dx) + (awayZ * dz)) * pixels);
+        down[k] = (rise * dy) - (((awayX * dx) + (awayZ * dz)) * awayPixels);
         on[k] = (across[k] * across[k]) + (down[k] * down[k]) > 1e-8f;
     }
     if (on[0] && on[1]) {
@@ -5072,8 +5088,15 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
     // case and the ring, so they win where they overlap.
     constexpr float Reach = 10.f;
     PoseHandle hit = PoseHandle::None;
-    const PoseHandle order[] = { PoseHandle::Tip, PoseHandle::Floor, PoseHandle::Ring, PoseHandle::Case };
-    for (PoseHandle handle : order) {
+    // From above, every handle sits over the floor square at rest, and the
+    // top view is for sliding and twisting, so those come first there; the
+    // case, whose stroke runs straight at the camera from above, is left out.
+    static constexpr PoseHandle MainOrder[] = { PoseHandle::Tip, PoseHandle::Floor, PoseHandle::Ring, PoseHandle::Case };
+    static constexpr PoseHandle TopOrder[] = { PoseHandle::Floor, PoseHandle::Ring, PoseHandle::Tip, PoseHandle::None };
+    const PoseHandle* order = poseViewTesting == 1 ? TopOrder : MainOrder;
+    for (int32_t o = 0; o < 4; o += 1) {
+        const PoseHandle handle = order[o];
+        if (handle == PoseHandle::None) continue;
         float dist = 0.f;
         if (handle == PoseHandle::Ring) {
             poseRingAngleAt(state, value, mouse, center, scale, &dist);
@@ -5160,49 +5183,20 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
     }
 }
 
-void ScriptSimulator::drawInsetViews(ImDrawList* drawList, const SimulatorState& state,
-    const MultiAxisValues& axes, ImVec2 modelCenter, float modelScale) noexcept
+namespace {
+struct InsetView { const char* name; float yaw; float elevation; float zoom; };
+// From straight above with the front toward the bottom, and from the viewer's
+// right. The top view is drawn closer in than the whole of the floor and wall,
+// which left the model small in the middle; the box clips what reaches past
+// it. The side view is taller than it is wide and fits as it is, or the case
+// is cut off at the top.
+constexpr InsetView InsetViews[2] = { { "Top", 0.f, 89.f, 1.35f }, { "Side", 90.f, 0.f, 0.95f } };
+}
+
+bool ScriptSimulator::insetLayout(int32_t v, const SimulatorState& state, ImVec2 modelCenter, float modelScale,
+    ImVec2& boxMin, ImVec2& boxMax, SimulatorState& view, ImVec2& centre, float& scale) const noexcept
 {
-    if (!state.InsetViews || !ModelDrawnValid) return;
-
-    // The extent of each view at a unit size, and of the main model at rest,
-    // measured again twice a second, in case a setting that changes them
-    // has moved.
-    const int32_t frame = ImGui::GetFrameCount();
-    const bool measure = frame - insetMeasuredFrame > 30;
-    if (measure) insetMeasuredFrame = frame;
-
-    // What the live model was doing, put back afterwards, so these extra
-    // draws neither step its springs nor move its frame.
-    const ModelMotion live = captureMotion();
-    const ImVec2 liveMin = ModelDrawnMin, liveMax = ModelDrawnMax;
-    const bool liveValid = ModelDrawnValid;
-    const bool liveFinish = FinishEasterEgg;
-    const bool livePosing = posingThisFrame;
-    bool liveLit[(int32_t)Axis::Count];
-    for (int32_t i = 0; i < (int32_t)Axis::Count; i += 1) {
-        liveLit[i] = poseLitAxis[i];
-        poseLitAxis[i] = false;
-    }
-    FinishEasterEgg = false;
-    posingThisFrame = false;
-
-    constexpr float Unit = 100.f;
-    auto measureAt = [&](const SimulatorState& view, const MultiAxisValues& values, ImVec2& outMin, ImVec2& outMax) noexcept {
-        ImDrawList scratch(ImGui::GetDrawListSharedData());
-        scratch._ResetForNewFrame();
-        scratch.PushClipRectFullScreen();
-        scratch.PushTextureID(ImGui::GetIO().Fonts->TexID);
-        restoreMotion(live);
-        ModelDrawnValid = false;
-        drawMultiAxisModel(&scratch, view, values, ImVec2(0.f, 0.f), Unit);
-        if (ModelDrawnValid) {
-            outMin = ModelDrawnMin / Unit;
-            outMax = ModelDrawnMax / Unit;
-        }
-    };
-    if (measure) measureAt(state, MultiAxisValues(), insetAnchorMin, insetAnchorMax);
-
+    if (!state.InsetViews || !state.ShowMultiAxis || !insetMeasured || v < 0 || v > 1) return false;
     // Beside the model at rest, a third of its height each, stacked: on its
     // left, where Fit to video's usual place against the right of the
     // picture leaves room, or on its right when the left is off the screen.
@@ -5213,43 +5207,112 @@ void ScriptSimulator::drawInsetViews(ImDrawList* drawList, const SimulatorState&
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     float x = modelMin.x - gap - side;
     if (x < viewport->Pos.x + gap) x = modelMax.x + gap;
-    const ImVec2 boxes[2][2] = {
-        { ImVec2(x, modelMin.y), ImVec2(x + side, modelMin.y + side) },
-        { ImVec2(x, modelMin.y + side + gap), ImVec2(x + side, modelMin.y + (side * 2.f) + gap) },
+    const float y = modelMin.y + ((side + gap) * (float)v);
+    boxMin = ImVec2(x, y);
+    boxMax = ImVec2(x + side, y + side);
+
+    view = state;
+    view.CameraYaw = InsetViews[v].yaw;
+    view.CameraElevation = InsetViews[v].elevation;
+    view.ShowAxisReadout = false;
+    // Whole from above: cut away, the case seen from the top is a shell sliced
+    // in half, and the twist and slide it is there for are lost.
+    if (v == 0) view.CutawayCase = false;
+
+    const ImVec2 rel = insetRelMax[v] - insetRelMin[v];
+    const float inner = side * InsetViews[v].zoom;
+    scale = Util::Min(inner / Util::Max(1e-3f, rel.x), inner / Util::Max(1e-3f, rel.y));
+    centre = ((boxMin + boxMax) * 0.5f) - (((insetRelMin[v] + insetRelMax[v]) * 0.5f) * scale);
+    return true;
+}
+
+void ScriptSimulator::drawInsetViews(ImDrawList* drawList, const SimulatorState& state,
+    const MultiAxisValues& axes, ImVec2 modelCenter, float modelScale, const bool* hasTrack, bool posing) noexcept
+{
+    if (!state.InsetViews || !ModelDrawnValid) return;
+
+    // The extent of each view at a unit size, and of the main model at rest,
+    // measured again twice a second, in case a setting that changes them
+    // has moved.
+    const int32_t frame = ImGui::GetFrameCount();
+    const bool measure = frame - insetMeasuredFrame > 30 || !insetMeasured;
+    if (measure) insetMeasuredFrame = frame;
+
+    // What the live model was doing, put back afterwards, so these extra
+    // draws neither step its springs nor move its frame.
+    const ModelMotion live = captureMotion();
+    const ImVec2 liveMin = ModelDrawnMin, liveMax = ModelDrawnMax;
+    const bool liveValid = ModelDrawnValid;
+    const bool liveFinish = FinishEasterEgg;
+    const bool livePosing = posingThisFrame;
+    const ImVec2 liveFrameMin = FrameMin, liveFrameMax = FrameMax;
+    ImVec2 liveHandles[(int32_t)PoseHandle::Count];
+    for (int32_t h = 0; h < (int32_t)PoseHandle::Count; h += 1) liveHandles[h] = PoseHandleScreen[h];
+    bool liveLit[(int32_t)Axis::Count];
+    for (int32_t i = 0; i < (int32_t)Axis::Count; i += 1) liveLit[i] = poseLitAxis[i];
+    FinishEasterEgg = false;
+
+    constexpr float Unit = 100.f;
+    auto measureAt = [&](const SimulatorState& view, ImVec2& outMin, ImVec2& outMax) noexcept {
+        ImDrawList scratch(ImGui::GetDrawListSharedData());
+        scratch._ResetForNewFrame();
+        scratch.PushClipRectFullScreen();
+        scratch.PushTextureID(ImGui::GetIO().Fonts->TexID);
+        restoreMotion(live);
+        ModelDrawnValid = false;
+        posingThisFrame = false;
+        for (auto& lit : poseLitAxis) lit = false;
+        drawMultiAxisModel(&scratch, view, MultiAxisValues(), ImVec2(0.f, 0.f), Unit);
+        if (ModelDrawnValid) {
+            outMin = ModelDrawnMin / Unit;
+            outMax = ModelDrawnMax / Unit;
+        }
     };
-    struct View { const char* name; float yaw; float elevation; };
-    // From straight above with the front toward the bottom, and from the
-    // viewer's right.
-    static constexpr View Views[2] = { { "Top", 0.f, 89.f }, { "Side", 90.f, 0.f } };
+    if (measure) {
+        measureAt(state, insetAnchorMin, insetAnchorMax);
+        for (int32_t v = 0; v < 2; v += 1) {
+            SimulatorState view = state;
+            view.CameraYaw = InsetViews[v].yaw;
+            view.CameraElevation = InsetViews[v].elevation;
+            view.ShowAxisReadout = false;
+            if (v == 0) view.CutawayCase = false;
+            measureAt(view, insetRelMin[v], insetRelMax[v]);
+        }
+        insetMeasured = true;
+    }
 
     const auto& role = OFS_Sashimi::Role();
     for (int32_t v = 0; v < 2; v += 1) {
-        SimulatorState view = state;
-        view.CameraYaw = Views[v].yaw;
-        view.CameraElevation = Views[v].elevation;
-        view.ShowAxisReadout = false;
-        // Whole from above: cut away, the case seen from the top is a shell
-        // sliced in half, and the twist and slide it is there for are lost.
-        if (v == 0) view.CutawayCase = false;
-        if (measure) measureAt(view, MultiAxisValues(), insetRelMin[v], insetRelMax[v]);
-        const ImVec2 min = boxes[v][0], max = boxes[v][1];
+        ImVec2 min, max, centre;
+        float scale = 1.f;
+        SimulatorState view;
+        if (!insetLayout(v, state, modelCenter, modelScale, min, max, view, centre, scale)) continue;
         const float round = ImGui::GetStyle().FrameRounding > 0.f ? 6.f : 0.f;
         drawList->AddRectFilled(min, max, IM_COL32(0x10, 0x10, 0x10, 0xC8), round);
         drawList->AddRect(min, max, IM_COL32(255, 255, 255, 0x18), round);
 
-        // Closer in than the whole of the floor and wall, which left the
-        // model small in the middle; the box clips what reaches past it.
-        const ImVec2 rel = insetRelMax[v] - insetRelMin[v];
-        const float inner = side * 1.35f;
-        const float scale = Util::Min(inner / Util::Max(1e-3f, rel.x), inner / Util::Max(1e-3f, rel.y));
-        const ImVec2 boxCentre = (min + max) * 0.5f;
-        const ImVec2 centre = boxCentre - (((insetRelMin[v] + insetRelMax[v]) * 0.5f) * scale);
+        // The handle in use lights its axes' guides in the view it is in.
+        const bool here = posing && poseView == v + 1;
+        for (int32_t i = 0; i < (int32_t)Axis::Count; i += 1) poseLitAxis[i] = here && liveLit[i];
+        posingThisFrame = posing;
 
         restoreMotion(live);
         drawList->PushClipRect(min, max, true);
         drawMultiAxisModel(drawList, view, axes, centre, scale);
+        // The handles unclipped, so the value being set and the chevrons can
+        // reach past the box rather than being cut off at its edge.
         drawList->PopClipRect();
-        drawList->AddText(min + ImVec2(7.f, 4.f), role.TextFaint, Views[v].name);
+        if (posing) {
+            // The handles too, so a pose can be set from above or the side.
+            // The faint-until-near test goes by this box.
+            FrameMin = min;
+            FrameMax = max;
+            poseViewDrawing = v + 1;
+            drawPoseHandles(drawList, view, axes, hasTrack, centre, scale);
+            poseViewDrawing = 0;
+            for (int32_t h = 0; h < (int32_t)PoseHandle::Count; h += 1) InsetHandleScreen[v][h] = PoseHandleScreen[h];
+        }
+        drawList->AddText(min + ImVec2(7.f, 4.f), role.TextFaint, InsetViews[v].name);
     }
 
     restoreMotion(live);
@@ -5258,6 +5321,9 @@ void ScriptSimulator::drawInsetViews(ImDrawList* drawList, const SimulatorState&
     ModelDrawnValid = liveValid;
     FinishEasterEgg = liveFinish;
     posingThisFrame = livePosing;
+    FrameMin = liveFrameMin;
+    FrameMax = liveFrameMax;
+    for (int32_t h = 0; h < (int32_t)PoseHandle::Count; h += 1) PoseHandleScreen[h] = liveHandles[h];
     for (int32_t i = 0; i < (int32_t)Axis::Count; i += 1) poseLitAxis[i] = liveLit[i];
     InsetViewsShown = true;
 }
@@ -5463,7 +5529,7 @@ void ScriptSimulator::commitTake(const bool* hasTrack) noexcept
         if (samples.size() < 2) continue;
         bool moved = false;
         for (const auto& sample : samples) {
-            moved = moved || std::abs(sample.second - samples.front().second) >= 1.f;
+            moved = moved || std::abs(sample.second - samples.front().second) >= PoseMovedAtLeast;
         }
         if (!moved) continue;
         if (auto script = poseScriptFor(axis)) writes.emplace_back(script, axis);
@@ -5549,7 +5615,10 @@ void ScriptSimulator::commitPose(const bool* hasTrack) noexcept
     for (int32_t axis : PoseHandleAxes[(int32_t)PoseDragging]) {
         if (axis < 0 || !hasTrack[axis] || poseOverride[axis] < 0.f) continue;
         const int32_t pos = (int32_t)std::round(poseOverride[axis]);
-        if (pos == (int32_t)std::round(poseStart[axis])) continue;
+        // Only the axes the drag meant to move: a handle carrying two axes
+        // picks up a unit of the other from the hand's own wobble, which
+        // wrote a point nobody asked for.
+        if (std::abs((float)pos - poseStart[axis]) < PoseMovedAtLeast) continue;
         if (auto script = poseScriptFor(axis)) writes.emplace_back(script, pos);
     }
     for (int32_t i = 0; i < AxisCount; i += 1) poseOverride[i] = -1.f;
@@ -5573,6 +5642,15 @@ void ScriptSimulator::cancelPose(ImGuiID simId) noexcept
 void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState& state,
     const MultiAxisValues& axes, const bool* hasTrack, ImVec2 center, float scale) noexcept
 {
+    // Drawn in each view; the hover, the drag and the easing toward them
+    // belong to the one view the mouse is in, so the others show the handles
+    // at rest and only it shows chevrons and the value being set.
+    const bool activeHere = poseViewDrawing == poseView;
+    const PoseHandle dragging = activeHere ? PoseDragging : PoseHandle::None;
+    const PoseHandle hovered = activeHere ? PoseHovered : PoseHandle::None;
+    float restingGrow[(int32_t)PoseHandle::Count] = {};
+    float* grow = activeHere ? poseGrow : restingGrow;
+
     float value[AxisCount];
     for (int32_t i = 0; i < AxisCount; i += 1) {
         value[i] = poseOverride[i] >= 0.f ? poseOverride[i] : axes.value[i];
@@ -5582,7 +5660,7 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
     // of the way of the video, and at full strength as it comes near.
     const ImVec2 mouse = ImGui::GetIO().MousePos;
     constexpr float Near = 40.f;
-    const bool near = PoseDragging != PoseHandle::None
+    const bool near = dragging != PoseHandle::None
         || (mouse.x >= FrameMin.x - Near && mouse.x <= FrameMax.x + Near
             && mouse.y >= FrameMin.y - Near && mouse.y <= FrameMax.y + Near);
     const float strength = near ? 1.f : 0.35f;
@@ -5591,14 +5669,14 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
     // rather than snapping.
     const float dt = ImGui::GetIO().DeltaTime;
     for (int32_t h = 0; h < (int32_t)PoseHandle::Count; h += 1) {
-        const bool lit = PoseHovered == (PoseHandle)h || PoseDragging == (PoseHandle)h;
-        poseGrow[h] += ((lit ? 1.f : 0.f) - poseGrow[h]) * Util::Min(1.f, dt * 14.f);
+        const bool lit = hovered == (PoseHandle)h || dragging == (PoseHandle)h;
+        grow[h] += ((lit ? 1.f : 0.f) - grow[h]) * Util::Min(1.f, dt * 14.f);
     }
     auto look = [&](PoseHandle handle) noexcept {
         PoseLook l;
         l.usable = poseHandleUsable(handle, hasTrack);
-        l.active = PoseDragging == handle;
-        l.grow = poseGrow[(int32_t)handle];
+        l.active = dragging == handle;
+        l.grow = grow[(int32_t)handle];
         l.strength = strength;
         return l;
     };
@@ -5616,8 +5694,8 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
     // tip's shadow on it, a line dropped to the shadow from the tip, and the
     // lean from the centre. For twist, a needle the way the front faces.
     {
-        const float tipShow = poseHandleUsable(PoseHandle::Tip, hasTrack) ? poseGrow[(int32_t)PoseHandle::Tip] : 0.f;
-        const float ringShow = poseHandleUsable(PoseHandle::Ring, hasTrack) ? poseGrow[(int32_t)PoseHandle::Ring] : 0.f;
+        const float tipShow = poseHandleUsable(PoseHandle::Tip, hasTrack) ? grow[(int32_t)PoseHandle::Tip] : 0.f;
+        const float ringShow = poseHandleUsable(PoseHandle::Ring, hasTrack) ? grow[(int32_t)PoseHandle::Ring] : 0.f;
         const float show = Util::Max(tipShow, ringShow);
         if (show > 0.02f) {
             const auto& role = OFS_Sashimi::Role();
@@ -5763,12 +5841,12 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
     // dragged: chevrons where the axis moves the handle on screen, and for
     // an axis seen end on, which is dragged up and down instead with up
     // away from the viewer, softer ones with its name.
-    const PoseHandle shown = PoseDragging != PoseHandle::None ? PoseDragging : PoseHovered;
+    const PoseHandle shown = dragging != PoseHandle::None ? dragging : hovered;
     ImVec2 dirs[2] = { ImVec2(0.f, 0.f), ImVec2(0.f, 0.f) };
     bool endOn[2] = { false, false };
     if (shown != PoseHandle::None && poseHandleUsable(shown, hasTrack)) {
         const ImVec2 at = PoseHandleScreen[(int32_t)shown];
-        const float reach = 18.f + 6.f * poseGrow[(int32_t)shown];
+        const float reach = 18.f + 6.f * grow[(int32_t)shown];
         if (shown == PoseHandle::Ring) {
             ImVec2 across;
             const float open = poseRingOpenness(state, value, center, scale, &across, nullptr);
@@ -5795,9 +5873,9 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
     // While dragging, what is being set, by the mouse, as a pill: each axis
     // and its value, and in a quieter tone whether a point already at the
     // playhead is about to be replaced.
-    if (PoseDragging != PoseHandle::None) {
+    if (dragging != PoseHandle::None) {
         std::string text;
-        const auto& handleAxes = PoseHandleAxes[(int32_t)PoseDragging];
+        const auto& handleAxes = PoseHandleAxes[(int32_t)dragging];
         for (int32_t k = 0; k < 2; k += 1) {
             const int32_t axis = handleAxes[k];
             if (axis < 0 || !hasTrack[axis]) continue;
@@ -6289,7 +6367,43 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
             for (int32_t i = 0; i < (int32_t)Axis::Count; i += 1) {
                 if (hasTrack[i]) axes.mapped[i] = true;
             }
-            updatePoseHandles(state, axes, hasTrack, modelCenter, modelScale, simId);
+            // In whichever view the handle is: the top and side views first,
+            // being small and beside the model, then the model itself. A drag
+            // stays in the view it began in.
+            auto updateIn = [&](int32_t v) noexcept {
+                poseViewTesting = v;
+                if (v == 0) {
+                    updatePoseHandles(state, axes, hasTrack, modelCenter, modelScale, simId);
+                    return;
+                }
+                ImVec2 boxMin, boxMax, centre;
+                float scale = 1.f;
+                SimulatorState view;
+                if (!insetLayout(v - 1, state, modelCenter, modelScale, boxMin, boxMax, view, centre, scale)) return;
+                const ImVec2 m = ImGui::GetIO().MousePos;
+                const bool inBox = m.x >= boxMin.x && m.x <= boxMax.x && m.y >= boxMin.y && m.y <= boxMax.y;
+                if (PoseDragging == PoseHandle::None && !inBox) return;
+                updatePoseHandles(view, axes, hasTrack, centre, scale, simId);
+            };
+            if (PoseDragging != PoseHandle::None) {
+                updateIn(poseView);
+            }
+            else {
+                // Nothing hovered until a view finds it, this frame: a view
+                // that is off returns without looking, and last frame's hover
+                // would otherwise make it the owner and keep the model's own
+                // handles from ever being tried.
+                poseView = 0;
+                PoseHovered = PoseHandle::None;
+                poseTookMouse = false;
+                for (int32_t v : { 1, 2, 0 }) {
+                    updateIn(v);
+                    if (PoseHovered != PoseHandle::None || PoseDragging != PoseHandle::None) {
+                        poseView = v;
+                        break;
+                    }
+                }
+            }
         }
         else if (PoseDragging != PoseHandle::None) {
             // Played or switched off mid drag: the pose is dropped unwritten.
@@ -6307,13 +6421,16 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
         posingThisFrame = posing;
         for (auto& lit : poseLitAxis) lit = false;
         const PoseHandle litHandle = PoseDragging != PoseHandle::None ? PoseDragging : PoseHovered;
-        if (posing && litHandle != PoseHandle::None) {
+        if (posing && litHandle != PoseHandle::None && poseView == 0) {
             for (int32_t axis : PoseHandleAxes[(int32_t)litHandle]) {
                 if (axis >= 0 && hasTrack[axis]) poseLitAxis[axis] = true;
             }
         }
         drawMultiAxisModel(frontDraw, state, axes, modelCenter, modelScale);
-        if (posing) drawPoseHandles(frontDraw, state, axes, hasTrack, modelCenter, modelScale);
+        if (posing) {
+            poseViewDrawing = 0;
+            drawPoseHandles(frontDraw, state, axes, hasTrack, modelCenter, modelScale);
+        }
         PoseHandlesShown = posing;
         // The handles go while playing, since the pose is written at the
         // playhead. Say why, rather than have them simply vanish.
@@ -6337,7 +6454,7 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
             fitRelMax = (ModelDrawnMax - modelCenter) / modelScale;
             fitRelValid = true;
         }
-        drawInsetViews(frontDraw, state, axes, modelCenter, modelScale);
+        drawInsetViews(frontDraw, state, axes, modelCenter, modelScale, hasTrack, posing);
     }
     else {
         AxisBar bar;

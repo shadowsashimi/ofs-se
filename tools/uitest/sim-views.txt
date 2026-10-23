@@ -1,7 +1,9 @@
 # The 3D simulator's top and side views: two small views beside the model,
 # from straight above and from the side, moving with it. Off to begin with.
-# Add > OSR2 with twist is at 30 694, then 41 555, at 1600x900.
-#! covers src/UI/OFS_ScriptSimulator.cpp:drawInsetViews
+# With the pose handles on they carry handles too, so a pose can be set from
+# above or the side. Add > SR6 with twist is at 30 694, then 41 603, at
+# 1600x900.
+#! covers src/UI/OFS_ScriptSimulator.cpp:drawInsetViews src/UI/OFS_ScriptSimulator.cpp:insetLayout
 size 1600 900
 layout classic
 wait 20
@@ -12,11 +14,12 @@ seek 5
 wait 10
 click 30 694
 wait 10
-click 41 555
+click 41 603
 wait 20
+expect script_axes stroke,surge,sway,twist,roll,pitch
 expect inset_views 0
 action toggle_simulator_views
-wait 10
+wait 40
 expect inset_views 1
 shot 01-views
 
@@ -30,6 +33,49 @@ simaxis twist 70
 wait 60
 expect inset_views 1
 shot 02-posed
+simaxis stroke -1
+simaxis sway -1
+simaxis surge -1
+simaxis roll -1
+simaxis pitch -1
+simaxis twist -1
+wait 10
+
+note the pose handles, in the views as well as on the model
+action toggle_pose_handles
+wait 10
+expect pose_shown 1
+shot 03-handles
+
+note slide the floor square in the top view: sway and surge
+insethandle top floor
+wait 5
+press left
+wait 3
+insethandle top floor 12 0
+wait 3
+insethandle top floor 12 -12
+wait 5
+shot 04-top-floor-drag
+waituntil pose_value:sway >= 0 5
+release left
+wait 10
+expect actions:uitest.sway 1
+expect actions:uitest.surge 1
+
+note tilt the tip in the side view: pitch
+insethandle side tip
+wait 5
+press left
+wait 3
+insethandle side tip 10 0
+wait 3
+insethandle side tip 10 0
+wait 5
+shot 05-side-tip-drag
+release left
+wait 10
+expect actions:uitest.pitch 1
 
 note and off again
 action toggle_simulator_views

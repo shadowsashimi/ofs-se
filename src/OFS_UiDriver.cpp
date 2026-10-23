@@ -494,6 +494,16 @@ bool OFS_UiDriver::parse(const std::string& script, const std::string& media) no
             op.text2 = std::to_string((int32_t)height) + " " + (parts.empty() ? "video,simulator,timeline,heatmap" : parts);
             push(op);
         }
+        else if (command == "insethandle") {
+            Op op;
+            op.type = OpType::InsetHandle;
+            std::string view;
+            if (!(args >> view >> op.text)) { fail("insethandle needs top or side and a handle"); continue; }
+            op.n = view == "side" ? 1 : 0;
+            if (!(args >> op.x >> op.y)) { op.x = 0.f; op.y = 0.f; }
+            push(op);
+            frames(2);
+        }
         else if (command == "layout") {
             Op op;
             op.type = OpType::Layout;
@@ -632,6 +642,23 @@ void OFS_UiDriver::execute(const Op& op) noexcept
             options.timeline = parts.find("timeline") != std::string::npos;
             options.heatmap = parts.find("heatmap") != std::string::npos;
             app->previewExport.StartTo(op.text, options);
+            break;
+        }
+        case OpType::InsetHandle: {
+            const char* names[] = { "case", "ring", "tip", "floor" };
+            int32_t idx = -1;
+            for (int32_t i = 0; i < 4; i += 1) {
+                if (op.text == names[i]) idx = i;
+            }
+            if (idx < 0 || !app->simulator.PoseHandlesShown || !app->simulator.InsetViewsShown) {
+                log("line " + std::to_string(op.line) + ": FAIL no pose handle " + op.text + " in the inset views");
+                failed += 1;
+                break;
+            }
+            const ImVec2 target = app->simulator.InsetHandleScreen[op.n][idx];
+            mouseX = target.x + op.x;
+            mouseY = target.y + op.y;
+            io.AddMousePosEvent(mouseX, mouseY);
             break;
         }
         case OpType::Layout:

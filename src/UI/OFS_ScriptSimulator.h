@@ -245,6 +245,8 @@ public:
 	bool PuppetButtonShown = false;
 	// The top and side views are showing, for the UI tests.
 	bool InsetViewsShown = false;
+	// Where each handle was drawn in the top and side views last frame.
+	ImVec2 InsetHandleScreen[2][(int32_t)PoseHandle::Count];
 
 	// One frame of the simulator for a preview video: the model, or the bar
 	// in 2D, at a time in the scripts, fitted into an area of an image being
@@ -279,7 +281,21 @@ private:
 	ModelMotion captureMotion() const noexcept;
 	// The top and side views, drawn after the model itself.
 	void drawInsetViews(struct ImDrawList* drawList, const struct SimulatorState& state,
-		const MultiAxisValues& axes, ImVec2 modelCenter, float modelScale) noexcept;
+		const MultiAxisValues& axes, ImVec2 modelCenter, float modelScale,
+		const bool* hasTrack, bool posing) noexcept;
+	// Where inset v, 0 the top view and 1 the side, sits and how it looks:
+	// its box, its camera, and the model's centre and scale in it. False
+	// when the views are off or not measured yet.
+	bool insetLayout(int32_t v, const struct SimulatorState& state, ImVec2 modelCenter, float modelScale,
+		ImVec2& boxMin, ImVec2& boxMax, struct SimulatorState& view, ImVec2& centre, float& scale) const noexcept;
+	bool insetMeasured = false;
+	// Which view the pose handle under the mouse or being dragged is in: 0
+	// the model itself, 1 the top view, 2 the side. The handles are drawn in
+	// each, and only the one the mouse is in shows them lit.
+	int32_t poseView = 0;
+	int32_t poseViewDrawing = 0;
+	// The view whose handles are being tested for the mouse.
+	int32_t poseViewTesting = 0;
 	// Each inset's extent at a unit size, measured now and then rather than
 	// every frame, and how many frames ago.
 	ImVec2 insetRelMin[2] = { ImVec2(-1.f, -1.f), ImVec2(-1.f, -1.f) };

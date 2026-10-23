@@ -67,6 +67,7 @@
 //   preview PATH FORMAT HEIGHT START END [parts]
 //                            export a preview video without the dialog; FORMAT mp4|webp|gif,
 //                            parts any of video,simulator,timeline,heatmap (all by default)
+//   insethandle top|side HANDLE [DX DY]  put the mouse on a pose handle in the top or side view
 //   kill                     end at once, as a crash would, without the app's shutdown
 //
 // The script ends with quit whether it says so or not.
@@ -121,6 +122,7 @@ private:
         Kill,
         Layout,
         PreviewExport,
+        InsetHandle,
     };
 
     struct Op
