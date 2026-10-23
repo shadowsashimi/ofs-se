@@ -1055,6 +1055,10 @@ std::vector<std::pair<std::string, std::string>> OFS_UiDriver::collectState() no
     add("snap_beats", flag(BaseOverlay::State().SnapToBeats));
     add("text_translations", std::to_string(OFS_Translator::ptr->TextTranslationCount()));
     add("inset_views", flag(app->simulator.InsetViewsShown));
+    {
+        const auto& sim = SimulatorState::State(app->simulator.StateHandle());
+        add("sim_views", std::to_string(sim.MultiView));
+    }
     add("speed_colors", std::to_string(BaseOverlay::State().SpeedColors));
     add("waveform_samples", std::to_string(app->scriptTimeline.Wave.data.SampleCount()));
     add("waveform_bass", flag(app->scriptTimeline.WaveformIsBass()));

@@ -4458,6 +4458,25 @@ constexpr int32_t PoseHandleAxes[(int32_t)PoseHandle::Count][2] = {
     { 2, 1 },   // floor: sway, surge
 };
 
+// Which handles each view has, so none is offered twice. From above: the floor
+// square for surge and sway, the ring for twist, and the tip, leaning, for
+// roll and pitch. From the side or front: the case, for stroke. With one view,
+// all of them.
+bool poseHandleInView(PoseHandle handle, int32_t view) noexcept
+{
+    if (view == 1) return handle == PoseHandle::Floor || handle == PoseHandle::Ring || handle == PoseHandle::Tip;
+    if (view == 2) return handle == PoseHandle::Case;
+    return true;
+}
+// From above, the tip sits straight over the floor square's knob, and one
+// covered the other. Its knob is drawn a little toward the back, with a line
+// to where the tip is; a drag goes by how far the mouse moves, not where it
+// is, so it acts the same.
+ImVec2 poseKnobOffset(PoseHandle handle, int32_t view) noexcept
+{
+    return view == 1 && handle == PoseHandle::Tip ? ImVec2(0.f, -18.f) : ImVec2(0.f, 0.f);
+}
+
 float poseFloorY() noexcept
 {
     return PoseFloorY + (Profile[SlitRing].y * ModelHalfLength);
@@ -5095,15 +5114,15 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
     // case and the ring, so they win where they overlap.
     constexpr float Reach = 10.f;
     PoseHandle hit = PoseHandle::None;
-    // From above, every handle sits over the floor square at rest, and the
-    // top view is for sliding and twisting, so those come first there; the
-    // case, whose stroke runs straight at the camera from above, is left out.
+    // From above, the tip's knob is set aside from the floor square's, so it
+    // is tried first as everywhere; the case, whose stroke runs straight at
+    // the camera from above, is not in that view at all.
     static constexpr PoseHandle MainOrder[] = { PoseHandle::Tip, PoseHandle::Floor, PoseHandle::Ring, PoseHandle::Case };
-    static constexpr PoseHandle TopOrder[] = { PoseHandle::Floor, PoseHandle::Ring, PoseHandle::Tip, PoseHandle::None };
+    static constexpr PoseHandle TopOrder[] = { PoseHandle::Tip, PoseHandle::Floor, PoseHandle::Ring, PoseHandle::None };
     const PoseHandle* order = poseViewTesting == 1 ? TopOrder : MainOrder;
     for (int32_t o = 0; o < 4; o += 1) {
         const PoseHandle handle = order[o];
-        if (handle == PoseHandle::None) continue;
+        if (handle == PoseHandle::None || !poseHandleInView(handle, poseViewTesting)) continue;
         float dist = 0.f;
         if (handle == PoseHandle::Ring) {
             poseRingAngleAt(state, value, mouse, center, scale, &dist);
@@ -5123,7 +5142,8 @@ void ScriptSimulator::updatePoseHandles(const SimulatorState& state, const Multi
             if (dist > Reach) continue;
         }
         else {
-            dist = std::sqrt(ImLengthSqr(poseAnchor(handle, state, value, center, scale) - mouse));
+            const ImVec2 knob = poseAnchor(handle, state, value, center, scale) + poseKnobOffset(handle, poseViewTesting);
+            dist = std::sqrt(ImLengthSqr(knob - mouse));
             if (dist > Reach) continue;
         }
         hit = handle;
@@ -5198,37 +5218,47 @@ struct InsetView { const char* name; float yaw; float elevation; float zoom; };
 // whole floor, since the case's closed end is near the camera from above and
 // a full slide and lean otherwise took it out of the box. The side view is taller than it is wide and fits as it is, or the case
 // is cut off at the top.
-constexpr InsetView InsetViews[2] = { { "Top", 0.f, -89.f, 0.9f }, { "Side", 90.f, 0.f, 0.95f } };
+constexpr InsetView InsetViews[3] = { { "Top", 0.f, -89.f, 0.9f }, { "Side", 90.f, 0.f, 0.95f }, { "Front", 0.f, 0.f, 0.95f } };
+const InsetView& insetView(int32_t v, const SimulatorState& state) noexcept
+{
+    return v == 0 ? InsetViews[0] : InsetViews[state.MultiView == 2 ? 2 : 1];
+}
 }
 
 bool ScriptSimulator::insetLayout(int32_t v, const SimulatorState& state, ImVec2 modelCenter, float modelScale,
     ImVec2& boxMin, ImVec2& boxMax, SimulatorState& view, ImVec2& centre, float& scale) const noexcept
 {
-    if (!state.InsetViews || !state.ShowMultiAxis || !insetMeasured || v < 0 || v > 1) return false;
-    // Beside the model at rest, a third of its height each, stacked: on its
-    // left, where Fit to video's usual place against the right of the
-    // picture leaves room, or on its right when the left is off the screen.
+    if (state.MultiView == 0 || !state.ShowMultiAxis || !insetMeasured || v < 0 || v > 1) return false;
+    // In place of the model, as tall as it stands at rest, side by side: the
+    // top view, then the side or front, ending where the model's right edge
+    // was, since Fit to video's usual place is against the right of the
+    // picture; moved right instead when that would run off the screen.
     const ImVec2 modelMin = modelCenter + (insetAnchorMin * modelScale);
     const ImVec2 modelMax = modelCenter + (insetAnchorMax * modelScale);
-    const float side = Util::Max(90.f, (modelMax.y - modelMin.y) * 0.32f);
+    const float height = Util::Max(120.f, modelMax.y - modelMin.y);
+    // The top view near square, the floor being square; the side or front
+    // narrower, the model standing tall in it.
+    const float widths[2] = { height * 0.75f, height * 0.55f };
+    const float width = widths[v];
     const float gap = 8.f;
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
-    float x = modelMin.x - gap - side;
-    if (x < viewport->Pos.x + gap) x = modelMax.x + gap;
-    const float y = modelMin.y + ((side + gap) * (float)v);
-    boxMin = ImVec2(x, y);
-    boxMax = ImVec2(x + side, y + side);
+    float left = modelMax.x - (widths[0] + widths[1]) - gap;
+    if (left < viewport->Pos.x + gap) left = viewport->Pos.x + gap;
+    const float x = v == 0 ? left : left + widths[0] + gap;
+    boxMin = ImVec2(x, modelMin.y);
+    boxMax = ImVec2(x + width, modelMin.y + height);
 
+    const InsetView& look = insetView(v, state);
     view = state;
-    view.CameraYaw = InsetViews[v].yaw;
-    view.CameraElevation = InsetViews[v].elevation;
+    view.CameraYaw = look.yaw;
+    view.CameraElevation = look.elevation;
     view.ShowAxisReadout = false;
     // Whole from above: cut away, the case seen from the top is a shell sliced
     // in half, and the twist and slide it is there for are lost.
     if (v == 0) view.CutawayCase = false;
 
     const ImVec2 rel = insetRelMax[v] - insetRelMin[v];
-    const float inner = side * InsetViews[v].zoom;
+    const float inner = Util::Min(width, height) * look.zoom;
     scale = Util::Min(inner / Util::Max(1e-3f, rel.x), inner / Util::Max(1e-3f, rel.y));
     centre = ((boxMin + boxMax) * 0.5f) - (((insetRelMin[v] + insetRelMax[v]) * 0.5f) * scale);
     return true;
@@ -5237,7 +5267,7 @@ bool ScriptSimulator::insetLayout(int32_t v, const SimulatorState& state, ImVec2
 void ScriptSimulator::drawInsetViews(ImDrawList* drawList, const SimulatorState& state,
     const MultiAxisValues& axes, ImVec2 modelCenter, float modelScale, const bool* hasTrack, bool posing) noexcept
 {
-    if (!state.InsetViews || !ModelDrawnValid) return;
+    if (state.MultiView == 0 || !ModelDrawnValid) return;
 
     // The extent of each view at a unit size, and of the main model at rest,
     // measured again twice a second, in case a setting that changes them
@@ -5280,8 +5310,8 @@ void ScriptSimulator::drawInsetViews(ImDrawList* drawList, const SimulatorState&
         measureAt(state, insetAnchorMin, insetAnchorMax);
         for (int32_t v = 0; v < 2; v += 1) {
             SimulatorState view = state;
-            view.CameraYaw = InsetViews[v].yaw;
-            view.CameraElevation = InsetViews[v].elevation;
+            view.CameraYaw = insetView(v, state).yaw;
+            view.CameraElevation = insetView(v, state).elevation;
             view.ShowAxisReadout = false;
             if (v == 0) view.CutawayCase = false;
             measureAt(view, insetRelMin[v], insetRelMax[v]);
@@ -5290,14 +5320,17 @@ void ScriptSimulator::drawInsetViews(ImDrawList* drawList, const SimulatorState&
     }
 
     const auto& role = OFS_Sashimi::Role();
+    ImVec2 viewsMin(FLT_MAX, FLT_MAX), viewsMax(-FLT_MAX, -FLT_MAX);
     for (int32_t v = 0; v < 2; v += 1) {
         ImVec2 min, max, centre;
         float scale = 1.f;
         SimulatorState view;
         if (!insetLayout(v, state, modelCenter, modelScale, min, max, view, centre, scale)) continue;
         const float round = ImGui::GetStyle().FrameRounding > 0.f ? 6.f : 0.f;
-        drawList->AddRectFilled(min, max, IM_COL32(0x10, 0x10, 0x10, 0xC8), round);
-        drawList->AddRect(min, max, IM_COL32(255, 255, 255, 0x18), round);
+        // Faint, like the single view, which has none: the video shows
+        // through as it does around the model.
+        drawList->AddRectFilled(min, max, IM_COL32(0x10, 0x10, 0x10, 0x40), round);
+        drawList->AddRect(min, max, IM_COL32(255, 255, 255, 0x22), round);
 
         // The handle in use lights its axes' guides in the view it is in.
         const bool here = posing && poseView == v + 1;
@@ -5320,13 +5353,24 @@ void ScriptSimulator::drawInsetViews(ImDrawList* drawList, const SimulatorState&
             poseViewDrawing = 0;
             for (int32_t h = 0; h < (int32_t)PoseHandle::Count; h += 1) InsetHandleScreen[v][h] = PoseHandleScreen[h];
         }
-        drawList->AddText(min + ImVec2(7.f, 4.f), role.TextFaint, InsetViews[v].name);
+        drawList->AddText(min + ImVec2(7.f, 4.f), role.TextFaint, insetView(v, state).name);
+        viewsMin = ImMin(viewsMin, min);
+        viewsMax = ImMax(viewsMax, max);
     }
 
     restoreMotion(live);
-    ModelDrawnMin = liveMin;
-    ModelDrawnMax = liveMax;
-    ModelDrawnValid = liveValid;
+    // The frame, the hint and the record button go around the two views,
+    // which is what is on screen; the model itself was only measured.
+    if (viewsMax.x > viewsMin.x) {
+        ModelDrawnMin = viewsMin;
+        ModelDrawnMax = viewsMax;
+        ModelDrawnValid = liveValid;
+    }
+    else {
+        ModelDrawnMin = liveMin;
+        ModelDrawnMax = liveMax;
+        ModelDrawnValid = liveValid;
+    }
     FinishEasterEgg = liveFinish;
     posingThisFrame = livePosing;
     FrameMin = liveFrameMin;
@@ -5690,8 +5734,11 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
     };
 
     for (int32_t h = 0; h < (int32_t)PoseHandle::Count; h += 1) {
-        PoseHandleScreen[h] = poseAnchor((PoseHandle)h, state, value, center, scale);
+        PoseHandleScreen[h] = poseAnchor((PoseHandle)h, state, value, center, scale)
+            + poseKnobOffset((PoseHandle)h, poseViewDrawing);
     }
+    // Only the handles this view has.
+    auto shownHere = [&](PoseHandle handle) noexcept { return poseHandleInView(handle, poseViewDrawing); };
 
     // A guide on the floor while the tip or the twist ring is under the
     // mouse or dragged. On screen alone a tilt toward the viewer and one
@@ -5782,7 +5829,7 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
 
     // Twist ring: a fine line round the body, with a knob on the front that
     // turns with it. Drawn first, so the other handles sit on top of it.
-    {
+    if (shownHere(PoseHandle::Ring)) {
         const PoseLook l = look(PoseHandle::Ring);
         ImVec2 points[PoseRingSamples];
         for (int32_t k = 0; k < PoseRingSamples; k += 1) {
@@ -5805,7 +5852,7 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
     }
 
     // Case: a grip lying along the body, with two lines across it.
-    {
+    if (shownHere(PoseHandle::Case)) {
         const PoseLook l = look(PoseHandle::Case);
         const ImVec2 at = PoseHandleScreen[(int32_t)PoseHandle::Case];
         float up[AxisCount];
@@ -5823,7 +5870,7 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
 
     // Floor square: on the ground under the body, moving with surge and
     // sway. A faint tile with a knob in the middle.
-    {
+    if (shownHere(PoseHandle::Floor)) {
         const PoseLook l = look(PoseHandle::Floor);
         const PoseFrame f = makePoseFrame(state, value);
         const float y = poseFloorY();
@@ -5843,7 +5890,16 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
     }
 
     // Tip: the biggest knob, on the closed end, since it carries two axes.
-    poseKnob(drawList, PoseHandleScreen[(int32_t)PoseHandle::Tip], 11.f, look(PoseHandle::Tip));
+    if (shownHere(PoseHandle::Tip)) {
+        // Set aside from where the tip is, from above, a line back to it.
+        const ImVec2 knob = PoseHandleScreen[(int32_t)PoseHandle::Tip];
+        const ImVec2 offset = poseKnobOffset(PoseHandle::Tip, poseViewDrawing);
+        if (ImLengthSqr(offset) > 0.f) {
+            drawList->AddLine(knob - offset, knob, poseColor(OFS_Sashimi::Grey80, 0.7f * strength), 1.f);
+            drawList->AddCircleFilled(knob - offset, 2.5f, poseColor(OFS_Sashimi::Grey80, 0.8f * strength));
+        }
+        poseKnob(drawList, knob, 11.f, look(PoseHandle::Tip));
+    }
 
     // Which way each axis goes, on the handle under the mouse or being
     // dragged: chevrons where the axis moves the handle on screen, and for
@@ -6115,9 +6171,18 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
         OFS::StepperInt("Reaction offset (ms)", "##PuppetOffset", &state.PuppetOffsetMs, 10, 0, 1000);
         OFS::Tooltip("Writes recorded takes this much earlier than your hand moved, to make up for "
                      "reacting a little after what you see.");
-        ImGui::Checkbox(TRS("Top and side views"), &state.InsetViews);
-        OFS::Tooltip("Two small views beside the model, from straight above and from the side, so "
-                     "surge, sway and twist, and pitch, can be read without turning the camera.");
+        {
+            static constexpr const char* labels[3] = { "One", "Top + side", "Top + front" };
+            static constexpr const char* tips[3] = {
+                "The model from the camera, as set above.",
+                "Two views in its place: from straight above, where surge, sway and twist read and are "
+                "posed, and from the side, where pitch reads and the stroke is posed.",
+                "From straight above, and from the front, where roll reads and the stroke is posed.",
+            };
+            ImGui::TextDisabled("%s", TRS("Views"));
+            const int32_t picked = OFS::SegmentedControl("##SimViews", labels, tips, 3, state.MultiView);
+            if (picked >= 0) state.MultiView = picked;
+        }
         ImGui::Checkbox(TRS("Cutaway case"), &state.CutawayCase);
         OFS::Tooltip("Remove the near half of the case so the sleeve inside is visible.");
         ImGui::Checkbox(TRS("Highlight ring"), &state.ShowRim);
@@ -6434,10 +6499,33 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
                 if (axis >= 0 && hasTrack[axis]) poseLitAxis[axis] = true;
             }
         }
-        drawMultiAxisModel(frontDraw, state, axes, modelCenter, modelScale);
-        if (posing) {
-            poseViewDrawing = 0;
-            drawPoseHandles(frontDraw, state, axes, hasTrack, modelCenter, modelScale);
+        if (state.MultiView == 0) {
+            drawMultiAxisModel(frontDraw, state, axes, modelCenter, modelScale);
+            if (posing) {
+                poseViewDrawing = 0;
+                drawPoseHandles(frontDraw, state, axes, hasTrack, modelCenter, modelScale);
+            }
+            if (ModelDrawnValid) {
+                fitRelMin = (ModelDrawnMin - modelCenter) / modelScale;
+                fitRelMax = (ModelDrawnMax - modelCenter) / modelScale;
+                fitRelValid = true;
+            }
+        }
+        else {
+            // Two views in its place. The model is still drawn once, off
+            // screen, which steps its springs once a frame and gives Fit to
+            // video the size it fits by, as it would with one view.
+            ImDrawList scratch(ImGui::GetDrawListSharedData());
+            scratch._ResetForNewFrame();
+            scratch.PushClipRectFullScreen();
+            scratch.PushTextureID(ImGui::GetIO().Fonts->TexID);
+            drawMultiAxisModel(&scratch, state, axes, modelCenter, modelScale);
+            if (ModelDrawnValid) {
+                fitRelMin = (ModelDrawnMin - modelCenter) / modelScale;
+                fitRelMax = (ModelDrawnMax - modelCenter) / modelScale;
+                fitRelValid = true;
+            }
+            drawInsetViews(frontDraw, state, axes, modelCenter, modelScale, hasTrack, posing);
         }
         PoseHandlesShown = posing;
         // The handles go while playing, since the pose is written at the
@@ -6457,12 +6545,6 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
             posePill(frontDraw, ImVec2(((ModelDrawnMin.x + ModelDrawnMax.x) - width) * 0.5f, hintY),
                 hint, nullptr, false);
         }
-        if (ModelDrawnValid) {
-            fitRelMin = (ModelDrawnMin - modelCenter) / modelScale;
-            fitRelMax = (ModelDrawnMax - modelCenter) / modelScale;
-            fitRelValid = true;
-        }
-        drawInsetViews(frontDraw, state, axes, modelCenter, modelScale, hasTrack, posing);
     }
     else {
         AxisBar bar;

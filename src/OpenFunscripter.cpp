@@ -1084,10 +1084,10 @@ void OpenFunscripter::registerBindings()
             { "toggle_simulator_views",
                 [this]() {
                     auto& simState = SimulatorState::State(simulator.StateHandle());
-                    simState.InsetViews = !simState.InsetViews;
+                    simState.MultiView = (simState.MultiView + 1) % 3;
                 },
                 false },
-            "Show or hide the 3D simulator's top and side views", "Utility");
+            "Switch the 3D simulator's views: one, top and side, top and front", "Utility");
 
         keys->RegisterAction(
             { "toggle_simulator_rod",

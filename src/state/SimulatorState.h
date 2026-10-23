@@ -41,10 +41,11 @@ struct SimulatorState
     // and slide of the case, at 100 it barely bends and the sleeve gives way
     // around it instead, shaded darker where it is pressed hardest.
     int32_t RodStiffness = 70;
-    // Two small views beside the model, from above and from the side, where
-    // surge, sway and twist and then pitch and surge read without turning the
-    // camera.
-    bool InsetViews = false;
+    // Two views in place of the one: 0 off, the model from the camera as
+    // usual; 1 from above and from the side; 2 from above and from the
+    // front. From above, surge, sway and twist read without turning the
+    // camera; from the side pitch, and from the front roll.
+    int32_t MultiView = 0;
     // Print the live value of each mapped axis next to the model.
     bool ShowAxisReadout = false;
     // Cut away the near half of the case so the sleeve inside is visible.
@@ -161,6 +162,6 @@ REFL_TYPE(SimulatorState)
 	REFL_FIELD(PoseHandles)
 	REFL_FIELD(TiltSlideRange)
 	REFL_FIELD(RodStiffness)
-	REFL_FIELD(InsetViews)
+	REFL_FIELD(MultiView)
 	REFL_FIELD(PuppetOffsetMs)
 REFL_END
