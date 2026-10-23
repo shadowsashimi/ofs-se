@@ -31,6 +31,16 @@ struct SimulatorState
     bool ShowMultiAxis = true;
     // Size of that model relative to the configured bar length.
     float ModelScale = 1.f;
+    // How far roll, pitch, surge and sway move the model at the ends of their
+    // range, in percent of what it was drawn with at first. Stroke and twist
+    // are as they were. Scripters who use real machines found the model moved
+    // about a third further than one does, which made a script feel stronger
+    // in the preview than on the machine.
+    int32_t TiltSlideRange = 70;
+    // How stiff the rod is, in percent: at 0 it bends to follow every lean
+    // and slide of the case, at 100 it barely bends and the sleeve gives way
+    // around it instead, shaded darker where it is pressed hardest.
+    int32_t RodStiffness = 70;
     // Print the live value of each mapped axis next to the model.
     bool ShowAxisReadout = false;
     // Cut away the near half of the case so the sleeve inside is visible.
@@ -141,4 +151,6 @@ REFL_TYPE(SimulatorState)
 	REFL_FIELD(StrokeMin)
 	REFL_FIELD(StrokeMax)
 	REFL_FIELD(PoseHandles)
+	REFL_FIELD(TiltSlideRange)
+	REFL_FIELD(RodStiffness)
 REFL_END

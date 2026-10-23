@@ -658,6 +658,17 @@ struct PoseFrame
     }
 };
 
+// How far the tilting and sliding axes reach, scaled by the setting.
+float modelTiltRange(const SimulatorState& state) noexcept
+{
+    return ModelMaxTilt * ((float)Util::Clamp(state.TiltSlideRange, 20, 100) / 100.f);
+}
+
+float modelSlideRange(const SimulatorState& state) noexcept
+{
+    return ModelLateralTravel * ((float)Util::Clamp(state.TiltSlideRange, 20, 100) / 100.f);
+}
+
 PoseFrame makePoseFrame(const SimulatorState& state, const float* value) noexcept
 {
     PoseFrame f;
@@ -687,14 +698,14 @@ PoseFrame makePoseFrame(const SimulatorState& state, const float* value) noexcep
     // The signs live here alone. Everything downstream derives from these,
     // unrotate and the fluid's idea of downhill included.
     f.twistAngle = -f.twist * (float)M_PI;
-    f.rollAngle = -f.roll * ModelMaxTilt;
-    f.pitchAngle = f.pitch * ModelMaxTilt;
+    f.rollAngle = -f.roll * modelTiltRange(state);
+    f.pitchAngle = f.pitch * modelTiltRange(state);
 
     // Stroke moves the body along its own axis, so it is applied in model
     // space before the tilt. A tilted stroker then strokes along its tilt.
     f.strokeOffset = f.stroke * ModelStrokeTravel;
     // Sway is positive to the user's left, which is -x on screen.
-    f.worldOffset = Vec3{ -f.sway * ModelLateralTravel, 0.f, f.surge * ModelLateralTravel };
+    f.worldOffset = Vec3{ -f.sway * modelSlideRange(state), 0.f, f.surge * modelSlideRange(state) };
 
     // Camera elevation. At zero the model is seen straight on, which reads
     // cleanest but leaves the orifice edge on and therefore invisible, since
@@ -756,7 +767,14 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
     // away and simply passes out through the side of the case. The remainder,
     // 1 - RodFollow, is what the canal has to absorb by moving aside, which is
     // the deformation actually worth seeing.
-    constexpr float RodFollow = 0.86f;
+    //
+    // A stiffer rod follows less of the lean, and less of the slide too: it
+    // passed exactly through the opening wherever the case went, so a case
+    // slid aside folded it over, which no real one does. What it does not
+    // follow the sleeve takes up instead.
+    const float rodStiffness = (float)Util::Clamp(state.RodStiffness, 0, 100) / 100.f;
+    const float RodFollow = 0.86f + ((0.35f - 0.86f) * rodStiffness);
+    const float RodReach = 1.f + ((0.55f - 1.f) * rodStiffness);
     // How much the vulva swells at full insertion, and how far back from the
     // opening that swelling reaches. The reach stops just short of the shell's
     // rim: past it the sleeve is inside the case with almost no room, so the
@@ -913,8 +931,8 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
     // The lip rests on the cone rather than merging into it.
     constexpr float LipFootClearance = 0.010f;
     // Tilt limits, so a full swing stays readable instead of folding over.
-    constexpr float MaxTiltRadians = ModelMaxTilt;
-    constexpr float LateralTravel = ModelLateralTravel;
+    const float MaxTiltRadians = modelTiltRange(state);
+    const float LateralTravel = modelSlideRange(state);
 
     // The pose, worked out in makePoseFrame so the pose handles share it.
     const PoseFrame frame = makePoseFrame(state, axes.value);
@@ -1309,14 +1327,21 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
     // the vulva aimed the rod at a place the case had already swung away from:
     // the tilt pivots at the vulva, so half a body length up the axis has
     // moved several radii across, and the rod ran up outside the shell.
-    const Vec3 bendTopCentre = bodyAxisLateralAt(bendTop);
+    const Vec3 bendTopReach = bodyAxisLateralAt(bendTop);
+    const Vec3 bendTopCentre{ bendTopReach.x * RodReach, 0.f, bendTopReach.z * RodReach };
     auto rodCentreAt = [&](float worldY) noexcept -> Vec3 {
         const Vec3 tw = twitchLateralAt(worldY);
+        // Stiff, the rod leans as one straight piece from its base, as a firm
+        // toy rocks on its suction cup, rather than curving into an S to
+        // arrive along the canal; the canal takes up the angle instead.
+        const Vec3 leanSlope{ bendTopCentre.x / bendSpan, 0.f, bendTopCentre.z / bendSpan };
+        const Vec3 topSlope{ vulvaSlope.x + ((leanSlope.x - vulvaSlope.x) * rodStiffness), 0.f,
+                             vulvaSlope.z + ((leanSlope.z - vulvaSlope.z) * rodStiffness) };
         if(worldY >= bendTop) {
             // Straight on at the angle the bend finished with.
             const float k = worldY - bendTop;
-            return Vec3{ bendTopCentre.x + (vulvaSlope.x * k) + tw.x, worldY,
-                         bendTopCentre.z + (vulvaSlope.z * k) + tw.z };
+            return Vec3{ bendTopCentre.x + (topSlope.x * k) + tw.x, worldY,
+                         bendTopCentre.z + (topSlope.z * k) + tw.z };
         }
         // Hermite: clamped flat at the base, and at the far end the canal's
         // position and angle. The slight counter-curve near the base is what a
@@ -1330,10 +1355,13 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
         const float t = Util::Clamp((worldY - rodBaseY) / bendSpan, 0.f, 1.f);
         const float h01 = (t * t) * (3.f - (2.f * t));
         const float h11 = (t * t) * (t - 1.f);
+        const Vec3 curved{ (bendTopCentre.x * h01) + (vulvaSlope.x * bendSpan * h11), 0.f,
+                           (bendTopCentre.z * h01) + (vulvaSlope.z * bendSpan * h11) };
+        const Vec3 straight{ bendTopCentre.x * t, 0.f, bendTopCentre.z * t };
         return Vec3{
-            (bendTopCentre.x * h01) + (vulvaSlope.x * bendSpan * h11) + tw.x,
+            curved.x + ((straight.x - curved.x) * rodStiffness) + tw.x,
             worldY,
-            (bendTopCentre.z * h01) + (vulvaSlope.z * bendSpan * h11) + tw.z };
+            curved.z + ((straight.z - curved.z) * rodStiffness) + tw.z };
     };
     // Direction the centreline is running at a height. Taken from the curve
     // itself so the two cannot disagree.
@@ -2394,6 +2422,17 @@ void ScriptSimulator::drawMultiAxisModel(ImDrawList* drawList, const SimulatorSt
                 // soft material pulled thin does.
                 float stretch = 0.f;
                 ImColor base = isSleeve ? sleeveColor : caseColor;
+                // Where the rod presses the sleeve aside, it darkens to a
+                // deeper red, as flesh under pressure does: how hard is how far
+                // the ring had to move onto the rod. This is what shows the
+                // strain of a steep angle now that the rod keeps its shape.
+                if(isSleeve && r < RingCount) {
+                    const float shift = std::sqrt((ringCx[r] * ringCx[r]) + (ringCz[r] * ringCz[r]));
+                    const float pressure = Util::Clamp(shift / (RodRadius * 0.6f), 0.f, 1.f);
+                    base.Value.x += (0.50f - base.Value.x) * 0.75f * pressure;
+                    base.Value.y += (0.04f - base.Value.y) * 0.75f * pressure;
+                    base.Value.z += (0.14f - base.Value.z) * 0.75f * pressure;
+                }
                 if(isSleeve && r < firstBoreRing + 4 && Profile[r].y < -0.806f) {
                     const float fromVulva = std::abs(Profile[r].y - Profile[SlitRing].y) * HalfLength;
                     // The vulva is pinker than the body of the sleeve, and the
@@ -5186,7 +5225,7 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
             };
             // As far as the tip leans at full tilt, and never inside the ring.
             const float lever = std::abs(f.strokeOffset + PoseTipY - f.pivotY);
-            const float radius = Util::Max(lever * SDL_sinf(ModelMaxTilt), PoseRingRadius * 1.3f);
+            const float radius = Util::Max(lever * SDL_sinf(modelTiltRange(state)), PoseRingRadius * 1.3f);
 
             constexpr int32_t Samples = 48;
             ImVec2 rim[Samples];
@@ -5527,6 +5566,14 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
     if (state.ShowMultiAxis) {
         OFS::StepperFloat("Model scale", "##ModelScale", &state.ModelScale, 0.1f, 0.1f, 4.f, "%.2fx");
         OFS::Tooltip("Size of the model relative to the simulator's length.");
+        OFS::StepperInt("Tilt and slide range (%)", "##TiltSlide", &state.TiltSlideRange, 5, 20, 100);
+        OFS::Tooltip("How far roll, pitch, surge and sway move the model at the ends of their range. "
+                     "Stroke and twist are not affected. 70 is about how far a real machine moves; "
+                     "100 is how far the model used to.");
+        OFS::StepperInt("Rod stiffness (%)", "##RodStiffness", &state.RodStiffness, 10, 0, 100);
+        OFS::Tooltip("How stiff the rod is. Stiff, it keeps its shape and the sleeve gives way around "
+                     "it, shaded darker where it is pressed hardest. At 0 it bends to follow every "
+                     "lean, as it used to.");
         {
             static constexpr const char* labels[3] = { "Front", "3/4", "Side" };
             static constexpr const char* tips[3] = {
