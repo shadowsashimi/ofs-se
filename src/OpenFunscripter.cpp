@@ -2939,7 +2939,7 @@ void OpenFunscripter::ShowTracksWindow(bool* open) noexcept
         }
     }
 
-    ImGui::Begin(TracksWindowId, open);
+    ImGui::Begin(TRS(TracksWindowId), open);
     if (!LoadedProject->IsValid() || LoadedFunscripts().empty()) {
         ImGui::TextDisabled(TRS("Open a video or a script to see its tracks."));
         ImGui::End();

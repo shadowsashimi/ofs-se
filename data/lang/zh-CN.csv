@@ -1,0 +1,1121 @@
+Key (do not touch),Default,Translation
+INVALID_TR,%%this should not be displayed%%,%%this should not be displayed%%
+ABOUT,About,关于
+LATEST_RELEASE,Latest release,最新版本
+OFS_LOG_OUTPUT,OFS Log Output,OFS 日志输出
+ADD_EDIT_ACTIONS,Add/Edit actions,添加/编辑点
+ADD_EDIT_ACTION,Add/Edit action,添加/编辑点
+ADD_ACTION,Add action,添加点
+REMOVE_ACTIONS,Remove actions,删除点
+REMOVE_ACTION,Remove action,删除点
+MOUSE_MOVED_ACTIONS,Mouse moved actions,鼠标移动点
+ACTIONS_MOVED,Actions moved,点已移动
+CUT_SELECTION,Cut selection,剪切选区
+REMOVE_SELECTION,Remove selection,删除选区
+PASTE_SELECTION,Paste selection,粘贴选区
+EQUALIZE,Equalize,均衡
+INVERT,Invert,反转
+ISOLATE,Isolate,隔离
+TOP_POINTS,Top points,顶部点
+MID_POINTS,Mid points,中间点
+BOTTOM_POINTS,Bottom points,底部点
+GENERATE_ACTIONS,Generate actions,生成点
+FRAME_ALIGN,Frame align,对齐帧
+RANGE_EXTEND,Range extend,扩展范围
+REPEAT_STROKE,Repeat stroke,重复行程
+MOVE_TO_CURRENT_POSITION,Move to current position,移到当前位置
+SIMPLIFY,Simplify,简化
+LUA_SCRIPT,Lua script,Lua 脚本
+REDO_STACK,Redo stack,重做栈
+UNDO_STACK,Undo stack,撤销栈
+UNDO_REDO_HISTORY,Undo/Redo history,撤销/重做历史
+T_CODE,T-Code,T-Code
+PORT,Port,端口
+OPEN_PORT,Open port,打开端口
+LIMITS,Limits,限制
+LINEAR_LIMITS,Linear limits,线性限制
+ROTATION_LIMITS,Rotation limits,旋转限制
+VIBRATION_LIMITS,Vibration limits,振动限制
+GLOBAL_SETTINGS,Global settings,全局设置
+DELAY,Delay,延迟
+CONTROLLER_BUTTON_A,A / X,A / X
+CONTROLLER_BUTTON_B,B / Circle,B / 圆
+CONTROLLER_BUTTON_X,X / Square,X / 方
+CONTROLLER_BUTTON_Y,Y / Triangle,Y / 三角
+CONTROLLER_BUTTON_BACK,Back / Share,Back / Share
+CONTROLLER_BUTTON_GUIDE,Guide,Guide
+CONTROLLER_BUTTON_START,Start,Start
+CONTROLLER_BUTTON_LEFTSTICK,Leftstick,左摇杆
+CONTROLLER_BUTTON_RIGHTSTICK,Rightstick,右摇杆
+CONTROLLER_BUTTON_LEFTSHOULDER,Leftshoulder,左肩键
+CONTROLLER_BUTTON_RIGHTSHOULDER,Rightshoulder,右肩键
+CONTROLLER_BUTTON_DPAD_UP,DPAD Up,十字键上
+CONTROLLER_BUTTON_DPAD_DOWN,DPAD Down,十字键下
+CONTROLLER_BUTTON_DPAD_LEFT,DPAD Left,十字键左
+CONTROLLER_BUTTON_DPAD_RIGHT,DPAD Right,十字键右
+CONTROLLER_NOT_SET,- Not set -,- 未设置 -
+KEY_MOD_CTRL,Ctrl,Ctrl
+KEY_MOD_ALT,Alt,Alt
+KEY_MOD_SHIFT,Shift,Shift
+KEY_ALREADY_IN_USE,Key is in use,按键已被占用
+KEY_ALREADY_IN_USE_MSG,Key already bound for [%s],该按键已绑定到 [%s]
+BUTTON_ALREADY_IN_USE,Button is in use,按钮已被占用
+BUTTON_ALREADY_IN_USE_MSG,Button already bound for [%s],该按钮已绑定到 [%s]
+DESCRIPTION,Description,描述
+KEYBOARD,Keyboard,键盘
+ACTIVE,Active,启用
+KEY_NOT_SET,- Not set -,- 未设置 -
+CHANGE_KEY,Change key,更改按键
+CHANGE_KEY_MSG,"Press any key...
+Escape to exit.","请按任意键...
+Escape 退出。"
+PASSIVE_BINDING_TXT1,Here modifiers can be configured which change certain behaviour.,可在此配置用于改变部分行为的修饰键。
+PASSIVE_BINDING_TXT2,"You can only use Shift, Ctrl & Alt.",只能使用 Shift、Ctrl 和 Alt。
+KEYS,Keys,按键
+BINDINGS,Bindings,绑定
+BINDING_TXT1,"You can use CTRL, SHIFT & ALT as modifiers.",可使用 CTRL、SHIFT 和 ALT 作为修饰键。
+BINDING_TXT2,Only controller buttons can be bound. The DPAD directions count as a buttons.,只能绑定手柄按钮。十字键各方向均算作按钮。
+BINDING_TXT3,The configuration gets saved everytime a change is made.,每次更改后都会自动保存配置。
+BINDING_TXT4,"If you wan't to revert to the defaults, you'll have to delete the config.",如需恢复默认值，需要删除配置文件。
+FILTER,Filter,筛选
+MODIFIERS,Modifiers,修饰键
+ACTION,Action,操作
+CONTROLLER,Controller,手柄
+IGNORE_REPEATS,Ignore repeats,忽略重复
+CHANGE_BUTTON,Change button,更改按钮
+CHANGE_BUTTON_MSG,"Press any button...
+Escape to clear.","请按任意按钮...
+Escape 清除。"
+RUNNING_TASK,Running task,正在运行任务
+THIS_MAY_TAKE_A_WHILE,This may take a while...,这可能需要一些时间...
+OPTIONS,Options,选项
+AUTO_SCROLL,Auto-scroll,自动滚动
+CLEAR,Clear,清除
+COPY,Copy,复制
+USED,Used,已用
+ALLOCATED,Allocated,已分配
+SCRIPTS,Scripts,脚本
+RENDERING,Rendering,渲染
+SHOW_ACTIONS,Show actions,显示点
+SPLINE_MODE,Spline mode,样条模式
+SHOW_VIDEO_POSITION,Show video position,显示视频位置
+WAVEFORM,Waveform,波形
+SETTINGS,Settings,设置
+SCALE,Scale,缩放
+COLOR,Color,颜色
+ENABLE_WAVEFORM,Enable waveform,启用波形
+MIN_INT_FMT,Min: %d,最小：%d
+MAX_INT_FMT,Max: %d,最大：%d
+TCODE_TICKRATE,Tickrate (Hz),刷新率 (Hz)
+SPLINE,Spline,样条
+SPLINE_TOOLTIP,Smooth motion instead of linear.,平滑运动而非线性。
+REMAP,Remap,重映射
+REMAP_TOOLTIP,"Remap script to use the full range.
+i.e. scripts using the range 10 to 90 become 0 to 100.","将脚本重映射为使用完整范围。
+例如使用 10 到 90 范围的脚本会变为 0 到 100。"
+DELAY_TOOLTIP,"Negative: Backward in time.
+Positive: Forward in time.","负值：时间向后。
+正值：时间向前。"
+OUTPUTS,Outputs,输出
+YOU_CAN_RIGHT_CLICK_SLIDERS_TOOLTIP,You can right click sliders.,可以右键单击滑块。
+REBALANCE,Rebalance,重新平衡
+REBALANCE_TOOLTIP,Balance around 500 even with unevenly spread limits.,即使限制分布不均，也以 500 为中心平衡。
+GAMEPAD_ONLY,only,仅
+SHOW_VIDEO_POSITION_TOOLTIP,"(Frame overlay only)
+Shows a red line where the current frame is.
+More of a debugging feature.","（仅帧叠加层）
+用红线标出当前帧位置。
+主要用于调试。"
+PROCESSING_AUDIO,Processing audio...,正在处理音频...
+UPDATE_WAVEFORM,Update waveform,更新波形
+POSITIONS,Positions,位置
+LOOP_A_SET,Loop A set,已设置循环 A
+LOOP_B_SET,Loop B set,已设置循环 B
+LOCK,Lock,锁定
+CLICK_TO_ENABLE_VIDEO,Click to enable video,点击启用视频
+LOOP_CLEARED,Loop cleared,已清除循环
+VIDEOPLAYER,Player,播放器
+SPEED,Speed,速度
+TIMELINE,Timeline,时间轴
+TIME,Time,时间
+CONTROLS,Controls,控制
+TIMELINE_SECONDS,seconds,秒
+TASK_EXPORTING_CLIPS,Exporting clips,正在导出片段
+PROJECT,Project,项目
+MEDIA,Media,媒体
+CHANGE_DEFAULT_LOCATION,Change default location,更改默认位置
+CHANGE_LOCATION,Change location,更改位置
+SCRIPTING_MODE,Scripting mode,脚本编写模式
+DEFAULT_MODE,Manual,手动
+ALTERNATING_MODE,Alternating,交替
+DYNAMIC_INJECTION_MODE,Auto peak,自动峰值
+RECORDING_MODE,Recording,录制
+SCRIPTING_OVERLAY,Scripting overlay,脚本编写叠加层
+FRAME_OVERLAY,Frame,帧
+TEMPO_OVERLAY,Tempo,节奏
+EMPTY_OVERLAY,None,无
+OFFSET_MS,Offset (ms),偏移 (ms)
+OFFSET_TOOLTIP,"Applies an offset to actions inserted while the video is playing.
+- : inserts earlier
++ : inserts later","对视频播放时插入的点应用偏移。
+- ：提前插入
++ ：延后插入"
+MIRROR_MODE,Mirror mode,镜像模式
+MIRROR_MODE_TOOLTIP,Mirrors add/edit/remove action across all loaded scripts.,在所有已加载脚本中同步添加/编辑/删除点。
+DI_TARGET_SPEED,Target speed (units/s),目标速度 (units/s)
+DI_PEAK_OFFSET,Peak offset. Negative places the peak earlier in the gap; positive places it later.,峰值偏移。负值使峰值在间隔中提前，正值使其延后。
+TOP,Top,顶部
+BOTTOM,Bottom,底部
+NEXT_POINT,Next point,下一个点
+NEXT_POINT_AT_FMT,Next point is at %d,下一个点位于 %d
+NEXT_POINT_IS_FMT,Next point is %s,下一个点%s
+INVERTED,inverted,已反转
+NOT_INVERTED,not inverted,未反转
+FIXED_RANGE,Fixed range,固定范围
+CONTEXT_SENSITIVE,Context sensitive,上下文感知
+CONTEXT_SENSITIVE_TOOLTIP,Alternates based on the previous action.,根据上一个点交替。
+MODE,Mode,模式
+MOUSE,Mouse,鼠标
+CONTROLLER_DEADZONE,Controller deadzone,手柄死区
+DEADZONE,Deadzone,死区
+CENTER,Center,中心
+TWO_AXES,Two axes,双轴
+TWO_AXES_TOOLTIP,"Recording pitch & roll at once.
+Only works with a controller.","同时录制俯仰和横滚。
+仅适用于手柄。"
+RECORD_ON_PLAY,Record on play,播放时录制
+TWO_AXES_AXES,X / Y,X / Y
+POSITION,Position,位置
+RECORDING_ACTIVE,Recording active,正在录制
+RECORDING_PAUSED,Recording paused,录制已暂停
+STATISTICS,Statistics,统计
+ACTION_EDITOR,Action editor,点编辑器
+DYNAMIC_BINDING_GROUP,Dynamic,动态
+ACTIONS_BINDING_GROUP,Actions,操作
+CORE_BINDING_GROUP,Core,核心
+NAVIGATION_BINDING_GROUP,Navigation,导航
+UTILITY_BINDING_GROUP,Utility,实用
+MOVING_BINDING_GROUP,Moving,移动
+SPECIAL_BINDING_GROUP,Special,特殊
+VIDEOPLAYER_BINDING_GROUP,Videoplayer,视频播放器
+EXTENSIONS_BINDING_GROUP,Extensions,扩展
+CONTROLLER_BINDING_GROUP,Controller,手柄
+ACTION_REMOVE_ACTION,Remove action,删除点
+ACTION_ACTION_0,Action at 0,在 0 处添加点
+ACTION_ACTION_10,Action at 10,在 10 处添加点
+ACTION_ACTION_20,Action at 20,在 20 处添加点
+ACTION_ACTION_30,Action at 30,在 30 处添加点
+ACTION_ACTION_40,Action at 40,在 40 处添加点
+ACTION_ACTION_50,Action at 50,在 50 处添加点
+ACTION_ACTION_60,Action at 60,在 60 处添加点
+ACTION_ACTION_70,Action at 70,在 70 处添加点
+ACTION_ACTION_80,Action at 80,在 80 处添加点
+ACTION_ACTION_90,Action at 90,在 90 处添加点
+ACTION_ACTION_100,Action at 100,在 100 处添加点
+ACTION_SAVE_PROJECT,Save project,保存项目
+ACTION_QUICK_EXPORT,Quick export,快速导出
+ACTION_QUICK_EXPORT_2_0,Quick export (2.0),快速导出 (2.0)
+ACTION_SYNC_TIME_WITH_PLAYER,Sync time with player,与播放器同步时间
+ACTION_CYCLE_FORWARD_LOADED_SCRIPTS,Cycle forward loaded scripts,向前切换已加载脚本
+ACTION_CYCLE_BACKWARD_LOADED_SCRIPTS,Cycle backward loaded scripts,向后切换已加载脚本
+ACTION_PREVIOUS_ACTION,Previous action,上一个点
+ACTION_NEXT_ACTION,Next action,下一个点
+ACTION_PREVIOUS_ACTION_MULTI,Previous action (multi),上一个点（多脚本）
+ACTION_NEXT_ACTION_MULTI,Next action (multi),下一个点（多脚本）
+ACTION_PREV_FRAME,Previous frame,上一帧
+ACTION_NEXT_FRAME,Next frame,下一帧
+ACTION_FAST_STEP,Fast step,快进一步
+ACTION_FAST_BACKSTEP,Fast backstep,快退一步
+ACTION_UNDO,Undo,撤销
+ACTION_REDO,Redo,重做
+ACTION_COPY,Copy,复制
+ACTION_PASTE,Paste,粘贴
+ACTION_CUT,Cut,剪切
+ACTION_PASTE_EXACT,Paste exact,精确粘贴
+ACTION_SELECT_ALL,Select all,全选
+ACTION_DESELECT_ALL,Deselect all,取消全选
+ACTION_SELECT_ALL_LEFT,Select all left,选择左侧全部
+ACTION_SELECT_ALL_RIGHT,Select all right,选择右侧全部
+ACTION_SELECT_TOP,Select top points,选择顶部点
+ACTION_SELECT_BOTTOM,Select bottom points,选择底部点
+ACTION_SELECT_MID,Select middle points,选择中间点
+ACTION_TOGGLE_MIRROR_MODE,Toggle mirror mode,切换镜像模式
+ACTION_SAVE_FRAME,Save frame as image,将帧保存为图片
+ACTION_CYCLE_SUBTITLES,Cycle subtitles,切换字幕
+ACTION_TOGGLE_FULLSCREEN,Toggle fullscreen,切换全屏
+ACTION_MOVE_UP_10,Move actions +10 up,点上移 +10
+ACTION_MOVE_DOWN_10,Move actions -10 down,点下移 -10
+ACTION_MOVE_UP_5,Move actions +5 up,点上移 +5
+ACTION_MOVE_DOWN_5,Move actions -5 down,点下移 -5
+ACTION_MOVE_ACTIONS_LEFT_SNAP,Move actions left with snapping,点左移（吸附）
+ACTION_MOVE_ACTIONS_RIGHT_SNAP,Move actions right with snapping,点右移（吸附）
+ACTION_MOVE_ACTIONS_LEFT,Move actions left,点左移
+ACTION_MOVE_ACTIONS_RIGHT,Move actions right,点右移
+ACTION_MOVE_ACTIONS_UP,Move actions up,点上移
+ACTION_MOVE_ACTIONS_DOWN,Move actions down,点下移
+ACTION_MOVE_TO_CURRENT_POSITION,Move to current position,移到当前位置
+ACTION_EQUALIZE_ACTIONS,Equalize actions,均衡点
+ACTION_INVERT_ACTIONS,Invert actions,反转点
+ACTION_ISOLATE_ACTION,Isolate action,隔离点
+ACTION_REPEAT_STROKE,Repeat stroke,重复行程
+ACTION_TOGGLE_PLAY,Play / Pause,播放 / 暂停
+ACTION_REDUCE_PLAYBACK_SPEED,Playback speed -10%,播放速度 -10%
+ACTION_INCREASE_PLAYBACK_SPEED,Playback speed +10%,播放速度 +10%
+ACTION_GO_TO_START,Go to the start,跳到开头
+ACTION_GO_TO_END,Go to the end,跳到结尾
+ACTION_RELOAD_ENABLED_EXTENSIONS,Reload enabled extensions,重新加载已启用的扩展
+ACTION_TOGGLE_CONTROLLER_NAV,Toggle controller navigation,切换手柄导航
+ACTION_SEEK_FORWARD_1,Forward 1 second,前进 1 秒
+ACTION_SEEK_BACKWARD_1,Backward 1 second,后退 1 秒
+ACTION_ADD_ACTION_CONTROLLER,Add action,添加点
+ACTION_TOGGLE_RECORDING_MODE,Toggle recording mode,切换录制模式
+ACTION_CONTROLLER_SELECT,Controller selection,手柄选择
+ACTION_SET_PLAYBACK_SPEED,Set current playback speed,设置当前播放速度
+PASSIVE_GROUP_TIMELINE,Point timeline,点时间轴
+PASSIVE_GROUP_SIMULATOR,Simulator,模拟器
+MOD_MOVE_OR_ADD_POINT,Click drag/add point in the timeline,在时间轴中点击拖动/添加点
+MOD_CLICK_SIM_ADD_PONT,Click simulator to add a point,点击模拟器添加点
+PROJECT_HAS_UNSAVED_EDITS,Project has unsaved edits,项目有未保存的编辑
+UNSAVED_EDITS_MSG,The current project has unsaved edits.,当前项目有未保存的编辑。
+UNSAVED_CHANGES,Unsaved changes,未保存的更改
+UNSAVED_CHANGES_MSG,Do you want to save and exit?,是否保存并退出？
+FILE_NOT_FOUND,File not found,未找到文件
+COULDNT_FIND_FILE,Couldn’t find file,找不到文件
+OFS_FAILED_TO_IMPORT,OpenFunscripter failed to import.,OpenFunscripter 导入失败。
+OFS_FAILED_TO_IMPORT_MSG,Failed to import,导入失败
+FAILED_TO_LOAD,Failed to load,加载失败
+FAILED_TO_LOAD_MSG,The project failed to load.,项目加载失败。
+FAILED_TO_FIND_VIDEO,Failed to find video,找不到视频
+FAILED_TO_FIND_VIDEO_MSG,"The video was not found.
+Please pick the correct video.","未找到视频。
+请选择正确的视频。"
+CHOOSE_OUTPUT_DIR,Choose output directory,选择输出目录
+PICK_DIFFERENT_MEDIA,Pick different media,选择其他媒体
+FILE,File,文件
+OPEN_PROJECT,Open project,打开项目
+SAVE,Save,保存
+CLOSE_PROJECT,Close project,关闭项目
+WRONG_FILE,Wrong file,文件错误
+WRONG_FILE_MSG,The file isn’t a project file.,该文件不是项目文件。
+IMPORT_VIDEO_SCRIPT,Import video/script,导入视频/脚本
+RECENT_FILES,Recent files,最近文件
+NO_RECENT_FILES,No recent files,无最近文件
+SAVE_PROJECT,Save project,保存项目
+EXPORT_MENU,Export...,导出...
+QUICK_EXPORT,Quick export,快速导出
+QUICK_EXPORT_TOOLTIP,Exports all scripts as .funscript in their default paths.,将所有脚本以 .funscript 导出到默认路径。
+QUICK_EXPORT_2_0,Quick export (2.0),快速导出 (2.0)
+QUICK_EXPORT_2_0_TOOLTIP,Exports combined 2.0 funscript with channels.,导出带通道的合并 2.0 funscript。
+QUICK_EXPORT_1_1,Quick export (1.1),快速导出 (1.1)
+QUICK_EXPORT_1_1_TOOLTIP,Exports combined 1.1 funscript with axes.,导出带轴的合并 1.1 funscript。
+EXPORT_ACTIVE_SCRIPT,Export active script,导出当前脚本
+EXPORT_ALL,Export all,全部导出
+AUTO_BACKUP_TIMER_FMT,Auto Backup in %d seconds,%d 秒后自动备份
+AUTO_BACKUP,Auto Backup,自动备份
+OPEN_BACKUP_DIR,Open backup directory,打开备份目录
+CONFIGURE,Configure,配置
+ADD_MENU,Add...,添加...
+ADD_SHORTCUTS,Shortcuts,快捷键
+ADD_NEW,Add new,新建
+ADD_NEW_FUNSCRIPT,Add new funscript,添加新 funscript
+ADD_EXISTING,Add existing,添加现有
+ADD_EXISTING_FUNSCRIPTS,Add existing funscripts,添加现有 funscript
+REMOVE_SCRIPT_CONFIRM_MSG,"If the script wasn’t previously exported, this can’t be reverted.
+Continue?","如果该脚本之前未导出，此操作无法撤销。
+是否继续？"
+REMOVE,Remove,删除
+REMOVE_SCRIPT,Remove script,删除脚本
+EDIT,Edit,编辑
+SAVE_FRAME_AS_IMAGE,Save frame as image,将帧保存为图片
+OPEN_SCREENSHOT_DIR,Open screenshot directory,打开截图目录
+SAVE_HEATMAP,Save heatmap,保存热图
+UNDO,Undo,撤销
+REDO,Redo,重做
+CUT,Cut,剪切
+PASTE,Paste,粘贴
+SELECT,Select,选择
+SELECT_ALL,Select all,全选
+DESELECT_ALL,Deselect all,取消全选
+SPECIAL,Special,特殊
+SELECT_ALL_LEFT,Select all left,选择左侧全部
+SELECT_ALL_RIGHT,Select all right,选择右侧全部
+SET_SELECTION_START,Set selection start,设置选区起点
+SET_SELECTION_END,Set selection end,设置选区终点
+TOP_POINTS_ONLY,Top points only,仅顶部点
+MID_POINTS_ONLY,Mid points only,仅中间点
+BOTTOM_POINTS_ONLY,Bottom points only,仅底部点
+BOOKMARKS,Bookmarks,书签
+EXPORT_CLIP,Export clip,导出片段
+NAME,Name,名称
+ADD_BOOKMARK,Add bookmark,添加书签
+CREATE_INTERVAL_FOR_FMT,"Create interval for ""%s""",为“%s”创建区间
+GO_TO_MENU,Go to...,跳转到...
+NO_BOOKMARKS,No bookmarks,无书签
+ALWAYS_SHOW_LABELS,Always show labels,始终显示标签
+DELETE_ALL_BOOKMARKS,Delete all bookmarks,删除所有书签
+VIEW_MENU,View,视图
+METADATA,Metadata,元数据
+DRAW_VIDEO,Draw video,绘制视频
+RESET_VIDEO_POS,Reset video position,重置视频位置
+VIDEO_MODE,Video mode,视频模式
+VIDEO_MODE_FULL,Full,完整
+VIDEO_MODE_LEFT_PANE,Left pane,左窗格
+VIDEO_MODE_RIGHT_PANE,Right pane,右窗格
+VIDEO_MODE_TOP_PANE,Top pane,上窗格
+VIDEO_MODE_BOTTOM_PANE,Bottom pane,下窗格
+VIDEO_MODE_VR,VR,VR
+DEBUG,Debug,调试
+METRICS,Metrics,指标
+LOG_OUTPUT,Log output,日志输出
+FULLSCREEN,Fullscreen,全屏
+PREFERENCES,Preferences,首选项
+REPEAT_RATE,Repeat rate,重复速率
+CONTROLLER_CONNECTED,Controller connected!,手柄已连接！
+EXTENSIONS_MENU,Extensions,扩展
+DEV_MODE,Developer mode,开发者模式
+SHOW_LOGS,Show logs,显示日志
+DEV_MODE_TOOLTIP,Enable extra functionality for extension developement.,为扩展开发启用额外功能。
+EXTENSION_DIR,Extension directory,扩展目录
+ENABLED,Enabled,已启用
+SHOW_WINDOW,Show window,显示窗口
+OPEN_DIRECTORY,Open directory,打开目录
+NAVIGATION,Navigation,导航
+SCRIPTING,Scripting,脚本编写
+UNSAVED_CHANGES_FMT,unsaved changes %d minutes ago,%d 分钟前有未保存的更改
+METADATA_EDITOR,Metadata editor,元数据编辑器
+TITLE,Title,标题
+DURATION,Duration,时长
+CREATOR,Creator,作者
+URL,Url,网址
+VIDEO_URL,Video url,视频网址
+NOTES,Notes,备注
+LICENSE,License,许可
+FREE,Free,免费
+PAID,Paid,付费
+NONE,None,无
+TAGS,Tags,标签
+ADD,Add,添加
+PERFORMERS,Performers,演员
+SAVE_TEMPLATE,Save template,保存模板
+SAVE_TEMPLATE_TOOLTIP,Saves all current values as defaults for later.,将当前所有值保存为以后的默认值。
+GIT_COMMIT,Commit,提交
+INTERVAL,Interval,区间
+CLOSE_WITHOUT_SAVING,Close without saving?,不保存就关闭？
+CLOSE_WITHOUT_SAVING_MSG,Do you want to save the current project?,是否保存当前项目？
+CONFIGURATION,Configuration,配置
+RESET,Reset,重置
+MOVE,Move,移动
+DISTANCE,Distance,距离
+GLOBAL_YAW,Global yaw,全局偏航
+GLOBAL_PITCH,Global pitch,全局俯仰
+BOX,Box,盒子
+CONTAINER,Container,容器
+TWIST,Twist,扭转
+ROLL_DEG,Roll deg,横滚角度
+PITCH_DEG,Pitch deg,俯仰角度
+TWIST_DEG,Twist deg,扭转角度
+ROLL,Roll,横滚
+PITCH,Pitch,俯仰
+YAW,Yaw,偏航
+INSERT_CURRENT_POSITION,Insert current position,插入当前位置
+SCROLL_PERCENT,Scroll (%),滚动 (%)
+SCROLL_PERCENT_TOOLTIP,You can use the mousewheel on the sliders above.,可以在上方滑块上使用鼠标滚轮。
+EXTENSION_LOG_OUTPUT,Extension log output,扩展日志输出
+ERROR_STR,Error,错误
+TRY_RELOADING,Try reloading,尝试重新加载
+RELOAD,Reload,重新加载
+BPM,BPM,BPM
+OFFSET,Offset,偏移
+SNAP,Snap,吸附
+SNAPPING,Snapping,吸附
+SNAP_TO_GRID,Snap to grid,吸附到网格
+SNAP_POSITION,Snap position,吸附位置
+TEMPO_GRID,Grid,网格
+BREAK,Break,间歇
+TEMPO,Tempo,节奏
+TEMPO_AUTO,Auto tempo from chapters,从章节自动获取节奏
+TEMPO_DOWNBEAT,Downbeat,强拍
+TEMPO_SET_DOWNBEAT,Set downbeat at playhead,在播放头处设置强拍
+UNKNOWN_ERROR,unknown error,未知错误
+FFMPEG_WAS_NOT_FOUND_MSG,"ffmpeg.exe was not found.
+Do you want to download it?","未找到 ffmpeg.exe。
+是否下载？"
+BINDABLE_FUNCTIONS,Bindable functions,可绑定功能
+YES,Yes,是
+FFMPEG_FAILED_TO_DOWNLOAD_MSG,Failed to download from https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip,无法从 https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip 下载
+DONE,Done,完成
+DONE_MSG,ffmpeg.exe was successfully extracted.,ffmpeg.exe 已成功解压。
+EXTRACT_FAIL,Failed to extract ffmpeg.exe.,解压 ffmpeg.exe 失败。
+EXTRACT_FAIL_MSG,"Extracting uses tar.exe.
+It will fail if it's not on your system.","解压使用 tar.exe。
+如果系统中没有它将会失败。"
+DOWNLOAD_FFMPEG,Download ffmpeg?,下载 ffmpeg？
+TEMPO_WHOLE_MEASURES,whole measures,整小节
+TEMPO_2ND_MEASURES,2nd measures,1/2 小节
+TEMPO_4TH_MEASURES,4th measures,1/4 小节
+TEMPO_8TH_MEASURES,8th measures,1/8 小节
+TEMPO_12TH_MEASURES,12th measures,1/12 小节
+TEMPO_16TH_MEASURES,16th measures,1/16 小节
+TEMPO_24TH_MEASURES,24th measures,1/24 小节
+TEMPO_32ND_MEASURES,32nd measures,1/32 小节
+TEMPO_48TH_MEASURES,48th measures,1/48 小节
+TEMPO_64TH_MEASURES,64th measures,1/64 小节
+LOAD_CONFIG,Load config,加载配置
+SAVE_CONFIG,Save config,保存配置
+SAVE_SIMULATOR_CONFIG,Save simulator configuration,保存模拟器配置
+SAVE_SIMULATOR_CONFIG_MSG,"Do you want do save the current config?
+This will override any existing default config.","是否保存当前配置？
+这将覆盖现有的默认配置。"
+LINES,Lines,线条
+TEXT,Text,文本
+FRONT,Front,前景
+BACK,Back,背景
+BORDER,Border,边框
+INDICATOR,Indicator,指示器
+LINE,Line,线
+WIDTH,Width,宽度
+OPACITY,Opacity,不透明度
+EXTRA_LINES,Extra lines,额外线条
+VANILLA,Vanilla,经典版
+SHOW_POSITION,Show position,显示位置
+VANILLA_TOOLTIP,The original simulator from day one.,最初版本的模拟器。
+RESET_TO_DEFAULTS,Reset to defaults,恢复默认
+SIMULATOR,Simulator,模拟器
+APPLICATION,Application,应用程序
+DARK_MODE,Dark mode,深色模式
+LIGHT_MODE,Light mode,浅色模式
+PREFERENCES_TXT,"Higher frame rate makes OFS feel ""snappier"" because input gets processed more frequently.",更高的帧率让 OFS 响应更“灵敏”，因为输入处理得更频繁。
+VSYNC,Vsync,垂直同步
+VSYNC_TOOLTIP,"Limits frame rate to the refresh rate of the monitor.
+Frame limit is ignored.","将帧率限制为显示器刷新率。
+将忽略帧率限制。"
+FRAME_LIMIT,Frame limit,帧率限制
+FRAME_LIMIT_TOOLTIP,This limits the frame rate OFS is running at.,限制 OFS 运行的帧率。
+FONT,Font,字体
+CHANGE,Change,更改
+CHOOSE_FONT,Choose font,选择字体
+DEFAULT_FONT,Default font,默认字体
+FONT_SIZE,Font size,字体大小
+FORCE_HW_DECODING,Force hardware decoding (Requires program restart),强制硬件解码（需重启程序）
+FORCE_HW_DECODING_TOOLTIP,May cause crashes on some systems.,在某些系统上可能导致崩溃。
+FAST_FRAME_STEP,Fast frame step,快速帧步进
+FAST_FRAME_STEP_TOOLTIP,Amount of frames to skip with fast step.,快速步进时跳过的帧数。
+SHOW_METADATA_DIALOG_ON_NEW_PROJECT,Show metadata dialog on new project,新建项目时显示元数据对话框
+FUNCTIONS_RANGE_EXTENDER,Range extender,范围扩展器
+FUNCTIONS_SIMPLIFY,Simplify (Ramer-Douglas-Peucker),简化 (Ramer-Douglas-Peucker)
+RANGE,Range,范围
+RANGE_EXTENDER_TXT,Select atleast 5 actions to extend.,请至少选择 5 个点进行扩展。
+EPSILON,Epsilon,Epsilon
+SIMPLIFY_TXT,Select atleast 5 actions to simplify.,请至少选择 5 个点进行简化。
+SPECIAL_FUNCTIONS,Special functions,特殊功能
+MEMORY_USAGE,Memory usage,内存使用
+UPDATE,Update,更新
+SLOWEST,slowest,最慢
+LANGUAGE,Language,语言
+ACTION_RELOAD_TRANSLATION,Reload current translation,重新加载当前翻译
+DIRECTORY,Directory,目录
+HIGHLIGHT_TRESHOLD,Highlight treshold,高亮阈值
+ENABLE_MAX_SPEED_HIGHLIGHT,Max speed highlight,最大速度高亮
+FPS_OVERRIDE,FPS override,覆盖 FPS
+TIME_SPENT,Time spent,耗时
+SHOW_ACTION_LINES,Show lines,显示线条
+SHOW_ACTION_POINTS,Show points,显示点
+CLEAR_RECENT_FILES,Clear recent files,清除最近文件
+GENERIC_OPEN,Open...,打开...
+ADD_EDIT_TRIGGER,Add/Edit trigger,添加/编辑触发器
+VALIDATE,Validate,验证
+OK_RESULT,ok,确定
+ORPHAN_TRIGGER_MESSAGE,The following triggers have no corresponding actions.,以下触发器没有对应的点。
+DELETE,Delete,删除
+REPEAT,Repeat,重复
+WEBSOCKET_API,Websocket API,Websocket API
+SERVER_ACTIVE,Server active,服务器已启用
+CLIENT_COUNT,Clients connected,已连接客户端
+START,Start,Start
+END,End,结束
+TOTAL,Total,总计
+REMOVE_CHAPTER,Remove chapter,删除章节
+REMOVE_CHAPTER_MSG,Do you want to remove the chapter?,是否删除该章节？
+REMOVE_BOOKMARK,Remove bookmark,删除书签
+REMOVE_BOOKMARK_MSG,Do you want to remove the bookmark?,是否删除该书签？
+ADD_NEW_CHAPTER,Add chapter,添加章节
+ADD_NEW_BOOKMARK,Add bookmark,添加书签
+SET_CHAPTER_SIZE,Set size,设置大小
+GO_TO_CHAPTER,Go to chapter,跳转到章节
+NO_MUSIC_HERE,No music here,无音乐
+SET_CHAPTER_START,Set chapter start,设置章节起点
+SET_CHAPTER_END,Set chapter end,设置章节终点
+SAVE_HEATMAP_WITH_CHAPTERS,Save heatmap with chapters,保存带章节的热图
+CHAPTERS,Chapters,章节
+CHAPTER,Chapter,章节
+BEGIN,Begin,开始
+CHAPTER_BINDING_GROUP,Chapters,章节
+ACTION_CREATE_BOOKMARK,Create bookmark,创建书签
+ACTION_CREATE_CHAPTER,Create chapter,创建章节
+#TEXT," Letting go adds a point at the playhead; Escape cancels. Ctrl drags slowly, Ctrl+Shift snaps to 5. Double click to set it back to the middle.", 松开后在播放头处添加一个点；Escape 取消。按住 Ctrl 慢速拖动，Ctrl+Shift 以 5 为步长吸附。双击可将其恢复到中间。
+#TEXT, Low: the audio may not have a steady beat., 偏低：音频可能没有稳定的节拍。
+#TEXT,"""%s"" has no tempo yet.",“%s”尚无节奏。
+#TEXT,"""%s"" is marked as having no music, so the grid keeps the last tempo it had.",“%s”标记为无音乐，因此网格保持其上一个节奏。
+#TEXT,%.0f ms apart,相隔 %.0f ms
+#TEXT,%.0f units/s,%.0f units/s
+#TEXT,"%.1f BPM becomes %.1f, for a tempo read off a pulse half as fast as the beat. Kept when the chapter is measured again.",%.1f BPM 变为 %.1f，适用于从半速脉冲读出的节奏。重新测量该章节时保留。
+#TEXT,"%.1f BPM becomes %.1f, for a tempo read off a pulse twice as fast as the beat. Kept when the chapter is measured again.",%.1f BPM 变为 %.1f，适用于从双速脉冲读出的节奏。重新测量该章节时保留。
+#TEXT,%.1f s after the end,结束后 %.1f s
+#TEXT,%.1f s of nothing,%.1f s 空白
+#TEXT,"%d lines sent, %.0f a second",已发送 %d 行，每秒 %.0f
+#TEXT,%d of 6 axes driven by a script,6 个轴中有 %d 个由脚本驱动
+#TEXT,%d sent,已发送 %d
+#TEXT,"%d to look at in ""%s""",有 %d 处需查看（“%s”）
+#TEXT,"%d too fast, %d too close, %d long gaps, %d past the end",%d 处过快，%d 处过近，%d 处长间隔，%d 处超出结尾
+#TEXT,%s from %.2f s to %.2f s. Changes above update it; axes set to Off keep what they had. Closing this tool discards it.,%s，从 %.2f s 到 %.2f s。上方的更改会更新它；设为“关”的轴保持原样。关闭此工具将丢弃它。
+#TEXT,%s grid,%s 网格
+#TEXT,"%s to %s, %s long",%s 到 %s，时长 %s
+#TEXT,%u selected in %d of %d edited lanes,已选中 %u 个，位于 %d / %d 条编辑中的通道
+#TEXT,%u selected in %s,已选中 %u 个，位于 %s
+#TEXT,(cannot be told a position),（无法指定位置）
+#TEXT,(no name),（无名称）
+#TEXT,"* Set by hand. Measure all chapters leaves it alone. Click to measure this chapter from the audio instead, which replaces it.",* 手动设置。“测量所有章节”不会改动它。点击改为从音频测量此章节，将替换此值。
+#TEXT,+1 beat,+1 拍
+#TEXT,-1 beat,-1 拍
+#TEXT,115200 is what the usual firmware listens at.,常用固件监听的波特率是 115200。
+#TEXT,30 s from playhead,从播放头起 30 s
+#TEXT,"300 units a second, 100ms apart. For a device that takes its time.",每秒 300 单位，间隔 100ms。适合较慢的设备。
+#TEXT,3D model,3D 模型
+#TEXT,"400 units a second, 50ms apart. A reasonable middle.",每秒 400 单位，间隔 50ms。适中的选择。
+#TEXT,"600 units a second, 20ms apart. For a quick one.",每秒 600 单位，间隔 20ms。适合快速的设备。
+#TEXT,600 units/s,600 units/s
+#TEXT,A Bluetooth machine appears here once it is paired in Windows.,蓝牙设备在 Windows 中配对后会显示在这里。
+#TEXT,"A bar for the active script, drawn over the app wherever you place it. Unlock it to drag its ends or its middle.",当前脚本的条形图，叠加在应用上任意位置。解锁后可拖动其两端或中间。
+#TEXT,"A connection, for firmware that wants one.",建立连接，适用于需要连接的固件。
+#TEXT,A line across the bar at every 10.,在条上每隔 10 画一条线。
+#TEXT,"A model of the stroker, driven by every loaded axis at once: stroke, surge, sway, twist, roll and pitch.",行程器模型，同时由所有已加载的轴驱动：行程、前后、左右、扭转、横滚和俯仰。
+#TEXT,"A plain stroke, or a passage saved from a selection and stamped along the beat.",普通行程，或从选区保存并沿节拍铺设的片段。
+#TEXT,"A point already sits at the playhead, at %d.",播放头处已有一个点，位于 %d。
+#TEXT,A point every,每隔
+#TEXT,"A short video of the script for sharing: the video with the simulator, the tracks and the heatmap over it, as an MP4, WebP or GIF.",用于分享的脚本短视频：视频叠加模拟器、轨道和热图，输出为 MP4、WebP 或 GIF。
+#TEXT,"A strip of the showing tracks, up to four, scrolling past a playhead.",显示中的轨道条带（最多四条），在播放头下滚动经过。
+#TEXT,"A video with the sound. Plays everywhere, and uploads to EroScripts as it is.",带声音的视频。到处都能播放，可直接上传到 EroScripts。
+#TEXT,Add,添加
+#TEXT,Add another binding.,添加另一个快捷键。
+#TEXT,Add its tracks,添加其轨道
+#TEXT,Add one from Add in the Tracks panel.,可在轨道面板的“添加”中添加。
+#TEXT,Address,地址
+#TEXT,Adds a track for each axis the project has none for yet: %s.,为项目中尚无轨道的每个轴添加轨道：%s。
+#TEXT,After (s),之后 (s)
+#TEXT,Against the left side of the video.,靠视频左侧。
+#TEXT,Against the right side of the video.,靠视频右侧。
+#TEXT,All music,全部音乐
+#TEXT,Alternate,交替
+#TEXT,Amount,数量
+#TEXT,An animated image with no sound that loops by itself in a post. Best kept short.,无声音的动图，在帖子中自动循环。最好保持简短。
+#TEXT,"An intro, an outro, or a break between songs. Detection skips it and the grid holds the tempo it already had.",片头、片尾或歌曲间的间歇。检测会跳过它，网格保持原有节奏。
+#TEXT,"An intro, an outro, or a break between songs. Detection skips it and the tempo grid holds the tempo it already had.",片头、片尾或歌曲间的间歇。检测会跳过它，节奏网格保持原有节奏。
+#TEXT,Animated images of more than 30 seconds get large. MP4 suits long clips.,超过 30 秒的动图会很大。长片段更适合用 MP4。
+#TEXT,Appearance,外观
+#TEXT,Applied to %s.,已应用到 %s。
+#TEXT,Applied to %s. Undo takes it back.,已应用到 %s。撤销可还原。
+#TEXT,Apply,应用
+#TEXT,Apply to tempo grid,应用到节奏网格
+#TEXT,Armed,已就绪
+#TEXT,At playhead,在播放头处
+#TEXT,At the playhead,播放头处
+#TEXT,Axes,轴
+#TEXT,Axis,轴
+#TEXT,Axis readout,轴读数
+#TEXT,Back 3 seconds.,后退 3 秒。
+#TEXT,Back to normal speed.,恢复正常速度。
+#TEXT,Bass only,仅低音
+#TEXT,Baud,波特率
+#TEXT,Beat fill,节拍填充
+#TEXT,Beat ticks,节拍刻度
+#TEXT,Beats,节拍
+#TEXT,Before using it on yourself:,在自己身上使用之前：
+#TEXT,Before you connect,连接之前
+#TEXT,"Below 150Hz, which is usually the kick and the bass line. Reads the audio again.",150Hz 以下，通常是底鼓和贝斯。将重新读取音频。
+#TEXT,Between the first and the last selected point.,从第一个到最后一个选中点之间。
+#TEXT,Border width (px),边框宽度 (px)
+#TEXT,Both,两者
+#TEXT,Both channels together.,两个声道合并。
+#TEXT,Bottom,底部
+#TEXT,Bottom focus (%),底部集中 (%)
+#TEXT,Bottoms stay put and tops come down.,底部不动，顶部下降。
+#TEXT,Camera height (degrees),相机高度（度）
+#TEXT,Camera turn (degrees),相机转角（度）
+#TEXT,Can be changed later under Project > Configure.,之后可在 项目 > 配置 中更改。
+#TEXT,Cancel,取消
+#TEXT,Centre,中心
+#TEXT,Channel,声道
+#TEXT,Chapter,章节
+#TEXT,Chapter actions,章节操作
+#TEXT,Check,检查
+#TEXT,"Checked tracks stay edited along with the track you're on, whichever that is. Same as the checkbox in the track header.",勾选的轨道会与当前所在的轨道一起被编辑，无论当前是哪条。与轨道标题中的复选框相同。
+#TEXT,Choose location...,选择位置...
+#TEXT,Circle,画圈
+#TEXT,Classic,经典
+#TEXT,Clears the range before filling it. Without this the new points join what is already there.,填充前先清空该范围。否则新点会与已有点合并。
+#TEXT,"Click an entry to undo back to before it, or to redo up to it.",点击某条记录可撤销到它之前，或重做到它为止。
+#TEXT,"Click to rebind, right click for options.",点击重新绑定，右键查看选项。
+#TEXT,"Click to rebind, right click for options. Repeats while held.",点击重新绑定，右键查看选项。按住时重复。
+#TEXT,Close,关闭
+#TEXT,Closest points (ms),最近点间距 (ms)
+#TEXT,"Confidence %.0f%%.%s%s
+Click to measure again. Detection trims a non-musical intro and outro first, so the downbeat need not be where the chapter begins.","置信度 %.0f%%。%s%s
+点击重新测量。检测会先去掉非音乐的片头和片尾，因此强拍不一定在章节开头。"
+#TEXT,Connect,连接
+#TEXT,Could not read the audio. Check that ffmpeg is available and that the media actually has an audio track.,无法读取音频。请检查 ffmpeg 是否可用，以及媒体是否确实有音轨。
+#TEXT,Custom,自定义
+#TEXT,Cutaway case,剖视外壳
+#TEXT,Deadzone,死区
+#TEXT,Deepest (%),最深 (%)
+#TEXT,Delete,删除
+#TEXT,Delete this pattern,删除此模式
+#TEXT,Detect tempo and chapters,检测节奏和章节
+#TEXT,"Device playback is new, and has not been tested on every device, firmware or connection type. The motion might not always be what you expect.",设备播放是新功能，尚未在所有设备、固件或连接类型上测试。运动可能不总是符合预期。
+#TEXT,Devices,设备
+#TEXT,Discard,放弃
+#TEXT,Disconnect,断开连接
+#TEXT,Double time (x2),双倍速 (x2)
+#TEXT,Double time x2,双倍速 x2
+#TEXT,Doubles the tempo.,节奏加倍。
+#TEXT,"Doubles this chapter's tempo, for one read off a pulse half as fast as the beat. Kept when the chapter is measured again.",将本章节的节奏加倍，适用于按半速脉冲读出的节奏。重新测量章节时保留。
+#TEXT,"Drag the simulator's ends to resize it, or its middle to move it. Click to lock it in place.",拖动模拟器两端调整大小，拖动中间移动位置。点击可锁定位置。
+#TEXT,"Draw the rod. Hidden, it still strokes and shapes the sleeve, so the vulva and canal can be watched deforming with nothing in the way.",绘制推杆。隐藏时它仍会行程并使套筒变形，因此可以无遮挡地观察阴部和通道的形变。
+#TEXT,Draw the script as a smooth curve through its points instead of straight lines.,将脚本绘制为穿过各点的平滑曲线，而非直线。
+#TEXT,Drawing,绘制
+#TEXT,Each colour starts at its speed and blends into the next.,每种颜色从其速度开始，渐变到下一种。
+#TEXT,Easing home,缓慢归位
+#TEXT,Easter egg,彩蛋
+#TEXT,EroScripts,EroScripts
+#TEXT,"Error:
+%s","错误：
+%s"
+#TEXT,Every axis is off. Pick a motion for at least one.,所有轴都已关闭。请至少为一个轴选择运动。
+#TEXT,Every chapter already has the name it would get.,每个章节都已有其应得的名称。
+#TEXT,"Every chapter with a tempo, skipping the ones marked as having no music.",所有有节奏的章节，跳过标记为无音乐的章节。
+#TEXT,"Every track in the project: show or hide it, choose which are edited, add, load and remove them.",项目中的所有轨道：显示或隐藏、选择要编辑的轨道、添加、加载和删除。
+#TEXT,Everything,全部
+#TEXT,Everything back to its rest position.,全部回到静止位置。
+#TEXT,Export preview video,导出预览视频
+#TEXT,Export...,导出...
+#TEXT,Extend by,扩展量
+#TEXT,Extra line width (px),额外线宽 (px)
+#TEXT,Extra lines,额外线条
+#TEXT,Fast,快
+#TEXT,Faster by a tenth.,加快十分之一。
+#TEXT,Fastest stroke (units/s),最快行程 (units/s)
+#TEXT,Figure 8,8 字形
+#TEXT,Fill,填充
+#TEXT,"Fine adjustment of the same bar line, for when it is out by less than a beat.",微调同一小节线，用于偏差不到一拍时。
+#TEXT,"Fire and forget, which is what most wifi firmware listens for.",发送即不管，大多数 wifi 固件都这样监听。
+#TEXT,Fit to video,适应视频
+#TEXT,Fixed bottom,固定底部
+#TEXT,Fixed top,固定顶部
+#TEXT,Follow,跟随
+#TEXT,Follow while paused,暂停时跟随
+#TEXT,"Follows single hits, so one stroke can differ from the next.",跟随单次打击，因此每个行程可以不同。
+#TEXT,"Follows the chapter under the playhead, using the tempo recorded on it by detection. Without this the grid holds one tempo for the whole media and has to be reapplied at every track.",跟随播放头下的章节，使用检测时记录的节奏。否则网格在整个媒体中保持同一节奏，需要在每首曲目处重新应用。
+#TEXT,Follows the shape of the track over a couple of seconds.,在几秒内跟随轨道的形状。
+#TEXT,Font size,字体大小
+#TEXT,Format,格式
+#TEXT,Forward 3 seconds.,前进 3 秒。
+#TEXT,Four colours at speeds you choose.,四种颜色，速度自选。
+#TEXT,Frame limit (fps),帧率限制 (fps)
+#TEXT,Frame rate (fps),帧率 (fps)
+#TEXT,From (units/s),起始 (units/s)
+#TEXT,"From straight above, and from the front, where roll reads and the stroke is posed.",正上方视角和正面视角，正面可看清横滚并摆放行程。
+#TEXT,From the first to the last selected point.,从第一个到最后一个选中的点。
+#TEXT,"From the front, straight on. Roll and sway read best.",正面直视。最易看清横滚和左右。
+#TEXT,From the side. Pitch and surge read best.,侧面。最易看清俯仰和前后。
+#TEXT,"From three quarters, a little above: every axis can be seen, pitch and surge included.",四分之三侧上方：所有轴都可见，包括俯仰和前后。
+#TEXT,Front,前景
+#TEXT,Full HD; the largest file.,全高清；文件最大。
+#TEXT,"Furthest mid stroke: one way going down and the other coming up. With another axis on Follow, the two make a circle.",在行程中段最远：下行时一个方向，上行时另一个方向。若另一个轴设为跟随，两者合成一个圆。
+#TEXT,GIF,GIF
+#TEXT,Gentle,柔和
+#TEXT,Go back to the settings OFS ships with.,恢复 OFS 自带的设置。
+#TEXT,Grid,网格
+#TEXT,Half time (/2),半速 (/2)
+#TEXT,Half time /2,半速 /2
+#TEXT,Halves the tempo.,节奏减半。
+#TEXT,"Halves this chapter's tempo, for one read off a pulse twice as fast as the beat. Kept when the chapter is measured again.",将本章节的节奏减半，适用于按两倍速脉冲读出的节奏。重新测量章节时保留。
+#TEXT,"Handles on the model to pose it while paused: drag the case for stroke, the ring for twist, the tip for roll and pitch, and the square on the floor for surge and sway. Letting go adds a point at the playhead to each axis you moved. Ctrl drags slowly, Ctrl+Shift snaps to steps of 5. Experimental, so it may change.",暂停时可用模型上的手柄摆放姿态：拖动外壳控制行程，圆环控制扭转，顶端控制横滚和俯仰，地面上的方块控制前后和左右。松开时会在播放头处为每个移动过的轴添加一个点。按住 Ctrl 慢速拖动，Ctrl+Shift 以 5 为步进吸附。实验性功能，可能会变动。
+#TEXT,Heatmap,热图
+#TEXT,Heatmap size,热图大小
+#TEXT,Height (% of the video),高度（视频的 %）
+#TEXT,Height of the waveform. Raise it for quiet audio.,波形高度。音频较安静时可调高。
+#TEXT,Hide this track. Bring it back from the Tracks panel.,隐藏此轨道。可在轨道面板中恢复。
+#TEXT,Hide toolbar,隐藏工具栏
+#TEXT,Highlight above (units/s),高亮阈值 (units/s)
+#TEXT,Highlight ring,高亮圆环
+#TEXT,How OFS looks and how hard it works to draw itself.,OFS 的外观以及绘制界面的性能设置。
+#TEXT,How a click on the timeline places a point.,在时间轴上点击时如何放置点。
+#TEXT,"How far ahead of the stroke the device is told, to cover what the link and the hardware take. Raise it if the device lags behind the script.",提前多久向设备发送行程，以弥补连接和硬件的延迟。如果设备落后于脚本，请调高。
+#TEXT,How far it moves each way from the centre.,从中心向两侧移动的距离。
+#TEXT,"How far roll, pitch, surge and sway move the model at the ends of their range. Stroke and twist are not affected. 70 is about how far a real machine moves; 100 is how far the model used to.",横滚、俯仰、前后和左右在其范围两端时模型的移动幅度。不影响行程和扭转。70 约等于真实设备的幅度；100 是模型以前的幅度。
+#TEXT,"How long an axis waits, with nothing driving it, before it goes back to its rest position. Nothing drives an axis while the playhead is outside its script, or while playback is paused.",轴在无驱动时等待多久后回到静止位置。播放头位于脚本范围之外或播放暂停时，轴都无驱动。
+#TEXT,How long it takes getting there.,到达那里所需的时间。
+#TEXT,How much of its depth the quietest passage of the selection keeps. The loudest always keeps all of it.,选区中最安静的片段保留多少深度。最响的部分始终保留全部深度。
+#TEXT,How much of the motion gathers at the bottom of the stroke. 0 moves as much at the top as at the bottom; 100 does not move at the top at all.,运动集中在行程底部的程度。0 表示顶部和底部移动幅度相同；100 表示顶部完全不动。
+#TEXT,How much of the video's height the simulator takes up.,模拟器占视频高度的比例。
+#TEXT,"How often a line of TCode goes out. 10ms is a hundred a second, which is what the firmware expects to be fed.",TCode 行的发送频率。10ms 即每秒一百行，这是固件期望的速率。
+#TEXT,"How scripts are drawn on the timeline, and where points land when placed with the mouse. The timeline's right click menu has the most used of these too.",脚本在时间轴上的绘制方式，以及用鼠标放置点时的落点。时间轴的右键菜单中也有最常用的选项。
+#TEXT,"How stiff the rod is. Stiff, it keeps its shape and the sleeve gives way around it, shaded darker where it is pressed hardest. At 0 it bends to follow every lean, as it used to.",推杆的硬度。较硬时保持形状，套筒在其周围变形，受压最大处颜色更深。为 0 时会随每次倾斜弯曲，与以前一样。
+#TEXT,How video is decoded. A change here takes effect once OFS is restarted.,视频的解码方式。更改后需重启 OFS 才生效。
+#TEXT,"I understand, connect",我了解，连接
+#TEXT,ImGui Demo,ImGui 演示
+#TEXT,In the middle of the video.,在视频中间。
+#TEXT,Insert offset (ms),插入偏移 (ms)
+#TEXT,Intiface,Intiface
+#TEXT,Isolate point at playhead,隔离播放头处的点
+#TEXT,"Keep the power switch, or Stop the devices, within reach.",让电源开关或“停止设备”保持在触手可及之处。
+#TEXT,Keep the preview in the scripts.,在脚本中保留预览。
+#TEXT,"Keep the simulator inside the video player, sized to it, and follow the player as its window is moved or resized. Moving or resizing the simulator by hand turns this off.",将模拟器保持在视频播放器内并与其大小匹配，在播放器窗口移动或调整大小时跟随。手动移动或调整模拟器大小会关闭此选项。
+#TEXT,Keep this tempo,保留此节奏
+#TEXT,"Keep where every panel is, and which are open, under a name.",以名称保存各面板的位置以及哪些面板处于打开状态。
+#TEXT,"Keeps the selected points as a shape measured in beats, to stamp at any tempo.",将选中的点保存为以节拍计量的形状，可按任意节奏铺设。
+#TEXT,Layouts,布局
+#TEXT,Leaning left and right.,左右倾斜。
+#TEXT,Leaves this axis as it is.,保持此轴不变。
+#TEXT,Left,左
+#TEXT,Length,长度
+#TEXT,Limits,限制
+#TEXT,Line colours,线条颜色
+#TEXT,Line width (px),线宽 (px)
+#TEXT,"Lines continuing past both ends of the bar, 10 apart.",超出条两端的延伸线，间隔 10。
+#TEXT,Lines faster than this are drawn in the highlight colour instead of their speed colour.,速度高于此值的线条以高亮颜色绘制，而非其速度颜色。
+#TEXT,"Lines go out from the frame loop, so the interval above is a floor: the app cannot send more often than it draws.",TCode 行由帧循环发出，因此上方的间隔是下限：应用发送的频率不会高于绘制频率。
+#TEXT,"Lines, points, spline, the playhead line, position rounding, and the waveform's height and colour.",线条、点、样条、播放头线、位置取整，以及波形的高度和颜色。
+#TEXT,"List each axis that has a script, with its current value, beside the model.",在模型旁列出每个有脚本的轴及其当前值。
+#TEXT,"Lists the strokes a device cannot follow, and slows them down.",列出设备无法跟上的行程，并将其放慢。
+#TEXT,"Lists the strokes a device cannot follow: too fast to keep up with, too close together to tell apart, long stretches with nothing in them, and points past the end of the media.",列出设备无法跟上的行程：速度过快无法跟上、间隔过近无法区分、长时间没有内容，以及超出媒体结尾的点。
+#TEXT,Load a video or audio file first.,请先加载视频或音频文件。
+#TEXT,Load...,加载...
+#TEXT,Lock,锁定
+#TEXT,Longest gap (s),最长间隔 (s)
+#TEXT,Look for devices,查找设备
+#TEXT,Loudness,响度
+#TEXT,MP4,MP4
+#TEXT,Machine,设备
+#TEXT,Make waveform,生成波形
+#TEXT,"Mark the previous and next point on the bar, with their positions.",在条上标出上一个和下一个点及其位置。
+#TEXT,"Mark which way the front of the case faces, so twist can be read at a glance.",标出外壳正面朝向，以便一眼看出扭转。
+#TEXT,"Marked as having no music. Click to measure it anyway, which clears the mark.",已标记为无音乐。点击仍然测量，将清除该标记。
+#TEXT,"Marks along the bottom of the track where a hit lands, found from the same audio as the waveform.",在轨道底部标出打击点，与波形使用相同的音频得出。
+#TEXT,Measure all chapters leaves a kept tempo alone. Measuring this chapter on its own still replaces it.,“测量所有章节”不会改动保留的节奏。单独测量此章节仍会替换它。
+#TEXT,Measure this chapter,测量此章节
+#TEXT,Measure this chapter's tempo from the audio waveform.,从音频波形测量此章节的节奏。
+#TEXT,Measured playback speed. It falls below the set speed when the video cannot be decoded fast enough to keep up.,实测播放速度。视频解码跟不上时会低于设定速度。
+#TEXT,"Measures every chapter that is not marked as having no music, over the bounds you set. A chapter whose tempo cannot be read is left as it was.",在你设定的范围内测量所有未标记为无音乐的章节。无法读出节奏的章节保持不变。
+#TEXT,Measures this chapter's tempo from the audio. The Chapters window can measure all of them at once.,从音频测量此章节的节奏。“章节”窗口可一次测量所有章节。
+#TEXT,Middle,中间
+#TEXT,Mode,模式
+#TEXT,Model scale,模型缩放
+#TEXT,Motion,运动
+#TEXT,"Moves the device as you scrub, instead of only while playing.",拖动播放头时也驱动设备，而非仅在播放时。
+#TEXT,"Moves the motion along the stroke. 180 is half a stroke, so a peak at the bottom moves to the top.",沿行程移动运动相位。180 为半个行程，因此底部的峰值会移到顶部。
+#TEXT,Moves the other way.,反向移动。
+#TEXT,"Moves this chapter's end to the playhead, carrying the start of the chapter after it along when the two meet.",将此章节的结束移到播放头处，两者相接时会带动下一章节的开始。
+#TEXT,"Moves this chapter's start to the playhead, carrying the end of the chapter before it along when the two meet.",将此章节的开始移到播放头处，两者相接时会带动上一章节的结束。
+#TEXT,Multi-axis,多轴
+#TEXT,Mute.,静音。
+#TEXT,Muted,已静音
+#TEXT,Name,名称
+#TEXT,"Names every chapter from where it falls and its tempo: Track 1 - 120 BPM, Intro, Outro or Break. Shows what will change before anything does.",根据位置和节奏为每个章节命名：Track 1 - 120 BPM、Intro、Outro 或 Break。更改前会先显示将变更的内容。
+#TEXT,Names typed by hand are replaced too. This cannot be undone.,手动输入的名称也会被替换。此操作无法撤销。
+#TEXT,Nearest 10,最接近的 10
+#TEXT,Nearest 25,最接近的 25
+#TEXT,Nearest 5,最接近的 5
+#TEXT,New file...,新建文件...
+#TEXT,New script without video...,新建无视频脚本...
+#TEXT,Next frame. Only while paused.,下一帧。仅在暂停时。
+#TEXT,"No chapters yet, so there is no tempo to follow.",尚无章节，因此没有可跟随的节奏。
+#TEXT,"No chapters yet. Detect tracks and chapters, above, splits the media where the music starts, stops or changes tempo, and measures each part. A chapter can also be started by hand at the playhead with the Create chapter binding, found in Options > Keys.",尚无章节。上方的“检测曲目和章节”会在音乐开始、停止或变换节奏处分割媒体，并测量每一部分。也可以使用“创建章节”绑定在播放头处手动开始章节，见 选项 > 按键。
+#TEXT,No saved layouts yet,尚无已保存的布局
+#TEXT,No serial ports found.,未找到串口。
+#TEXT,Note,音符
+#TEXT,Note length between points. A point every quarter note is a stroke every two beats.,点之间的音符时值。每个四分音符一个点，即每两拍一个行程。
+#TEXT,Note spacing,音符间距
+#TEXT,Nothing found. The audio may have no steady beat.,未找到。音频可能没有稳定的节拍。
+#TEXT,Nothing selected in %s,%s 中未选中任何内容
+#TEXT,Nothing selected in the %d edited lanes,%d 条编辑中的通道中未选中任何内容
+#TEXT,"Nothing to report in ""%s"".",“%s”中没有需要报告的内容。
+#TEXT,"Nothing to undo yet. Each edit is listed here as it is made, newest first, with repeats of the same edit counted together.",尚无可撤销的操作。每次编辑都会在此列出，最新的在前，相同编辑的重复会合并计数。
+#TEXT,"Of each pair too close together, keeps the one that leaves the shape closer to what it was.",对于每对过近的点，保留使形状更接近原样的那个。
+#TEXT,Off,关
+#TEXT,Offset (s),偏移 (s)
+#TEXT,One,单色
+#TEXT,"One light grey, whatever the speed.",一种浅灰色，不论速度。
+#TEXT,"One point, at %.3f s and %d.",一个点，位于 %.3f s，值 %d。
+#TEXT,One way at the bottom of each stroke and the other way at the top.,每个行程的底部朝一个方向，顶部朝另一个方向。
+#TEXT,One way at the bottom of one stroke and the other way at the bottom of the next.,一个行程的底部朝一个方向，下一个行程的底部朝另一个方向。
+#TEXT,"Only the stroke axis is loaded, so the model only moves up and down. Add .surge, .sway, .twist, .roll or .pitch scripts to the project, from Project > Add, to drive the rest.",只加载了行程轴，因此模型只会上下移动。从 项目 > 添加 向项目添加 .surge、.sway、.twist、.roll 或 .pitch 脚本以驱动其余轴。
+#TEXT,Opacity,不透明度
+#TEXT,Open a video or a script to see its tracks.,打开视频或脚本以查看其轨道。
+#TEXT,Open a video or audio file to generate its waveform.,打开视频或音频文件以生成波形。
+#TEXT,Open the Chapters window,打开“章节”窗口
+#TEXT,Open the folder translations are loaded from.,打开加载翻译的文件夹。
+#TEXT,OpenFunscripter - Sashimi Edition,OpenFunscripter - Sashimi Edition
+#TEXT,"Opens the Chapters window, where the tempo of each chapter is detected, checked and corrected.",打开“章节”窗口，可在其中检测、检查和修正每个章节的节奏。
+#TEXT,"Or type it: COM3, or a device path on Linux.",或直接输入：COM3，或 Linux 上的设备路径。
+#TEXT,"Outline the opening of the vulva where it comes round, inside the lips.",勾勒阴唇内侧阴部开口转折处的轮廓。
+#TEXT,Over (s),时长 (s)
+#TEXT,"Over the network, to a machine on wifi. Which of UDP and TCP, and which port, is whatever its firmware was set up for.",通过网络连接 wifi 设备。使用 UDP 还是 TCP 以及端口号，取决于其固件的设置。
+#TEXT,Pause to place a point at any position with a slider.,暂停后可用滑块在任意位置放置点。
+#TEXT,Pause to pose,暂停后摆姿势
+#TEXT,Pause.,暂停。
+#TEXT,Peak offset,峰值偏移
+#TEXT,Performance,性能
+#TEXT,Pitch,俯仰
+#TEXT,"Places a point at the playhead with this position, through the current scripting mode.",以此位置在播放头处放置一个点，使用当前脚本编写模式。
+#TEXT,Plain,朴素
+#TEXT,Play.,播放。
+#TEXT,Playback speed. Type one and press Enter.,播放速度。输入数值后按 Enter。
+#TEXT,Plays the script on a real device through Intiface Central.,通过 Intiface Central 在真实设备上播放脚本。
+#TEXT,Port,端口
+#TEXT,Pose with handles (experimental),用手柄摆放姿态（实验性）
+#TEXT,"Positive pushes every stroke's top up and bottom down by this much, negative pulls them in towards the middle.",正值将每个行程的顶部上推、底部下推此量，负值则向中间收拢。
+#TEXT,Presets,预设
+#TEXT,Preview,预览
+#TEXT,Preview video,预览视频
+#TEXT,"Preview writes %s from %.2f s to %.2f s, replacing what is there and adding a script for any axis the project does not have. Nothing is kept until you apply it.",预览会写入 %s，从 %.2f s 到 %.2f s，替换已有内容，并为项目中没有的轴添加脚本。应用之前不会保留任何内容。
+#TEXT,"Previewing, not applied yet.",正在预览，尚未应用。
+#TEXT,Previous frame. Only while paused.,上一帧。仅在暂停时。
+#TEXT,"Pulls each point that arrives too soon back towards the one before it, which shortens the stroke and leaves its timing alone.",将过早到达的点拉向前一个点，这会缩短行程而不改变其时间。
+#TEXT,Puppet recording,木偶录制
+#TEXT,"Puppet recording: hold a handle on the 3D simulator while the video plays, and every axis it moves is recorded until you let go.",木偶录制：视频播放时按住 3D 模拟器上的手柄，在松开之前它移动的每个轴都会被录制。
+#TEXT,"Pushes the top of every stroke in a selection up and its bottom down by the same amount, keeping the timing. Negative values pull them in towards the middle.",将选区中每个行程的顶部上推、底部下推相同的量，保持时间不变。负值则向中间收拢。
+#TEXT,Pushes the top of every stroke in a selection up and its bottom down.,将选区中每个行程的顶部上推、底部下推。
+#TEXT,"Put every panel back where a fresh install has it, and show the panels it shows.",将所有面板恢复到全新安装时的位置，并显示其默认显示的面板。
+#TEXT,"Put every panel back where it was when this layout was saved, and show the same panels.",将所有面板恢复到保存此布局时的位置，并显示相同的面板。
+#TEXT,Put the simulator back in the middle of the window.,将模拟器移回窗口中间。
+#TEXT,"Puts a bar line exactly on the playhead. Park it on a beat you can hear and the whole grid lines up from there, which is quicker than arguing with the offset when detection has the wrong beat.",在播放头处精确放置一条小节线。将其停在能听到的节拍上，整个网格就会从那里对齐，在检测到错误节拍时比反复调整偏移更快。
+#TEXT,Quietest keeps (%),最安静保留 (%)
+#TEXT,"Raise it to remove more points. A point goes when the line between its neighbours passes within this distance of it, scaled to how far apart the selected points are.",调高以删除更多点。若某点与其相邻两点连线的距离在此范围内，该点将被删除，距离按选中点的间距缩放。
+#TEXT,"Raises the viewpoint. 0 looks straight on. Raise it to tip the underside into view, which is where the orifice is.",抬高视角。0 为正视。调高可看到底面，即开口所在处。
+#TEXT,Range,范围
+#TEXT,Range extend,扩展范围
+#TEXT,Reaction offset (ms),反应偏移 (ms)
+#TEXT,Reading the audio...,正在读取音频...
+#TEXT,"Reads the audio once, which is what the loudness is taken from.",读取一次音频，响度即由此得出。
+#TEXT,Record,录制
+#TEXT,Record armed,录制待命
+#TEXT,Record motion with the model's handles while the video plays. Click to arm.,视频播放时用模型的手柄录制动作。点击进入待命。
+#TEXT,Recording,录制中
+#TEXT,"Recording is armed. While the video plays, hold a handle on the model and move it: every axis it moves is recorded until you let go, over the points already there. Escape throws a take away. Click to disarm.",录制已待命。视频播放时按住模型上的手柄并移动：它移动的每个轴都会被录制，直到松开，并覆盖已有的点。Escape 放弃本次录制。点击取消待命。
+#TEXT,Records the position from a game controller's stick while the video plays.,视频播放时用游戏手柄的摇杆录制位置。
+#TEXT,"Records the position from the mouse, moved up and down over the simulator.",用鼠标在模拟器上上下移动来录制位置。
+#TEXT,Remove,删除
+#TEXT,Remove %s from the project?,从项目中删除 %s？
+#TEXT,Remove the near half of the case so the sleeve inside is visible.,移除外壳的近侧一半，以便看到内部的套筒。
+#TEXT,Remove track?,移除轨道？
+#TEXT,Removes the points in a selection that add least to its shape (Ramer-Douglas-Peucker).,删除选区中对形状贡献最小的点 (Ramer-Douglas-Peucker)。
+#TEXT,"Removes the points in a selection that add least to its shape. The higher epsilon goes, the more are removed.",删除选区中对形状贡献最小的点。epsilon 越高，删除的越多。
+#TEXT,Rename,重命名
+#TEXT,Rename %d chapter?,重命名 %d 个章节？
+#TEXT,Rename %d chapters?,重命名 %d 个章节？
+#TEXT,Rename chapters,重命名章节
+#TEXT,Rename chapters...,重命名章节...
+#TEXT,Replace what is there,替换已有内容
+#TEXT,Replaces the layout saved with this name.,替换以此名称保存的布局。
+#TEXT,Reset to default layout,恢复默认布局
+#TEXT,Reverse,反向
+#TEXT,Right,右
+#TEXT,Rod stiffness (%),推杆硬度 (%)
+#TEXT,Roll,横滚
+#TEXT,"Rotates the grid back by one beat, for when the bar lines are landing on the wrong beat of the bar.",将网格后移一拍，用于小节线落在小节中错误节拍上时。
+#TEXT,"Rotates the grid on by one beat, for when the bar lines are landing on the wrong beat of the bar.",将网格前移一拍，用于小节线落在小节中错误节拍上时。
+#TEXT,Round position,位置取整
+#TEXT,"Round the corners of windows, buttons, tabs and timeline lanes, in any theme. Off gives the square look of the original OFS.",在任意主题下为窗口、按钮、标签页和时间轴通道使用圆角。关闭则为原版 OFS 的方角外观。
+#TEXT,Rounded corners,圆角
+#TEXT,"Rounds the position, up and down, of points placed or dragged with the mouse.",对用鼠标放置或拖动的点的位置（上下方向）取整。
+#TEXT,"Rounds the position, up and down, of points placed or dragged with the mouse: off, or to the nearest 5, 10 or 25.",对用鼠标放置或拖动的点的位置（上下方向）取整：关闭，或取整到最接近的 5、10 或 25。
+#TEXT,Sashimi,Sashimi
+#TEXT,Save,保存
+#TEXT,Save current layout...,保存当前布局...
+#TEXT,Save layout,保存布局
+#TEXT,Save selection as a pattern,将选区保存为模式
+#TEXT,Save text to translate,保存待翻译文本
+#TEXT,Saved %s,已保存 %s
+#TEXT,Scale with stroke length,按行程长度缩放
+#TEXT,Scales the selected strokes by how loud the audio is under them.,按其下方音频的响度缩放选中的行程。
+#TEXT,"Scales the selected strokes by how loud the audio is under them. Quiet passages end up shallower, loud ones keep their full depth.",按其下方音频的响度缩放选中的行程。安静的片段会变浅，响亮的保持完整深度。
+#TEXT,"Scans the audio, lays a chapter over each track and measures its tempo. The grid then follows whichever chapter the playhead is in.",扫描音频，在每首曲目上放置一个章节并测量其节奏。之后网格会跟随播放头所在的章节。
+#TEXT,"Scans the whole audio, splits it where the tempo changes -- usually one track ending and the next starting -- and lays a chapter over each stretch.",扫描整段音频，在节奏变化处分割（通常是一首曲目结束、下一首开始），并为每段设置一个章节。
+#TEXT,Script,脚本
+#TEXT,Script check,脚本检查
+#TEXT,"Script to a length you pick, with no media to open.",按所选长度编写脚本，无需打开媒体。
+#TEXT,Sections,段落
+#TEXT,Select at least 5 points to use it. %u selected.,至少选择 5 个点才能使用。已选 %u 个。
+#TEXT,"Select the stroke points to follow, at least 3. %u selected.",选择要跟随的行程点，至少 3 个。已选 %u 个。
+#TEXT,Selection,选区
+#TEXT,Send ahead by (ms),提前发送 (ms)
+#TEXT,Send every (ms),发送间隔 (ms)
+#TEXT,Sends the playhead here and selects the points.,将播放头移到此处并选中这些点。
+#TEXT,Sends this axis upside down.,将此轴上下颠倒发送。
+#TEXT,Serial,串口
+#TEXT,Set tempo (BPM),设置节奏 (BPM)
+#TEXT,"Sets the tempo grid from this chapter's BPM, for when the grid is not set to follow chapters on its own.",根据此章节的 BPM 设置节奏网格，用于网格未设置为自动跟随章节时。
+#TEXT,Shallowest (%),最浅 (%)
+#TEXT,Shift (degrees),偏移（度）
+#TEXT,"Shorter strokes move less, in proportion to the longest stroke selected.",较短的行程按与所选最长行程的比例移动得更少。
+#TEXT,Show,显示
+#TEXT,Show in folder,在文件夹中显示
+#TEXT,Show rod,显示推杆
+#TEXT,Shown in the timeline.,显示在时间轴中。
+#TEXT,"Shows the toolbar's tab. Drag the tab to dock the toolbar somewhere else, such as the right side, or out on its own.",显示工具栏的标签。拖动标签可将工具栏停靠到其他位置，如右侧，或单独浮动。
+#TEXT,Shrink towards,收缩方向
+#TEXT,Side,侧面
+#TEXT,Simplify,简化
+#TEXT,Simplify...,简化...
+#TEXT,Simulator,模拟器
+#TEXT,Size of the model relative to the simulator's length.,模型相对于模拟器长度的大小。
+#TEXT,Slow the fast ones down,放慢过快的行程
+#TEXT,"Slow to fast in soft grey, teal, amber and red, for long sessions.",从慢到快依次为柔灰、青绿、琥珀和红色，适合长时间使用。
+#TEXT,Slower by a tenth.,减慢十分之一。
+#TEXT,Small and quick.,小而快。
+#TEXT,Snap,吸附
+#TEXT,Snap to beats,吸附到节拍
+#TEXT,Snapping,吸附
+#TEXT,"Snaps points placed or dragged with the mouse onto a beat tick when one is close, ahead of the grid. Needs the waveform and its beat ticks.",用鼠标放置或拖动的点在接近节拍刻度时吸附到它上面，优先于网格。需要波形及其节拍刻度。
+#TEXT,"Snaps points placed or dragged with the mouse onto a beat tick, a hit found in the waveform, when one is close. Ahead of the grid. Needs the waveform and its beat ticks showing.",用鼠标放置或拖动的点在接近节拍刻度（波形中发现的打击点）时吸附到它上面。优先于网格。需要显示波形及其节拍刻度。
+#TEXT,Snaps points placed or dragged with the mouse onto the grid of the current mode. Hold Alt to place one point off the grid.,将用鼠标放置或拖动的点吸附到当前模式的网格上。按住 Alt 可在网格外放置单个点。
+#TEXT,"Snaps points placed or dragged with the mouse onto the grid of the current mode: frames, or the tempo grid's division. Hold Alt to place one point off the grid.",将用鼠标放置或拖动的点吸附到当前模式的网格上：帧，或节奏网格的细分。按住 Alt 可在网格外放置单个点。
+#TEXT,"Spacing of the tempo grid's lines, as a note length.",节奏网格线的间距，以音符时值表示。
+#TEXT,"Spacing of the tempo grid's lines: 1/4 is a line every quarter note, 1/8 every eighth note, and so on. At this tempo, a line every %.0f ms.",节奏网格线的间距：1/4 为每个四分音符一条线，1/8 为每个八分音符一条，以此类推。在此节奏下，每 %.0f ms 一条线。
+#TEXT,Speed,速度
+#TEXT,Start at the bottom,从底部开始
+#TEXT,Start with a low speed limit and narrow travel limits.,从较低的速度限制和较窄的行程限制开始。
+#TEXT,"Starting points, not a promise about any particular device. Check what yours does and set the numbers to match.",仅作为起点，不代表任何特定设备。请检查你的设备表现并相应设置数值。
+#TEXT,"Stepping through video, and what happens when a project is created.",视频逐帧步进，以及创建项目时的行为。
+#TEXT,Stop the devices,停止设备
+#TEXT,"Straight down a serial port. A machine on USB is one of these, and so is one paired over Bluetooth, which Windows gives a port of its own.",直接通过串口。USB 设备属于此类，蓝牙配对的设备也是，Windows 会为其分配专用端口。
+#TEXT,Stroke,行程
+#TEXT,Stroke hard and fast for long enough and the rod finishes inside the sleeve. Best seen with the cutaway on.,长时间快速用力行程后，推杆会在套筒内射精。开启剖视时最容易看到。
+#TEXT,Stroke lower limit (%),行程下限 (%)
+#TEXT,Stroke upper limit (%),行程上限 (%)
+#TEXT,Strokes shrink towards the middle of the selection.,行程向选区中间收缩。
+#TEXT,Surge,前后
+#TEXT,"Swap the two ends, so 100 is drawn where 0 was.",交换两端，使 100 绘制在原来 0 的位置。
+#TEXT,Sway,左右
+#TEXT,"Swings twice per stroke, crossing over at the bottom and the top, so against the stroke it traces a figure eight. Raise bottom focus for a grind at the bottom.",每个行程摆动两次，在底部和顶部交叉，与行程合起来画出 8 字形。提高底部重点可在底部研磨。
+#TEXT,Switch the simulator to 3D to see the model's handles.,将模拟器切换到 3D 以查看模型的手柄。
+#TEXT,TCP,TCP
+#TEXT,"TCode %s, driven by the %s script. %s",TCode %s，由 %s 脚本驱动。%s
+#TEXT,"TCode down a serial port: a machine on USB, or one paired over Bluetooth.",通过串口发送 TCode：USB 连接的设备，或通过蓝牙配对的设备。
+#TEXT,"TCode over the network, to a machine on wifi.",通过网络发送 TCode，到 wifi 上的设备。
+#TEXT,"Take the preview back out, leaving the scripts as they were.",撤回预览，脚本保持原样。
+#TEXT,Target speed (units/s),目标速度 (units/s)
+#TEXT,Tempo (BPM),节奏 (BPM)
+#TEXT,Text,文本
+#TEXT,"The BPM is this chapter's. Typing one above sets it on the chapter by hand, which measuring all chapters leaves alone; or count it half or double time below.",BPM 属于此章节。在上方输入数值会手动设置到该章节，“测量所有章节”不会改动它；也可在下方按半速或双倍速计算。
+#TEXT,"The added point goes to the bottom, so each click draws a stroke down and back up.",添加的点位于底部，因此每次点击会画出一个先下后上的行程。
+#TEXT,"The added point goes to the top, so each click draws a stroke up and back down.",添加的点位于顶部，因此每次点击会画出一个先上后下的行程。
+#TEXT,"The chapter under the playhead, at the tempo measured for it.",播放头所在章节，使用为其测得的节奏。
+#TEXT,The chapter under the playhead.,播放头下的章节。
+#TEXT,The colour of the rod in the 3D model.,3D 模型中推杆的颜色。
+#TEXT,"The colours of the heatmap here and on EroScripts, from cyan through red to violet.",此处和 EroScripts 上热图的颜色，从青色经红色到紫色。
+#TEXT,The current position as a number in the middle of the bar.,当前位置，以数字显示在条中间。
+#TEXT,"The fastest this axis may move, in percent of its travel a second. Off lets the script ask for whatever it likes.",此轴的最大移动速度，以每秒行程的百分比表示。关闭则脚本可任意要求。
+#TEXT,"The file stays on disk, but changes that weren't saved
+to it or exported are lost. This can't be undone.","文件仍保留在磁盘上，但未保存
+或未导出的更改将丢失。此操作无法撤销。"
+#TEXT,The left channel alone. For binaural audio with the stroking sounds on one side and voices on the other. Reads the audio again.,仅左声道。适用于一侧是行程声音、另一侧是人声的双耳音频。将重新读取音频。
+#TEXT,"The model from the camera, as set above.",按上方设置的相机视角显示模型。
+#TEXT,"The only track showing, so it stays.",这是唯一显示的轨道，因此保留。
+#TEXT,"The original OpenFunscripter's: white, green, yellow, red.",原版 OpenFunscripter 的配色：白、绿、黄、红。
+#TEXT,The part of the device's travel the script is mapped into.,脚本映射到设备行程中的部分。
+#TEXT,The playhead is before the first point. Move past it to measure the stroke it is in.,播放头在第一个点之前。移过它才能测量所在的行程。
+#TEXT,"The playhead is between chapters, so the grid keeps the last tempo it had.",播放头位于章节之间，因此网格保持其上一个节奏。
+#TEXT,The project's first script is the stroke.,项目的第一个脚本即为行程。
+#TEXT,The right channel alone. Reads the audio again.,仅右声道。将重新读取音频。
+#TEXT,"The row of mode, grid, snap and simulator choices under the menu bar. Hidden, the Mode panel and the Simulator window show the same choices.",菜单栏下方的模式、网格、吸附和模拟器选项栏。隐藏后，“模式”面板和“模拟器”窗口显示相同的选项。
+#TEXT,"The same as WebP for places that only take GIF. Larger, and fewer colours.",与 WebP 相同，用于只接受 GIF 的地方。文件更大，颜色更少。
+#TEXT,The selected points are not on the stroke script.,选中的点不在行程脚本上。
+#TEXT,"The simulator as you have it set up: the 3D model, or the bar in 2D.",按你设置的模拟器：3D 模型，或 2D 条。
+#TEXT,"The simulator is fixed in place. Click to unlock it, then drag its ends to resize it or its middle to move it.",模拟器已固定。点击解锁后，拖动两端调整大小，或拖动中间移动。
+#TEXT,The usual size for a post.,帖子的常用尺寸。
+#TEXT,The whole mix.,完整混音。
+#TEXT,"The whole script's heatmap along the bottom, with a mark at the moment shown.",底部显示整个脚本的热图，并标出当前时刻。
+#TEXT,Theme,主题
+#TEXT,Thin out the close ones,稀疏过近的点
+#TEXT,This action has no binding yet.,此操作尚未绑定快捷键。
+#TEXT,This script has no picture to show; the preview has a plain background.,此脚本没有可显示的画面；预览使用纯色背景。
+#TEXT,"This script has no points yet. Once it does, the stroke under the playhead is measured here.",此脚本尚无点。有点之后，这里会测量播放头下的行程。
+#TEXT,"Through Intiface Central, which holds the bluetooth connection.",通过 Intiface Central，由它维持蓝牙连接。
+#TEXT,"Through Intiface Central, which holds the bluetooth connection. Start its server, then connect here.",通过 Intiface Central，由它保持蓝牙连接。先启动其服务器，然后在此连接。
+#TEXT,Tilt and slide range (%),倾斜和滑动范围 (%)
+#TEXT,Tilting forwards and back.,前后倾斜。
+#TEXT,Timeline,时间轴
+#TEXT,Timeline settings...,时间轴设置...
+#TEXT,Tolerance,容差
+#TEXT,Toolbar,工具栏
+#TEXT,Top,顶部
+#TEXT,Top + front,上 + 前
+#TEXT,Top + side,上 + 侧
+#TEXT,Tops stay put and bottoms come up.,顶部不动，底部上升。
+#TEXT,Tracks,轨道
+#TEXT,Try it first with nobody attached.,先在无人连接的情况下试用。
+#TEXT,Try reloading,尝试重新加载
+#TEXT,Turning around the length of the sleeve.,绕套筒长轴转动。
+#TEXT,Turns on the axes this machine has and turns off the rest. Limits stay as you set them. Turning axes on or off by hand makes it Custom.,开启该设备具有的轴，关闭其余轴。限制保持你的设置。手动开关轴会变为“自定义”。
+#TEXT,Turns the viewpoint around the model. Hold Alt and drag over the model to turn it by hand.,绕模型旋转视角。按住 Alt 在模型上拖动可手动旋转。
+#TEXT,Twist,扭转
+#TEXT,Twist direction,扭转方向
+#TEXT,"Two views in its place: from straight above, where surge, sway and twist read and are posed, and from the side, where pitch reads and the stroke is posed.",以两个视图代替：正上方视图，可看清并摆放前后、左右和扭转；侧面视图，可看清俯仰并摆放行程。
+#TEXT,Type this chapter's tempo. Measure all chapters then leaves it alone.,输入此章节的节奏。之后“测量所有章节”不会改动它。
+#TEXT,Typical,典型
+#TEXT,UDP,UDP
+#TEXT,Unmute.,取消静音。
+#TEXT,Up and down,上下
+#TEXT,Video,视频
+#TEXT,View,视图
+#TEXT,"View > Toolbar brings it back. With it hidden,
+the Mode panel shows the mode and grid choices.","视图 > 工具栏 可恢复显示。隐藏时，
+“模式”面板会显示模式和网格选项。"
+#TEXT,Views,视图
+#TEXT,Volume  %.2f,音量  %.2f
+#TEXT,Waveform height,波形高度
+#TEXT,Waveform of,波形：
+#TEXT,WebP,WebP
+#TEXT,What the lines between points are coloured by their speed. The heatmap keeps EroScripts' colours whichever is picked.,点之间的线条按速度着色的方式。无论选择哪种，热图都保持 EroScripts 的配色。
+#TEXT,"What the lines on the timeline mark, and what points snap to.",时间轴上的线标记什么，以及点吸附到什么。
+#TEXT,"What the simulator draws. Its size, placement and colours are set in the Simulator panel itself, where the result can be seen as it changes.",模拟器绘制的内容。其大小、位置和颜色在模拟器面板中设置，可实时看到效果。
+#TEXT,"What the simulator shows: a 2D bar, or a 3D model driven by every loaded axis.",模拟器显示的内容：2D 条，或由所有已加载轴驱动的 3D 模型。
+#TEXT,Where it eases back to when nothing is driving it.,无驱动时缓慢回到的位置。
+#TEXT,Where pitch rests. Move it off 50 to tilt the whole motion forwards or back.,俯仰的静止位置。偏离 50 可使整个运动前倾或后倾。
+#TEXT,Where points placed or dragged with the mouse land.,用鼠标放置或拖动的点落在哪里。
+#TEXT,Where roll rests. Keep it at 50 to lean as far left as right.,横滚的静止位置。保持 50 可左右倾斜相同幅度。
+#TEXT,"Where the model is at stroke 0, as a share of its full travel. Like the L0 lower limit of a machine.",行程为 0 时模型所在位置，占其完整行程的比例。类似设备的 L0 下限。
+#TEXT,"Where the model is at stroke 100, as a share of its full travel. Like the L0 upper limit of a machine.",行程为 100 时模型所在位置，占其完整行程的比例。类似设备的 L0 上限。
+#TEXT,Where twist rests. 50 turns as far each way.,扭转的静止位置。50 时两个方向转动相同幅度。
+#TEXT,"While the video plays, hold a handle on the model and move it: every axis it moves is recorded until you let go, replacing the points already there. The Record button under the model does the same.",视频播放时按住模型上的手柄并移动：在松开之前它移动的每个轴都会被录制，替换已有的点。模型下方的“录制”按钮作用相同。
+#TEXT,"While the video plays, hold a handle on the model and move it: the case for stroke, the ring for twist, the tip for roll and pitch, the floor square for surge and sway. Letting go writes what you did over the points already there.",视频播放时按住模型上的手柄并移动：外壳控制行程，圆环控制扭转，顶端控制横滚和俯仰，地面方块控制前后和左右。松开后会用你的操作覆盖已有的点。
+#TEXT,Width (px),宽度 (px)
+#TEXT,Wifi,Wifi
+#TEXT,With,带
+#TEXT,Write the motion into the axis scripts to see and feel it. Nothing is kept until you apply it.,将运动写入轴脚本以查看和感受。应用之前不会保留任何内容。
+#TEXT,Writes a copy with nothing in it faster or closer together than the script check's limits. The project keeps the script as written.,写入一份副本，其中去除了超出脚本检查限制（过快或过近）的部分。项目保留原样的脚本。
+#TEXT,"Writes every piece of text shown so far that has no key in the translation file, with the loaded language's translation where it has one, to text-to-translate.csv in the translations folder. Open the panels and menus to translate first. Its rows, filled in, go at the end of a translation file.",将目前显示过、但在翻译文件中没有键的所有文本写入翻译文件夹中的 text-to-translate.csv，若已加载语言有对应翻译则一并写入。请先打开要翻译的面板和菜单。填写好的行添加到翻译文件末尾即可。
+#TEXT,"Writes recorded takes this much earlier than your hand moved, to make up for reacting a little after what you see.",将录制的内容比手部动作提前这么多写入，以弥补看到画面后的反应延迟。
+#TEXT,"Writes strokes along the beat, across a chapter or the whole mix.",沿节拍写入行程，覆盖一个章节或整个混音。
+#TEXT,"Writes twist, roll and pitch that move with the selected stroke points.",写入随选中行程点运动的扭转、横滚和俯仰。
+#TEXT,You use it at your own risk. This is only shown once.,使用风险自负。此提示只显示一次。
+#TEXT,everyNth: %d,everyNth: %d
+#TEXT,flip,翻转
+#TEXT,hold a handle,按住一个手柄
+#TEXT,pitch,俯仰
+#TEXT,"play, then hold a handle",播放，然后按住一个手柄
+#TEXT,px,px
+#TEXT,roll,横滚
+#TEXT,sample range: %.2f .. %.2f (%.2f visible),采样范围：%.2f .. %.2f（可见 %.2f）
+#TEXT,scale: %.6f  offset: %.6f,scale: %.6f  offset: %.6f
+#TEXT,snap  %s,吸附  %s
+#TEXT,snap  %s  +  %d,吸附  %s  +  %d
+#TEXT,snap  beats%s%s,吸附  节拍%s%s
+#TEXT,snap  off,吸附  关
+#TEXT,snap  pos %d,吸附  位置 %d
+#TEXT,tar.exe has been part of Windows 10 since build 17063,tar.exe 自 Windows 10 build 17063 起已内置
+#TEXT,"texels: %d (first %d, last %d)","texels: %d (first %d, last %d)"
+#TEXT,twist,扭转
+#TEXT,u at left edge:  %.6f,u at left edge:  %.6f
+#TEXT,u at right edge: %.6f,u at right edge: %.6f

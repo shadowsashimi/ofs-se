@@ -695,7 +695,7 @@ void OFS_VideoplayerControls::DrawTimeline() noexcept
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-1.f);
     float volume = player->Volume();
-    if (ImGui::SliderFloat("##Volume", &volume, 0.0f, 1.0f, "Volume  %.2f")) {
+    if (ImGui::SliderFloat("##Volume", &volume, 0.0f, 1.0f, TRS("Volume  %.2f"))) {
         volume = Util::Clamp(volume, 0.0f, 1.f);
         player->SetVolume(volume);
         if (volume > 0.0f) {

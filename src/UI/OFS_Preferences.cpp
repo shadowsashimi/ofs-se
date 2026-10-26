@@ -113,7 +113,7 @@ bool OFS_Preferences::ShowPreferenceWindow() noexcept
 
 		ImGui::BeginChild("##prefSections", ImVec2(em * 9.f, 0.f), true);
 		for (int32_t i = 0; i < SectionCount; i += 1) {
-			if (ImGui::Selectable(sectionNames[i], activeSection == i)) {
+			if (ImGui::Selectable(TRS(sectionNames[i]), activeSection == i)) {
 				activeSection = i;
 			}
 		}

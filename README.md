@@ -160,6 +160,10 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 
 ## Translating
 
+Chinese (Simplified) and Japanese come with the app; pick them under *Options →
+Preferences → Application → Language*. They were translated with AI and
+haven't been checked by native speakers yet, so corrections are very welcome.
+
 Translations are CSV files in the `lang` folder, which *Options → Preferences
 → Application* opens. Rows keyed like `ABOUT` are the original OFS strings.
 Most of the newer text is translated by its English instead: a row
@@ -168,6 +172,9 @@ translation, open the panels and menus you want to cover, then click *Save
 text to translate*. It writes `text-to-translate.csv` with every piece of
 text seen so far and any translation it already has; fill in the third
 column and add the rows to the end of your translation file.
+`tools/extract-text.py` lists every such text from the code, and
+`tools/check-translation.py` checks a file for missing rows and broken
+format codes.
 
 ## How this was built
 

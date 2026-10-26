@@ -473,7 +473,7 @@ void ScriptTimeline::drawSnapIndicator() noexcept
 
 	char label[96];
 	if(beatSnap) {
-		stbsp_snprintf(label, sizeof(label), "snap  beats%s%s", gridSnap ? "  /  " : "",
+		stbsp_snprintf(label, sizeof(label), TRS("snap  beats%s%s"), gridSnap ? "  /  " : "",
 			gridSnap ? activeOverlay->SnapGridLabel() : "");
 		if(posSnap) {
 			const size_t used = strlen(label);
@@ -481,16 +481,16 @@ void ScriptTimeline::drawSnapIndicator() noexcept
 		}
 	}
 	else if(gridSnap && posSnap) {
-		stbsp_snprintf(label, sizeof(label), "snap  %s  +  %d", activeOverlay->SnapGridLabel(), state.SnapPositionStep);
+		stbsp_snprintf(label, sizeof(label), TRS("snap  %s  +  %d"), activeOverlay->SnapGridLabel(), state.SnapPositionStep);
 	}
 	else if(gridSnap) {
-		stbsp_snprintf(label, sizeof(label), "snap  %s", activeOverlay->SnapGridLabel());
+		stbsp_snprintf(label, sizeof(label), TRS("snap  %s"), activeOverlay->SnapGridLabel());
 	}
 	else if(posSnap) {
-		stbsp_snprintf(label, sizeof(label), "snap  pos %d", state.SnapPositionStep);
+		stbsp_snprintf(label, sizeof(label), TRS("snap  pos %d"), state.SnapPositionStep);
 	}
 	else {
-		stbsp_snprintf(label, sizeof(label), "snap  off");
+		stbsp_snprintf(label, sizeof(label), TRS("snap  off"));
 	}
 
 	const ImVec2 pad(6.f, 3.f);

@@ -151,7 +151,7 @@ void ScriptingMode::DrawScriptingMode(bool* open) noexcept
     ImGui::Spacing();
     if (pickedOnToolbar) {
         for (auto& entry : OverlayModeEntries) {
-            if (entry.mode == activeOverlay) OFS::SeparatorText(FMT("%s grid", TRD(entry.label)));
+            if (entry.mode == activeOverlay) OFS::SeparatorText(FMT(TRS("%s grid"), TRD(entry.label)));
         }
     }
     else {

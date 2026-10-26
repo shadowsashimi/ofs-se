@@ -1,0 +1,1121 @@
+Key (do not touch),Default,Translation
+INVALID_TR,%%this should not be displayed%%,%%this should not be displayed%%
+ABOUT,About,バージョン情報
+LATEST_RELEASE,Latest release,最新リリース
+OFS_LOG_OUTPUT,OFS Log Output,OFS ログ出力
+ADD_EDIT_ACTIONS,Add/Edit actions,ポイントの追加/編集
+ADD_EDIT_ACTION,Add/Edit action,ポイントの追加/編集
+ADD_ACTION,Add action,ポイントを追加
+REMOVE_ACTIONS,Remove actions,ポイントを削除
+REMOVE_ACTION,Remove action,ポイントを削除
+MOUSE_MOVED_ACTIONS,Mouse moved actions,マウスでポイントを移動
+ACTIONS_MOVED,Actions moved,ポイントを移動
+CUT_SELECTION,Cut selection,選択範囲を切り取り
+REMOVE_SELECTION,Remove selection,選択範囲を削除
+PASTE_SELECTION,Paste selection,選択範囲を貼り付け
+EQUALIZE,Equalize,均等化
+INVERT,Invert,反転
+ISOLATE,Isolate,分離
+TOP_POINTS,Top points,上側のポイント
+MID_POINTS,Mid points,中間のポイント
+BOTTOM_POINTS,Bottom points,下側のポイント
+GENERATE_ACTIONS,Generate actions,ポイントを生成
+FRAME_ALIGN,Frame align,フレームに揃える
+RANGE_EXTEND,Range extend,範囲を拡張
+REPEAT_STROKE,Repeat stroke,ストロークを繰り返す
+MOVE_TO_CURRENT_POSITION,Move to current position,現在位置へ移動
+SIMPLIFY,Simplify,簡略化
+LUA_SCRIPT,Lua script,Lua スクリプト
+REDO_STACK,Redo stack,やり直しスタック
+UNDO_STACK,Undo stack,元に戻すスタック
+UNDO_REDO_HISTORY,Undo/Redo history,元に戻す/やり直し履歴
+T_CODE,T-Code,T-Code
+PORT,Port,ポート
+OPEN_PORT,Open port,ポートを開く
+LIMITS,Limits,制限
+LINEAR_LIMITS,Linear limits,直線軸の制限
+ROTATION_LIMITS,Rotation limits,回転軸の制限
+VIBRATION_LIMITS,Vibration limits,振動の制限
+GLOBAL_SETTINGS,Global settings,全体設定
+DELAY,Delay,遅延
+CONTROLLER_BUTTON_A,A / X,A / X
+CONTROLLER_BUTTON_B,B / Circle,B / ○
+CONTROLLER_BUTTON_X,X / Square,X / □
+CONTROLLER_BUTTON_Y,Y / Triangle,Y / △
+CONTROLLER_BUTTON_BACK,Back / Share,Back / Share
+CONTROLLER_BUTTON_GUIDE,Guide,Guide
+CONTROLLER_BUTTON_START,Start,Start
+CONTROLLER_BUTTON_LEFTSTICK,Leftstick,左スティック
+CONTROLLER_BUTTON_RIGHTSTICK,Rightstick,右スティック
+CONTROLLER_BUTTON_LEFTSHOULDER,Leftshoulder,左ショルダー
+CONTROLLER_BUTTON_RIGHTSHOULDER,Rightshoulder,右ショルダー
+CONTROLLER_BUTTON_DPAD_UP,DPAD Up,十字キー上
+CONTROLLER_BUTTON_DPAD_DOWN,DPAD Down,十字キー下
+CONTROLLER_BUTTON_DPAD_LEFT,DPAD Left,十字キー左
+CONTROLLER_BUTTON_DPAD_RIGHT,DPAD Right,十字キー右
+CONTROLLER_NOT_SET,- Not set -,- 未設定 -
+KEY_MOD_CTRL,Ctrl,Ctrl
+KEY_MOD_ALT,Alt,Alt
+KEY_MOD_SHIFT,Shift,Shift
+KEY_ALREADY_IN_USE,Key is in use,キーは使用中です
+KEY_ALREADY_IN_USE_MSG,Key already bound for [%s],キーは既に [%s] に割り当てられています
+BUTTON_ALREADY_IN_USE,Button is in use,ボタンは使用中です
+BUTTON_ALREADY_IN_USE_MSG,Button already bound for [%s],ボタンは既に [%s] に割り当てられています
+DESCRIPTION,Description,説明
+KEYBOARD,Keyboard,キーボード
+ACTIVE,Active,有効
+KEY_NOT_SET,- Not set -,- 未設定 -
+CHANGE_KEY,Change key,キーを変更
+CHANGE_KEY_MSG,"Press any key...
+Escape to exit.","任意のキーを押してください...
+Escape で終了。"
+PASSIVE_BINDING_TXT1,Here modifiers can be configured which change certain behaviour.,特定の動作を変更する修飾キーをここで設定できます。
+PASSIVE_BINDING_TXT2,"You can only use Shift, Ctrl & Alt.",Shift、Ctrl、Alt のみ使用できます。
+KEYS,Keys,キー
+BINDINGS,Bindings,割り当て
+BINDING_TXT1,"You can use CTRL, SHIFT & ALT as modifiers.",CTRL、SHIFT、ALT を修飾キーとして使用できます。
+BINDING_TXT2,Only controller buttons can be bound. The DPAD directions count as a buttons.,割り当てられるのはコントローラーのボタンのみです。十字キーの各方向もボタンとして扱われます。
+BINDING_TXT3,The configuration gets saved everytime a change is made.,設定は変更のたびに保存されます。
+BINDING_TXT4,"If you wan't to revert to the defaults, you'll have to delete the config.",初期設定に戻すには、設定ファイルを削除してください。
+FILTER,Filter,フィルター
+MODIFIERS,Modifiers,修飾キー
+ACTION,Action,アクション
+CONTROLLER,Controller,コントローラー
+IGNORE_REPEATS,Ignore repeats,リピートを無視
+CHANGE_BUTTON,Change button,ボタンを変更
+CHANGE_BUTTON_MSG,"Press any button...
+Escape to clear.","任意のボタンを押してください...
+Escape でクリア。"
+RUNNING_TASK,Running task,タスクを実行中
+THIS_MAY_TAKE_A_WHILE,This may take a while...,しばらく時間がかかる場合があります...
+OPTIONS,Options,オプション
+AUTO_SCROLL,Auto-scroll,自動スクロール
+CLEAR,Clear,クリア
+COPY,Copy,コピー
+USED,Used,使用中
+ALLOCATED,Allocated,確保済み
+SCRIPTS,Scripts,スクリプト
+RENDERING,Rendering,描画
+SHOW_ACTIONS,Show actions,ポイントを表示
+SPLINE_MODE,Spline mode,スプラインモード
+SHOW_VIDEO_POSITION,Show video position,動画の位置を表示
+WAVEFORM,Waveform,波形
+SETTINGS,Settings,設定
+SCALE,Scale,スケール
+COLOR,Color,色
+ENABLE_WAVEFORM,Enable waveform,波形を有効化
+MIN_INT_FMT,Min: %d,最小: %d
+MAX_INT_FMT,Max: %d,最大: %d
+TCODE_TICKRATE,Tickrate (Hz),更新レート (Hz)
+SPLINE,Spline,スプライン
+SPLINE_TOOLTIP,Smooth motion instead of linear.,直線ではなく滑らかに動かします。
+REMAP,Remap,リマップ
+REMAP_TOOLTIP,"Remap script to use the full range.
+i.e. scripts using the range 10 to 90 become 0 to 100.","スクリプトを全範囲に再マップします。
+例: 10〜90 の範囲のスクリプトは 0〜100 になります。"
+DELAY_TOOLTIP,"Negative: Backward in time.
+Positive: Forward in time.","負: 時間を戻す方向。
+正: 時間を進める方向。"
+OUTPUTS,Outputs,出力
+YOU_CAN_RIGHT_CLICK_SLIDERS_TOOLTIP,You can right click sliders.,スライダーは右クリックできます。
+REBALANCE,Rebalance,リバランス
+REBALANCE_TOOLTIP,Balance around 500 even with unevenly spread limits.,制限が不均等でも 500 を中心に調整します。
+GAMEPAD_ONLY,only,のみ
+SHOW_VIDEO_POSITION_TOOLTIP,"(Frame overlay only)
+Shows a red line where the current frame is.
+More of a debugging feature.","(フレームオーバーレイのみ)
+現在のフレーム位置に赤い線を表示します。
+主にデバッグ用の機能です。"
+PROCESSING_AUDIO,Processing audio...,音声を処理中...
+UPDATE_WAVEFORM,Update waveform,波形を更新
+POSITIONS,Positions,位置
+LOOP_A_SET,Loop A set,ループ A を設定
+LOOP_B_SET,Loop B set,ループ B を設定
+LOCK,Lock,ロック
+CLICK_TO_ENABLE_VIDEO,Click to enable video,クリックで動画を有効化
+LOOP_CLEARED,Loop cleared,ループを解除
+VIDEOPLAYER,Player,プレーヤー
+SPEED,Speed,速度
+TIMELINE,Timeline,タイムライン
+TIME,Time,時間
+CONTROLS,Controls,操作
+TIMELINE_SECONDS,seconds,秒
+TASK_EXPORTING_CLIPS,Exporting clips,クリップを書き出し中
+PROJECT,Project,プロジェクト
+MEDIA,Media,メディア
+CHANGE_DEFAULT_LOCATION,Change default location,既定の場所を変更
+CHANGE_LOCATION,Change location,場所を変更
+SCRIPTING_MODE,Scripting mode,スクリプト作成モード
+DEFAULT_MODE,Manual,手動
+ALTERNATING_MODE,Alternating,交互
+DYNAMIC_INJECTION_MODE,Auto peak,自動ピーク
+RECORDING_MODE,Recording,録画
+SCRIPTING_OVERLAY,Scripting overlay,スクリプト作成オーバーレイ
+FRAME_OVERLAY,Frame,フレーム
+TEMPO_OVERLAY,Tempo,テンポ
+EMPTY_OVERLAY,None,なし
+OFFSET_MS,Offset (ms),オフセット (ms)
+OFFSET_TOOLTIP,"Applies an offset to actions inserted while the video is playing.
+- : inserts earlier
++ : inserts later","再生中に挿入するポイントにオフセットを適用します。
+- : 早めに挿入
++ : 遅めに挿入"
+MIRROR_MODE,Mirror mode,ミラーモード
+MIRROR_MODE_TOOLTIP,Mirrors add/edit/remove action across all loaded scripts.,ポイントの追加/編集/削除を読み込み済みの全スクリプトに反映します。
+DI_TARGET_SPEED,Target speed (units/s),目標速度 (units/s)
+DI_PEAK_OFFSET,Peak offset. Negative places the peak earlier in the gap; positive places it later.,ピークのオフセット。負の値で間隔内の早い位置に、正の値で遅い位置にピークを置きます。
+TOP,Top,上
+BOTTOM,Bottom,下
+NEXT_POINT,Next point,次のポイント
+NEXT_POINT_AT_FMT,Next point is at %d,次のポイントは %d
+NEXT_POINT_IS_FMT,Next point is %s,次のポイントは%s
+INVERTED,inverted,反転
+NOT_INVERTED,not inverted,非反転
+FIXED_RANGE,Fixed range,固定範囲
+CONTEXT_SENSITIVE,Context sensitive,状況に応じる
+CONTEXT_SENSITIVE_TOOLTIP,Alternates based on the previous action.,直前のポイントに応じて交互にします。
+MODE,Mode,モード
+MOUSE,Mouse,マウス
+CONTROLLER_DEADZONE,Controller deadzone,コントローラーのデッドゾーン
+DEADZONE,Deadzone,デッドゾーン
+CENTER,Center,中央
+TWO_AXES,Two axes,2 軸
+TWO_AXES_TOOLTIP,"Recording pitch & roll at once.
+Only works with a controller.","ピッチとロールを同時に記録します。
+コントローラー使用時のみ動作します。"
+RECORD_ON_PLAY,Record on play,再生時に記録
+TWO_AXES_AXES,X / Y,X / Y
+POSITION,Position,位置
+RECORDING_ACTIVE,Recording active,記録中
+RECORDING_PAUSED,Recording paused,記録を一時停止中
+STATISTICS,Statistics,統計
+ACTION_EDITOR,Action editor,ポイントエディター
+DYNAMIC_BINDING_GROUP,Dynamic,ダイナミック
+ACTIONS_BINDING_GROUP,Actions,アクション
+CORE_BINDING_GROUP,Core,基本
+NAVIGATION_BINDING_GROUP,Navigation,ナビゲーション
+UTILITY_BINDING_GROUP,Utility,ユーティリティ
+MOVING_BINDING_GROUP,Moving,移動
+SPECIAL_BINDING_GROUP,Special,特殊
+VIDEOPLAYER_BINDING_GROUP,Videoplayer,動画プレーヤー
+EXTENSIONS_BINDING_GROUP,Extensions,拡張機能
+CONTROLLER_BINDING_GROUP,Controller,コントローラー
+ACTION_REMOVE_ACTION,Remove action,ポイントを削除
+ACTION_ACTION_0,Action at 0,ポイントを 0 に
+ACTION_ACTION_10,Action at 10,ポイントを 10 に
+ACTION_ACTION_20,Action at 20,ポイントを 20 に
+ACTION_ACTION_30,Action at 30,ポイントを 30 に
+ACTION_ACTION_40,Action at 40,ポイントを 40 に
+ACTION_ACTION_50,Action at 50,ポイントを 50 に
+ACTION_ACTION_60,Action at 60,ポイントを 60 に
+ACTION_ACTION_70,Action at 70,ポイントを 70 に
+ACTION_ACTION_80,Action at 80,ポイントを 80 に
+ACTION_ACTION_90,Action at 90,ポイントを 90 に
+ACTION_ACTION_100,Action at 100,ポイントを 100 に
+ACTION_SAVE_PROJECT,Save project,プロジェクトを保存
+ACTION_QUICK_EXPORT,Quick export,クイック書き出し
+ACTION_QUICK_EXPORT_2_0,Quick export (2.0),クイック書き出し (2.0)
+ACTION_SYNC_TIME_WITH_PLAYER,Sync time with player,プレーヤーと時間を同期
+ACTION_CYCLE_FORWARD_LOADED_SCRIPTS,Cycle forward loaded scripts,読み込み済みスクリプトを順に切り替え
+ACTION_CYCLE_BACKWARD_LOADED_SCRIPTS,Cycle backward loaded scripts,読み込み済みスクリプトを逆順に切り替え
+ACTION_PREVIOUS_ACTION,Previous action,前のポイント
+ACTION_NEXT_ACTION,Next action,次のポイント
+ACTION_PREVIOUS_ACTION_MULTI,Previous action (multi),前のポイント (複数)
+ACTION_NEXT_ACTION_MULTI,Next action (multi),次のポイント (複数)
+ACTION_PREV_FRAME,Previous frame,前のフレーム
+ACTION_NEXT_FRAME,Next frame,次のフレーム
+ACTION_FAST_STEP,Fast step,早送りステップ
+ACTION_FAST_BACKSTEP,Fast backstep,早戻しステップ
+ACTION_UNDO,Undo,元に戻す
+ACTION_REDO,Redo,やり直し
+ACTION_COPY,Copy,コピー
+ACTION_PASTE,Paste,貼り付け
+ACTION_CUT,Cut,切り取り
+ACTION_PASTE_EXACT,Paste exact,正確な位置に貼り付け
+ACTION_SELECT_ALL,Select all,すべて選択
+ACTION_DESELECT_ALL,Deselect all,すべて選択解除
+ACTION_SELECT_ALL_LEFT,Select all left,左側をすべて選択
+ACTION_SELECT_ALL_RIGHT,Select all right,右側をすべて選択
+ACTION_SELECT_TOP,Select top points,上側のポイントを選択
+ACTION_SELECT_BOTTOM,Select bottom points,下側のポイントを選択
+ACTION_SELECT_MID,Select middle points,中間のポイントを選択
+ACTION_TOGGLE_MIRROR_MODE,Toggle mirror mode,ミラーモードの切り替え
+ACTION_SAVE_FRAME,Save frame as image,フレームを画像として保存
+ACTION_CYCLE_SUBTITLES,Cycle subtitles,字幕を切り替え
+ACTION_TOGGLE_FULLSCREEN,Toggle fullscreen,全画面表示の切り替え
+ACTION_MOVE_UP_10,Move actions +10 up,ポイントを +10 上へ移動
+ACTION_MOVE_DOWN_10,Move actions -10 down,ポイントを -10 下へ移動
+ACTION_MOVE_UP_5,Move actions +5 up,ポイントを +5 上へ移動
+ACTION_MOVE_DOWN_5,Move actions -5 down,ポイントを -5 下へ移動
+ACTION_MOVE_ACTIONS_LEFT_SNAP,Move actions left with snapping,ポイントをスナップして左へ移動
+ACTION_MOVE_ACTIONS_RIGHT_SNAP,Move actions right with snapping,ポイントをスナップして右へ移動
+ACTION_MOVE_ACTIONS_LEFT,Move actions left,ポイントを左へ移動
+ACTION_MOVE_ACTIONS_RIGHT,Move actions right,ポイントを右へ移動
+ACTION_MOVE_ACTIONS_UP,Move actions up,ポイントを上へ移動
+ACTION_MOVE_ACTIONS_DOWN,Move actions down,ポイントを下へ移動
+ACTION_MOVE_TO_CURRENT_POSITION,Move to current position,現在位置へ移動
+ACTION_EQUALIZE_ACTIONS,Equalize actions,ポイントを均等化
+ACTION_INVERT_ACTIONS,Invert actions,ポイントを反転
+ACTION_ISOLATE_ACTION,Isolate action,ポイントを分離
+ACTION_REPEAT_STROKE,Repeat stroke,ストロークを繰り返す
+ACTION_TOGGLE_PLAY,Play / Pause,再生 / 一時停止
+ACTION_REDUCE_PLAYBACK_SPEED,Playback speed -10%,再生速度 -10%
+ACTION_INCREASE_PLAYBACK_SPEED,Playback speed +10%,再生速度 +10%
+ACTION_GO_TO_START,Go to the start,先頭へ移動
+ACTION_GO_TO_END,Go to the end,末尾へ移動
+ACTION_RELOAD_ENABLED_EXTENSIONS,Reload enabled extensions,有効な拡張機能を再読み込み
+ACTION_TOGGLE_CONTROLLER_NAV,Toggle controller navigation,コントローラーナビゲーションの切り替え
+ACTION_SEEK_FORWARD_1,Forward 1 second,1 秒進む
+ACTION_SEEK_BACKWARD_1,Backward 1 second,1 秒戻る
+ACTION_ADD_ACTION_CONTROLLER,Add action,ポイントを追加
+ACTION_TOGGLE_RECORDING_MODE,Toggle recording mode,記録モードの切り替え
+ACTION_CONTROLLER_SELECT,Controller selection,コントローラーによる選択
+ACTION_SET_PLAYBACK_SPEED,Set current playback speed,現在の再生速度を設定
+PASSIVE_GROUP_TIMELINE,Point timeline,ポイントタイムライン
+PASSIVE_GROUP_SIMULATOR,Simulator,シミュレーター
+MOD_MOVE_OR_ADD_POINT,Click drag/add point in the timeline,タイムラインでクリックしてポイントをドラッグ/追加
+MOD_CLICK_SIM_ADD_PONT,Click simulator to add a point,シミュレーターをクリックしてポイントを追加
+PROJECT_HAS_UNSAVED_EDITS,Project has unsaved edits,プロジェクトに未保存の編集があります
+UNSAVED_EDITS_MSG,The current project has unsaved edits.,現在のプロジェクトに未保存の編集があります。
+UNSAVED_CHANGES,Unsaved changes,未保存の変更
+UNSAVED_CHANGES_MSG,Do you want to save and exit?,保存して終了しますか?
+FILE_NOT_FOUND,File not found,ファイルが見つかりません
+COULDNT_FIND_FILE,Couldn’t find file,ファイルが見つかりませんでした
+OFS_FAILED_TO_IMPORT,OpenFunscripter failed to import.,OpenFunscripter のインポートに失敗しました。
+OFS_FAILED_TO_IMPORT_MSG,Failed to import,インポートに失敗しました
+FAILED_TO_LOAD,Failed to load,読み込みに失敗しました
+FAILED_TO_LOAD_MSG,The project failed to load.,プロジェクトの読み込みに失敗しました。
+FAILED_TO_FIND_VIDEO,Failed to find video,動画が見つかりません
+FAILED_TO_FIND_VIDEO_MSG,"The video was not found.
+Please pick the correct video.","動画が見つかりませんでした。
+正しい動画を選択してください。"
+CHOOSE_OUTPUT_DIR,Choose output directory,出力先フォルダーを選択
+PICK_DIFFERENT_MEDIA,Pick different media,別のメディアを選択
+FILE,File,ファイル
+OPEN_PROJECT,Open project,プロジェクトを開く
+SAVE,Save,保存
+CLOSE_PROJECT,Close project,プロジェクトを閉じる
+WRONG_FILE,Wrong file,ファイルが違います
+WRONG_FILE_MSG,The file isn’t a project file.,このファイルはプロジェクトファイルではありません。
+IMPORT_VIDEO_SCRIPT,Import video/script,動画/スクリプトをインポート
+RECENT_FILES,Recent files,最近使ったファイル
+NO_RECENT_FILES,No recent files,最近使ったファイルはありません
+SAVE_PROJECT,Save project,プロジェクトを保存
+EXPORT_MENU,Export...,書き出し...
+QUICK_EXPORT,Quick export,クイック書き出し
+QUICK_EXPORT_TOOLTIP,Exports all scripts as .funscript in their default paths.,すべてのスクリプトを既定のパスに .funscript として書き出します。
+QUICK_EXPORT_2_0,Quick export (2.0),クイック書き出し (2.0)
+QUICK_EXPORT_2_0_TOOLTIP,Exports combined 2.0 funscript with channels.,チャンネル付きの 2.0 funscript を結合して書き出します。
+QUICK_EXPORT_1_1,Quick export (1.1),クイック書き出し (1.1)
+QUICK_EXPORT_1_1_TOOLTIP,Exports combined 1.1 funscript with axes.,軸付きの 1.1 funscript を結合して書き出します。
+EXPORT_ACTIVE_SCRIPT,Export active script,アクティブなスクリプトを書き出し
+EXPORT_ALL,Export all,すべて書き出し
+AUTO_BACKUP_TIMER_FMT,Auto Backup in %d seconds,%d 秒後に自動バックアップ
+AUTO_BACKUP,Auto Backup,自動バックアップ
+OPEN_BACKUP_DIR,Open backup directory,バックアップフォルダーを開く
+CONFIGURE,Configure,設定
+ADD_MENU,Add...,追加...
+ADD_SHORTCUTS,Shortcuts,ショートカット
+ADD_NEW,Add new,新規追加
+ADD_NEW_FUNSCRIPT,Add new funscript,新しい funscript を追加
+ADD_EXISTING,Add existing,既存のものを追加
+ADD_EXISTING_FUNSCRIPTS,Add existing funscripts,既存の funscript を追加
+REMOVE_SCRIPT_CONFIRM_MSG,"If the script wasn’t previously exported, this can’t be reverted.
+Continue?","スクリプトを書き出していない場合、元に戻せません。
+続行しますか?"
+REMOVE,Remove,削除
+REMOVE_SCRIPT,Remove script,スクリプトを削除
+EDIT,Edit,編集
+SAVE_FRAME_AS_IMAGE,Save frame as image,フレームを画像として保存
+OPEN_SCREENSHOT_DIR,Open screenshot directory,スクリーンショットフォルダーを開く
+SAVE_HEATMAP,Save heatmap,ヒートマップを保存
+UNDO,Undo,元に戻す
+REDO,Redo,やり直し
+CUT,Cut,切り取り
+PASTE,Paste,貼り付け
+SELECT,Select,選択
+SELECT_ALL,Select all,すべて選択
+DESELECT_ALL,Deselect all,すべて選択解除
+SPECIAL,Special,特殊
+SELECT_ALL_LEFT,Select all left,左側をすべて選択
+SELECT_ALL_RIGHT,Select all right,右側をすべて選択
+SET_SELECTION_START,Set selection start,選択範囲の開始を設定
+SET_SELECTION_END,Set selection end,選択範囲の終了を設定
+TOP_POINTS_ONLY,Top points only,上側のポイントのみ
+MID_POINTS_ONLY,Mid points only,中間のポイントのみ
+BOTTOM_POINTS_ONLY,Bottom points only,下側のポイントのみ
+BOOKMARKS,Bookmarks,ブックマーク
+EXPORT_CLIP,Export clip,クリップを書き出し
+NAME,Name,名前
+ADD_BOOKMARK,Add bookmark,ブックマークを追加
+CREATE_INTERVAL_FOR_FMT,"Create interval for ""%s""","""%s"" の区間を作成"
+GO_TO_MENU,Go to...,移動...
+NO_BOOKMARKS,No bookmarks,ブックマークはありません
+ALWAYS_SHOW_LABELS,Always show labels,常にラベルを表示
+DELETE_ALL_BOOKMARKS,Delete all bookmarks,すべてのブックマークを削除
+VIEW_MENU,View,表示
+METADATA,Metadata,メタデータ
+DRAW_VIDEO,Draw video,動画を描画
+RESET_VIDEO_POS,Reset video position,動画の位置をリセット
+VIDEO_MODE,Video mode,動画モード
+VIDEO_MODE_FULL,Full,全体
+VIDEO_MODE_LEFT_PANE,Left pane,左ペイン
+VIDEO_MODE_RIGHT_PANE,Right pane,右ペイン
+VIDEO_MODE_TOP_PANE,Top pane,上ペイン
+VIDEO_MODE_BOTTOM_PANE,Bottom pane,下ペイン
+VIDEO_MODE_VR,VR,VR
+DEBUG,Debug,デバッグ
+METRICS,Metrics,メトリクス
+LOG_OUTPUT,Log output,ログ出力
+FULLSCREEN,Fullscreen,全画面表示
+PREFERENCES,Preferences,環境設定
+REPEAT_RATE,Repeat rate,リピート間隔
+CONTROLLER_CONNECTED,Controller connected!,コントローラーが接続されました!
+EXTENSIONS_MENU,Extensions,拡張機能
+DEV_MODE,Developer mode,開発者モード
+SHOW_LOGS,Show logs,ログを表示
+DEV_MODE_TOOLTIP,Enable extra functionality for extension developement.,拡張機能の開発向けの追加機能を有効にします。
+EXTENSION_DIR,Extension directory,拡張機能フォルダー
+ENABLED,Enabled,有効
+SHOW_WINDOW,Show window,ウィンドウを表示
+OPEN_DIRECTORY,Open directory,フォルダーを開く
+NAVIGATION,Navigation,ナビゲーション
+SCRIPTING,Scripting,スクリプト作成
+UNSAVED_CHANGES_FMT,unsaved changes %d minutes ago,%d 分前からの未保存の変更
+METADATA_EDITOR,Metadata editor,メタデータエディター
+TITLE,Title,タイトル
+DURATION,Duration,長さ
+CREATOR,Creator,作成者
+URL,Url,URL
+VIDEO_URL,Video url,動画 URL
+NOTES,Notes,メモ
+LICENSE,License,ライセンス
+FREE,Free,無料
+PAID,Paid,有料
+NONE,None,なし
+TAGS,Tags,タグ
+ADD,Add,追加
+PERFORMERS,Performers,出演者
+SAVE_TEMPLATE,Save template,テンプレートを保存
+SAVE_TEMPLATE_TOOLTIP,Saves all current values as defaults for later.,現在の値をすべて今後の既定値として保存します。
+GIT_COMMIT,Commit,確定
+INTERVAL,Interval,区間
+CLOSE_WITHOUT_SAVING,Close without saving?,保存せずに閉じますか?
+CLOSE_WITHOUT_SAVING_MSG,Do you want to save the current project?,現在のプロジェクトを保存しますか?
+CONFIGURATION,Configuration,構成
+RESET,Reset,リセット
+MOVE,Move,移動
+DISTANCE,Distance,距離
+GLOBAL_YAW,Global yaw,全体のヨー
+GLOBAL_PITCH,Global pitch,全体のピッチ
+BOX,Box,ボックス
+CONTAINER,Container,コンテナー
+TWIST,Twist,ツイスト
+ROLL_DEG,Roll deg,ロール (度)
+PITCH_DEG,Pitch deg,ピッチ (度)
+TWIST_DEG,Twist deg,ツイスト (度)
+ROLL,Roll,ロール
+PITCH,Pitch,ピッチ
+YAW,Yaw,ヨー
+INSERT_CURRENT_POSITION,Insert current position,現在位置を挿入
+SCROLL_PERCENT,Scroll (%),スクロール (%)
+SCROLL_PERCENT_TOOLTIP,You can use the mousewheel on the sliders above.,上のスライダーではマウスホイールを使用できます。
+EXTENSION_LOG_OUTPUT,Extension log output,拡張機能のログ出力
+ERROR_STR,Error,エラー
+TRY_RELOADING,Try reloading,再読み込みしてみてください
+RELOAD,Reload,再読み込み
+BPM,BPM,BPM
+OFFSET,Offset,オフセット
+SNAP,Snap,スナップ
+SNAPPING,Snapping,スナップ
+SNAP_TO_GRID,Snap to grid,グリッドにスナップ
+SNAP_POSITION,Snap position,位置をスナップ
+TEMPO_GRID,Grid,グリッド
+BREAK,Break,休止
+TEMPO,Tempo,テンポ
+TEMPO_AUTO,Auto tempo from chapters,チャプターからテンポを自動設定
+TEMPO_DOWNBEAT,Downbeat,ダウンビート
+TEMPO_SET_DOWNBEAT,Set downbeat at playhead,再生ヘッドにダウンビートを設定
+UNKNOWN_ERROR,unknown error,不明なエラー
+FFMPEG_WAS_NOT_FOUND_MSG,"ffmpeg.exe was not found.
+Do you want to download it?","ffmpeg.exe が見つかりませんでした。
+ダウンロードしますか?"
+BINDABLE_FUNCTIONS,Bindable functions,割り当て可能な機能
+YES,Yes,はい
+FFMPEG_FAILED_TO_DOWNLOAD_MSG,Failed to download from https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip,https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip からのダウンロードに失敗しました
+DONE,Done,完了
+DONE_MSG,ffmpeg.exe was successfully extracted.,ffmpeg.exe を展開しました。
+EXTRACT_FAIL,Failed to extract ffmpeg.exe.,ffmpeg.exe の展開に失敗しました。
+EXTRACT_FAIL_MSG,"Extracting uses tar.exe.
+It will fail if it's not on your system.","展開には tar.exe を使用します。
+システムにない場合は失敗します。"
+DOWNLOAD_FFMPEG,Download ffmpeg?,ffmpeg をダウンロードしますか?
+TEMPO_WHOLE_MEASURES,whole measures,全音符
+TEMPO_2ND_MEASURES,2nd measures,2 分音符
+TEMPO_4TH_MEASURES,4th measures,4 分音符
+TEMPO_8TH_MEASURES,8th measures,8 分音符
+TEMPO_12TH_MEASURES,12th measures,12 分音符
+TEMPO_16TH_MEASURES,16th measures,16 分音符
+TEMPO_24TH_MEASURES,24th measures,24 分音符
+TEMPO_32ND_MEASURES,32nd measures,32 分音符
+TEMPO_48TH_MEASURES,48th measures,48 分音符
+TEMPO_64TH_MEASURES,64th measures,64 分音符
+LOAD_CONFIG,Load config,設定を読み込む
+SAVE_CONFIG,Save config,設定を保存
+SAVE_SIMULATOR_CONFIG,Save simulator configuration,シミュレーター設定を保存
+SAVE_SIMULATOR_CONFIG_MSG,"Do you want do save the current config?
+This will override any existing default config.","現在の設定を保存しますか?
+既存の既定設定は上書きされます。"
+LINES,Lines,線
+TEXT,Text,テキスト
+FRONT,Front,前面
+BACK,Back,背面
+BORDER,Border,枠線
+INDICATOR,Indicator,インジケーター
+LINE,Line,ライン
+WIDTH,Width,幅
+OPACITY,Opacity,不透明度
+EXTRA_LINES,Extra lines,追加の線
+VANILLA,Vanilla,バニラ
+SHOW_POSITION,Show position,位置を表示
+VANILLA_TOOLTIP,The original simulator from day one.,初期からあるオリジナルのシミュレーターです。
+RESET_TO_DEFAULTS,Reset to defaults,既定値に戻す
+SIMULATOR,Simulator,シミュレーター
+APPLICATION,Application,アプリケーション
+DARK_MODE,Dark mode,ダークモード
+LIGHT_MODE,Light mode,ライトモード
+PREFERENCES_TXT,"Higher frame rate makes OFS feel ""snappier"" because input gets processed more frequently.",フレームレートを上げると入力の処理頻度が上がり、OFS の反応が「キビキビ」します。
+VSYNC,Vsync,垂直同期
+VSYNC_TOOLTIP,"Limits frame rate to the refresh rate of the monitor.
+Frame limit is ignored.","フレームレートをモニターのリフレッシュレートに制限します。
+フレーム制限は無視されます。"
+FRAME_LIMIT,Frame limit,フレーム制限
+FRAME_LIMIT_TOOLTIP,This limits the frame rate OFS is running at.,OFS が動作するフレームレートを制限します。
+FONT,Font,フォント
+CHANGE,Change,変更
+CHOOSE_FONT,Choose font,フォントを選択
+DEFAULT_FONT,Default font,既定のフォント
+FONT_SIZE,Font size,フォントサイズ
+FORCE_HW_DECODING,Force hardware decoding (Requires program restart),ハードウェアデコードを強制 (再起動が必要)
+FORCE_HW_DECODING_TOOLTIP,May cause crashes on some systems.,一部のシステムではクラッシュする場合があります。
+FAST_FRAME_STEP,Fast frame step,高速フレームステップ
+FAST_FRAME_STEP_TOOLTIP,Amount of frames to skip with fast step.,高速ステップでスキップするフレーム数です。
+SHOW_METADATA_DIALOG_ON_NEW_PROJECT,Show metadata dialog on new project,新規プロジェクト時にメタデータダイアログを表示
+FUNCTIONS_RANGE_EXTENDER,Range extender,範囲拡張
+FUNCTIONS_SIMPLIFY,Simplify (Ramer-Douglas-Peucker),簡略化 (Ramer-Douglas-Peucker)
+RANGE,Range,範囲
+RANGE_EXTENDER_TXT,Select atleast 5 actions to extend.,拡張するには 5 個以上のポイントを選択してください。
+EPSILON,Epsilon,イプシロン
+SIMPLIFY_TXT,Select atleast 5 actions to simplify.,簡略化するには 5 個以上のポイントを選択してください。
+SPECIAL_FUNCTIONS,Special functions,特殊機能
+MEMORY_USAGE,Memory usage,メモリ使用量
+UPDATE,Update,更新
+SLOWEST,slowest,最も遅い
+LANGUAGE,Language,言語
+ACTION_RELOAD_TRANSLATION,Reload current translation,現在の翻訳を再読み込み
+DIRECTORY,Directory,フォルダー
+HIGHLIGHT_TRESHOLD,Highlight treshold,強調表示のしきい値
+ENABLE_MAX_SPEED_HIGHLIGHT,Max speed highlight,最高速度の強調表示
+FPS_OVERRIDE,FPS override,FPS の上書き
+TIME_SPENT,Time spent,経過時間
+SHOW_ACTION_LINES,Show lines,線を表示
+SHOW_ACTION_POINTS,Show points,ポイントを表示
+CLEAR_RECENT_FILES,Clear recent files,最近使ったファイルをクリア
+GENERIC_OPEN,Open...,開く...
+ADD_EDIT_TRIGGER,Add/Edit trigger,トリガーの追加/編集
+VALIDATE,Validate,検証
+OK_RESULT,ok,OK
+ORPHAN_TRIGGER_MESSAGE,The following triggers have no corresponding actions.,次のトリガーには対応するポイントがありません。
+DELETE,Delete,削除
+REPEAT,Repeat,繰り返し
+WEBSOCKET_API,Websocket API,Websocket API
+SERVER_ACTIVE,Server active,サーバー稼働中
+CLIENT_COUNT,Clients connected,接続中のクライアント
+START,Start,Start
+END,End,終了
+TOTAL,Total,合計
+REMOVE_CHAPTER,Remove chapter,チャプターを削除
+REMOVE_CHAPTER_MSG,Do you want to remove the chapter?,チャプターを削除しますか?
+REMOVE_BOOKMARK,Remove bookmark,ブックマークを削除
+REMOVE_BOOKMARK_MSG,Do you want to remove the bookmark?,ブックマークを削除しますか?
+ADD_NEW_CHAPTER,Add chapter,チャプターを追加
+ADD_NEW_BOOKMARK,Add bookmark,ブックマークを追加
+SET_CHAPTER_SIZE,Set size,サイズを設定
+GO_TO_CHAPTER,Go to chapter,チャプターへ移動
+NO_MUSIC_HERE,No music here,音楽なし
+SET_CHAPTER_START,Set chapter start,チャプターの開始を設定
+SET_CHAPTER_END,Set chapter end,チャプターの終了を設定
+SAVE_HEATMAP_WITH_CHAPTERS,Save heatmap with chapters,チャプター付きでヒートマップを保存
+CHAPTERS,Chapters,チャプター
+CHAPTER,Chapter,チャプター
+BEGIN,Begin,開始
+CHAPTER_BINDING_GROUP,Chapters,チャプター
+ACTION_CREATE_BOOKMARK,Create bookmark,ブックマークを作成
+ACTION_CREATE_CHAPTER,Create chapter,チャプターを作成
+#TEXT," Letting go adds a point at the playhead; Escape cancels. Ctrl drags slowly, Ctrl+Shift snaps to 5. Double click to set it back to the middle.", 離すと再生ヘッドにポイントを追加します。Escape でキャンセル。Ctrl でゆっくりドラッグ、Ctrl+Shift で 5 刻みにスナップ。ダブルクリックで中央に戻します。
+#TEXT, Low: the audio may not have a steady beat., 低い: 音声に安定したビートがない可能性があります。
+#TEXT,"""%s"" has no tempo yet.","""%s"" にはまだテンポがありません。"
+#TEXT,"""%s"" is marked as having no music, so the grid keeps the last tempo it had.","""%s"" は音楽なしに設定されているため、グリッドは直前のテンポを維持します。"
+#TEXT,%.0f ms apart,間隔 %.0f ms
+#TEXT,%.0f units/s,%.0f units/s
+#TEXT,"%.1f BPM becomes %.1f, for a tempo read off a pulse half as fast as the beat. Kept when the chapter is measured again.",%.1f BPM を %.1f にします。ビートの半分の速さのパルスからテンポを読み取った場合用です。チャプターを再測定しても維持されます。
+#TEXT,"%.1f BPM becomes %.1f, for a tempo read off a pulse twice as fast as the beat. Kept when the chapter is measured again.",%.1f BPM を %.1f にします。ビートの 2 倍の速さのパルスからテンポを読み取った場合用です。チャプターを再測定しても維持されます。
+#TEXT,%.1f s after the end,終了から %.1f s 後
+#TEXT,%.1f s of nothing,%.1f s の空白
+#TEXT,"%d lines sent, %.0f a second",%d 行送信、毎秒 %.0f
+#TEXT,%d of 6 axes driven by a script,6 軸中 %d 軸をスクリプトで駆動
+#TEXT,%d sent,%d 送信済み
+#TEXT,"%d to look at in ""%s""","確認箇所 %d 件 (""%s"")"
+#TEXT,"%d too fast, %d too close, %d long gaps, %d past the end",速すぎ %d、近すぎ %d、長い空白 %d、終了後 %d
+#TEXT,%s from %.2f s to %.2f s. Changes above update it; axes set to Off keep what they had. Closing this tool discards it.,%s (%.2f s〜%.2f s)。上の変更で更新されます。オフの軸は元のままです。このツールを閉じると破棄されます。
+#TEXT,%s grid,%s グリッド
+#TEXT,"%s to %s, %s long",%s〜%s、長さ %s
+#TEXT,%u selected in %d of %d edited lanes,%u 個選択 (編集中のレーン %d / %d)
+#TEXT,%u selected in %s,%u 個選択 (%s)
+#TEXT,(cannot be told a position),(位置を指定できません)
+#TEXT,(no name),(名前なし)
+#TEXT,"* Set by hand. Measure all chapters leaves it alone. Click to measure this chapter from the audio instead, which replaces it.",* 手動で設定済み。「すべてのチャプターを測定」でも変更されません。クリックすると音声からこのチャプターを測定し、置き換えます。
+#TEXT,+1 beat,+1 ビート
+#TEXT,-1 beat,-1 ビート
+#TEXT,115200 is what the usual firmware listens at.,通常のファームウェアは 115200 で待ち受けます。
+#TEXT,30 s from playhead,再生ヘッドから 30 s
+#TEXT,"300 units a second, 100ms apart. For a device that takes its time.",毎秒 300 units、間隔 100ms。ゆっくり動くデバイス向けです。
+#TEXT,3D model,3D モデル
+#TEXT,"400 units a second, 50ms apart. A reasonable middle.",毎秒 400 units、間隔 50ms。標準的な中間値です。
+#TEXT,"600 units a second, 20ms apart. For a quick one.",毎秒 600 units、間隔 20ms。速いデバイス向けです。
+#TEXT,600 units/s,600 units/s
+#TEXT,A Bluetooth machine appears here once it is paired in Windows.,Bluetooth 機器は Windows でペアリングするとここに表示されます。
+#TEXT,"A bar for the active script, drawn over the app wherever you place it. Unlock it to drag its ends or its middle.",アクティブなスクリプトのバーです。好きな場所に重ねて表示されます。ロックを解除すると端や中央をドラッグできます。
+#TEXT,"A connection, for firmware that wants one.",接続を必要とするファームウェア向けの接続です。
+#TEXT,A line across the bar at every 10.,バーに 10 ごとに線を引きます。
+#TEXT,"A model of the stroker, driven by every loaded axis at once: stroke, surge, sway, twist, roll and pitch.",ストローカーのモデルです。読み込み済みの全軸 (ストローク、サージ、スウェイ、ツイスト、ロール、ピッチ) で同時に動きます。
+#TEXT,"A plain stroke, or a passage saved from a selection and stamped along the beat.",通常のストローク、または選択範囲から保存してビートに沿って配置するパターンです。
+#TEXT,"A point already sits at the playhead, at %d.",再生ヘッドには既にポイントがあります (%d)。
+#TEXT,A point every,ポイントの間隔
+#TEXT,"A short video of the script for sharing: the video with the simulator, the tracks and the heatmap over it, as an MP4, WebP or GIF.",共有用のスクリプトの短い動画です。動画にシミュレーター、トラック、ヒートマップを重ね、MP4、WebP、GIF で出力します。
+#TEXT,"A strip of the showing tracks, up to four, scrolling past a playhead.",表示中のトラック (最大 4 つ) の帯で、再生ヘッドの下をスクロールします。
+#TEXT,"A video with the sound. Plays everywhere, and uploads to EroScripts as it is.",音声付きの動画です。どこでも再生でき、そのまま EroScripts にアップロードできます。
+#TEXT,Add,追加
+#TEXT,Add another binding.,別の割り当てを追加します。
+#TEXT,Add its tracks,トラックを追加
+#TEXT,Add one from Add in the Tracks panel.,トラックパネルの「追加」から追加できます。
+#TEXT,Address,アドレス
+#TEXT,Adds a track for each axis the project has none for yet: %s.,まだトラックのない各軸にトラックを追加します: %s。
+#TEXT,After (s),後 (s)
+#TEXT,Against the left side of the video.,動画の左側に配置します。
+#TEXT,Against the right side of the video.,動画の右側に配置します。
+#TEXT,All music,すべての音楽
+#TEXT,Alternate,交互
+#TEXT,Amount,量
+#TEXT,An animated image with no sound that loops by itself in a post. Best kept short.,音声なしで自動的にループするアニメーション画像です。短めがおすすめです。
+#TEXT,"An intro, an outro, or a break between songs. Detection skips it and the grid holds the tempo it already had.",イントロ、アウトロ、曲間の休止です。検出では飛ばされ、グリッドは直前のテンポを維持します。
+#TEXT,"An intro, an outro, or a break between songs. Detection skips it and the tempo grid holds the tempo it already had.",イントロ、アウトロ、曲間の休止です。検出では飛ばされ、テンポグリッドは直前のテンポを維持します。
+#TEXT,Animated images of more than 30 seconds get large. MP4 suits long clips.,30 秒を超えるアニメーション画像はサイズが大きくなります。長いクリップには MP4 が適しています。
+#TEXT,Appearance,外観
+#TEXT,Applied to %s.,%s に適用しました。
+#TEXT,Applied to %s. Undo takes it back.,%s に適用しました。元に戻すで取り消せます。
+#TEXT,Apply,適用
+#TEXT,Apply to tempo grid,テンポグリッドに適用
+#TEXT,Armed,待機中
+#TEXT,At playhead,再生ヘッド位置
+#TEXT,At the playhead,再生ヘッドの位置
+#TEXT,Axes,軸
+#TEXT,Axis,軸
+#TEXT,Axis readout,軸の数値表示
+#TEXT,Back 3 seconds.,3 秒戻ります。
+#TEXT,Back to normal speed.,通常の速度に戻します。
+#TEXT,Bass only,低音のみ
+#TEXT,Baud,ボーレート
+#TEXT,Beat fill,ビートで埋める
+#TEXT,Beat ticks,ビート目盛り
+#TEXT,Beats,ビート
+#TEXT,Before using it on yourself:,ご自身で使用する前に:
+#TEXT,Before you connect,接続する前に
+#TEXT,"Below 150Hz, which is usually the kick and the bass line. Reads the audio again.",150Hz 未満 (通常はキックとベースライン) を使用します。音声を再読み込みします。
+#TEXT,Between the first and the last selected point.,最初と最後の選択ポイントの間。
+#TEXT,Border width (px),枠線の幅 (px)
+#TEXT,Both,両方
+#TEXT,Both channels together.,両チャンネルを合わせて使用します。
+#TEXT,Bottom,下
+#TEXT,Bottom focus (%),下側の重視 (%)
+#TEXT,Bottoms stay put and tops come down.,下側は固定し、上側を下げます。
+#TEXT,Camera height (degrees),カメラの高さ (度)
+#TEXT,Camera turn (degrees),カメラの回転 (度)
+#TEXT,Can be changed later under Project > Configure.,後から「プロジェクト > 設定」で変更できます。
+#TEXT,Cancel,キャンセル
+#TEXT,Centre,中央
+#TEXT,Channel,チャンネル
+#TEXT,Chapter,チャプター
+#TEXT,Chapter actions,チャプターの操作
+#TEXT,Check,チェック
+#TEXT,"Checked tracks stay edited along with the track you're on, whichever that is. Same as the checkbox in the track header.",チェックしたトラックは、どのトラックにいても一緒に編集されます。トラックヘッダーのチェックボックスと同じです。
+#TEXT,Choose location...,場所を選択...
+#TEXT,Circle,円
+#TEXT,Classic,クラシック
+#TEXT,Clears the range before filling it. Without this the new points join what is already there.,埋める前に範囲をクリアします。オフにすると新しいポイントは既存のポイントに追加されます。
+#TEXT,"Click an entry to undo back to before it, or to redo up to it.",項目をクリックすると、その前の状態まで元に戻すか、その状態までやり直します。
+#TEXT,"Click to rebind, right click for options.",クリックで割り当て直し、右クリックでオプション。
+#TEXT,"Click to rebind, right click for options. Repeats while held.",クリックで割り当て直し、右クリックでオプション。押している間は繰り返します。
+#TEXT,Close,閉じる
+#TEXT,Closest points (ms),最小間隔 (ms)
+#TEXT,"Confidence %.0f%%.%s%s
+Click to measure again. Detection trims a non-musical intro and outro first, so the downbeat need not be where the chapter begins.","信頼度 %.0f%%。%s%s
+クリックで再測定します。検出では先に音楽のないイントロとアウトロを除くため、ダウンビートがチャプターの始まりにあるとは限りません。"
+#TEXT,Connect,接続
+#TEXT,Could not read the audio. Check that ffmpeg is available and that the media actually has an audio track.,音声を読み込めませんでした。ffmpeg が利用可能か、メディアに音声トラックがあるか確認してください。
+#TEXT,Custom,カスタム
+#TEXT,Cutaway case,カットアウェイケース
+#TEXT,Deadzone,デッドゾーン
+#TEXT,Deepest (%),最深部 (%)
+#TEXT,Delete,削除
+#TEXT,Delete this pattern,このパターンを削除
+#TEXT,Detect tempo and chapters,テンポとチャプターを検出
+#TEXT,"Device playback is new, and has not been tested on every device, firmware or connection type. The motion might not always be what you expect.",デバイス再生は新しい機能で、すべてのデバイス、ファームウェア、接続方式で検証されてはいません。動きが想定どおりにならない場合があります。
+#TEXT,Devices,デバイス
+#TEXT,Discard,破棄
+#TEXT,Disconnect,切断
+#TEXT,Double time (x2),倍速 (x2)
+#TEXT,Double time x2,倍速 x2
+#TEXT,Doubles the tempo.,テンポを2倍にします。
+#TEXT,"Doubles this chapter's tempo, for one read off a pulse half as fast as the beat. Kept when the chapter is measured again.",このチャプターのテンポを2倍にします。ビートの半分の速さのパルスから読み取られた場合用です。チャプターを再測定しても保持されます。
+#TEXT,"Drag the simulator's ends to resize it, or its middle to move it. Click to lock it in place.",シミュレーターの端をドラッグでサイズ変更、中央をドラッグで移動。クリックで位置を固定します。
+#TEXT,"Draw the rod. Hidden, it still strokes and shapes the sleeve, so the vulva and canal can be watched deforming with nothing in the way.",ロッドを描画します。非表示でもストロークやスリーブの変形は行われるため、外陰部と内部の変形を遮るものなしに確認できます。
+#TEXT,Draw the script as a smooth curve through its points instead of straight lines.,ポイント間を直線ではなく滑らかな曲線でスクリプトを描画します。
+#TEXT,Drawing,描画
+#TEXT,Each colour starts at its speed and blends into the next.,各色はその速度から始まり、次の色へと変化します。
+#TEXT,Easing home,ホームへ戻る
+#TEXT,Easter egg,イースターエッグ
+#TEXT,EroScripts,EroScripts
+#TEXT,"Error:
+%s","エラー:
+%s"
+#TEXT,Every axis is off. Pick a motion for at least one.,すべての軸がオフです。少なくとも 1 つの軸に動きを選んでください。
+#TEXT,Every chapter already has the name it would get.,すべてのチャプターは既にその名前になっています。
+#TEXT,"Every chapter with a tempo, skipping the ones marked as having no music.",テンポのあるすべてのチャプター。音楽なしのものは除きます。
+#TEXT,"Every track in the project: show or hide it, choose which are edited, add, load and remove them.",プロジェクト内のすべてのトラック: 表示/非表示、編集対象の選択、追加、読み込み、削除を行います。
+#TEXT,Everything,すべて
+#TEXT,Everything back to its rest position.,すべてを休止位置に戻します。
+#TEXT,Export preview video,プレビュー動画を書き出す
+#TEXT,Export...,書き出し...
+#TEXT,Extend by,拡張量
+#TEXT,Extra line width (px),追加の線の幅 (px)
+#TEXT,Extra lines,追加の線
+#TEXT,Fast,速い
+#TEXT,Faster by a tenth.,1 割速くします。
+#TEXT,Fastest stroke (units/s),最速ストローク (units/s)
+#TEXT,Figure 8,8 の字
+#TEXT,Fill,塗りつぶし
+#TEXT,"Fine adjustment of the same bar line, for when it is out by less than a beat.",同じ小節線の微調整です。ずれが 1 ビート未満のときに使います。
+#TEXT,"Fire and forget, which is what most wifi firmware listens for.",送りっぱなし。ほとんどの Wi-Fi ファームウェアがこの方式で待ち受けます。
+#TEXT,Fit to video,動画に合わせる
+#TEXT,Fixed bottom,下側を固定
+#TEXT,Fixed top,上側を固定
+#TEXT,Follow,追従
+#TEXT,Follow while paused,一時停止中も追従
+#TEXT,"Follows single hits, so one stroke can differ from the next.",個々のヒットに追従するため、ストロークごとに異なる場合があります。
+#TEXT,"Follows the chapter under the playhead, using the tempo recorded on it by detection. Without this the grid holds one tempo for the whole media and has to be reapplied at every track.",再生ヘッド位置のチャプターに追従し、検出で記録されたテンポを使います。オフにするとグリッドはメディア全体で 1 つのテンポを保ち、曲ごとに適用し直す必要があります。
+#TEXT,Follows the shape of the track over a couple of seconds.,数秒単位でトラックの形に追従します。
+#TEXT,Font size,フォントサイズ
+#TEXT,Format,形式
+#TEXT,Forward 3 seconds.,3 秒進みます。
+#TEXT,Four colours at speeds you choose.,指定した速度ごとの 4 色。
+#TEXT,Frame limit (fps),フレーム制限 (fps)
+#TEXT,Frame rate (fps),フレームレート (fps)
+#TEXT,From (units/s),開始 (units/s)
+#TEXT,"From straight above, and from the front, where roll reads and the stroke is posed.",真上から (ロールを確認・ストロークを調整) と正面から。
+#TEXT,From the first to the last selected point.,最初の選択ポイントから最後の選択ポイントまで。
+#TEXT,"From the front, straight on. Roll and sway read best.",正面から。ロールとスウェイが見やすくなります。
+#TEXT,From the side. Pitch and surge read best.,横から。ピッチとサージが見やすくなります。
+#TEXT,"From three quarters, a little above: every axis can be seen, pitch and surge included.",斜め前のやや上から。ピッチとサージを含むすべての軸が見えます。
+#TEXT,Front,前面
+#TEXT,Full HD; the largest file.,フル HD。ファイルサイズが最も大きくなります。
+#TEXT,"Furthest mid stroke: one way going down and the other coming up. With another axis on Follow, the two make a circle.",ストロークの中間で最大: 下りで一方向、上りで逆方向。別の軸を「追従」にすると円を描きます。
+#TEXT,GIF,GIF
+#TEXT,Gentle,穏やか
+#TEXT,Go back to the settings OFS ships with.,OFS の初期設定に戻します。
+#TEXT,Grid,グリッド
+#TEXT,Half time (/2),半分の速さ (/2)
+#TEXT,Half time /2,半分の速さ /2
+#TEXT,Halves the tempo.,テンポを半分にします。
+#TEXT,"Halves this chapter's tempo, for one read off a pulse twice as fast as the beat. Kept when the chapter is measured again.",このチャプターのテンポを半分にします。ビートの2倍の速さのパルスから読み取られた場合用です。チャプターを再測定しても保持されます。
+#TEXT,"Handles on the model to pose it while paused: drag the case for stroke, the ring for twist, the tip for roll and pitch, and the square on the floor for surge and sway. Letting go adds a point at the playhead to each axis you moved. Ctrl drags slowly, Ctrl+Shift snaps to steps of 5. Experimental, so it may change.",一時停止中にモデルを動かすためのハンドルです。ケースでストローク、リングでツイスト、先端でロールとピッチ、床の四角でサージとスウェイを操作します。離すと、動かした各軸の再生ヘッド位置にポイントが追加されます。Ctrl でゆっくりドラッグ、Ctrl+Shift で 5 刻みにスナップします。試験的な機能のため、変更される場合があります。
+#TEXT,Heatmap,ヒートマップ
+#TEXT,Heatmap size,ヒートマップのサイズ
+#TEXT,Height (% of the video),高さ (動画に対する %)
+#TEXT,Height of the waveform. Raise it for quiet audio.,波形の高さです。音声が小さい場合は上げてください。
+#TEXT,Hide this track. Bring it back from the Tracks panel.,このトラックを隠します。トラックパネルから戻せます。
+#TEXT,Hide toolbar,ツールバーを隠す
+#TEXT,Highlight above (units/s),強調表示する速度 (units/s)
+#TEXT,Highlight ring,強調リング
+#TEXT,How OFS looks and how hard it works to draw itself.,OFS の見た目と、描画にかける負荷。
+#TEXT,How a click on the timeline places a point.,タイムラインのクリックでポイントをどう置くか。
+#TEXT,"How far ahead of the stroke the device is told, to cover what the link and the hardware take. Raise it if the device lags behind the script.",通信やハードウェアの遅れを補うため、ストロークをどれだけ先にデバイスへ送るかです。デバイスがスクリプトより遅れる場合は上げてください。
+#TEXT,How far it moves each way from the centre.,中央から各方向への移動量です。
+#TEXT,"How far roll, pitch, surge and sway move the model at the ends of their range. Stroke and twist are not affected. 70 is about how far a real machine moves; 100 is how far the model used to.",軸の範囲の端でロール、ピッチ、サージ、スウェイがモデルを動かす量です。ストロークとツイストには影響しません。70 が実機の動きに近く、100 が従来のモデルの動きです。
+#TEXT,"How long an axis waits, with nothing driving it, before it goes back to its rest position. Nothing drives an axis while the playhead is outside its script, or while playback is paused.",軸を動かすものがない状態で、休止位置に戻るまでの待ち時間です。再生ヘッドがスクリプトの範囲外にあるときや再生が一時停止中のときは、軸は動かされません。
+#TEXT,How long it takes getting there.,そこへ到達するまでの時間です。
+#TEXT,How much of its depth the quietest passage of the selection keeps. The loudest always keeps all of it.,選択範囲で最も静かな部分が保つ深さの割合です。最も大きな部分は常に全体を保ちます。
+#TEXT,How much of the motion gathers at the bottom of the stroke. 0 moves as much at the top as at the bottom; 100 does not move at the top at all.,動きをストロークの下側にどれだけ集めるかです。0 は上下とも同じだけ動き、100 は上側では全く動きません。
+#TEXT,How much of the video's height the simulator takes up.,シミュレーターが動画の高さに占める割合です。
+#TEXT,"How often a line of TCode goes out. 10ms is a hundred a second, which is what the firmware expects to be fed.",TCode の行を送信する頻度です。10ms は毎秒 100 回で、ファームウェアが想定する送信頻度です。
+#TEXT,"How scripts are drawn on the timeline, and where points land when placed with the mouse. The timeline's right click menu has the most used of these too.",タイムラインでのスクリプトの描き方と、マウスで置いたポイントの位置。よく使うものはタイムラインの右クリックメニューにもあります。
+#TEXT,"How stiff the rod is. Stiff, it keeps its shape and the sleeve gives way around it, shaded darker where it is pressed hardest. At 0 it bends to follow every lean, as it used to.",ロッドの硬さです。硬いと形を保ち、スリーブがその周りでへこみ、強く押された部分ほど暗く表示されます。0 では従来どおり傾きに合わせて曲がります。
+#TEXT,How video is decoded. A change here takes effect once OFS is restarted.,動画のデコード方法。変更は OFS の再起動後に反映されます。
+#TEXT,"I understand, connect",理解しました。接続する
+#TEXT,ImGui Demo,ImGui デモ
+#TEXT,In the middle of the video.,動画の中央に配置します。
+#TEXT,Insert offset (ms),挿入オフセット (ms)
+#TEXT,Intiface,Intiface
+#TEXT,Isolate point at playhead,再生ヘッドのポイントを分離
+#TEXT,"Keep the power switch, or Stop the devices, within reach.",電源スイッチ、または「デバイスを停止」をすぐ操作できるようにしてください。
+#TEXT,Keep the preview in the scripts.,プレビューをスクリプトに残します。
+#TEXT,"Keep the simulator inside the video player, sized to it, and follow the player as its window is moved or resized. Moving or resizing the simulator by hand turns this off.",シミュレーターを動画プレーヤー内にサイズを合わせて配置し、ウィンドウの移動やサイズ変更に追従させます。シミュレーターを手動で移動・サイズ変更するとオフになります。
+#TEXT,Keep this tempo,このテンポを維持
+#TEXT,"Keep where every panel is, and which are open, under a name.",各パネルの位置と開閉状態を名前を付けて保存します。
+#TEXT,"Keeps the selected points as a shape measured in beats, to stamp at any tempo.",選択したポイントをビート単位の形として保存し、任意のテンポで配置できるようにします。
+#TEXT,Layouts,レイアウト
+#TEXT,Leaning left and right.,左右の傾き。
+#TEXT,Leaves this axis as it is.,この軸はそのままにします。
+#TEXT,Left,左
+#TEXT,Length,長さ
+#TEXT,Limits,制限
+#TEXT,Line colours,線の色
+#TEXT,Line width (px),線の幅 (px)
+#TEXT,"Lines continuing past both ends of the bar, 10 apart.",バーの両端の外側に伸びる線 (10 間隔)。
+#TEXT,Lines faster than this are drawn in the highlight colour instead of their speed colour.,これより速い線は、速度の色ではなく強調表示の色で描画されます。
+#TEXT,"Lines go out from the frame loop, so the interval above is a floor: the app cannot send more often than it draws.",行はフレームループから送信されるため、上の間隔は下限です。描画より頻繁には送信できません。
+#TEXT,"Lines, points, spline, the playhead line, position rounding, and the waveform's height and colour.",線、ポイント、スプライン、再生ヘッドの線、位置の丸め、波形の高さと色。
+#TEXT,"List each axis that has a script, with its current value, beside the model.",スクリプトのある各軸とその現在値をモデルの横に一覧表示します。
+#TEXT,"Lists the strokes a device cannot follow, and slows them down.",デバイスが追従できないストロークを一覧表示し、速度を下げます。
+#TEXT,"Lists the strokes a device cannot follow: too fast to keep up with, too close together to tell apart, long stretches with nothing in them, and points past the end of the media.",デバイスが追従できないストロークを一覧表示します: 速すぎるもの、近すぎて区別できないもの、何もない長い区間、メディアの終了後にあるポイント。
+#TEXT,Load a video or audio file first.,先に動画または音声ファイルを読み込んでください。
+#TEXT,Load...,読み込む...
+#TEXT,Lock,ロック
+#TEXT,Longest gap (s),最長の空白 (s)
+#TEXT,Look for devices,デバイスを検索
+#TEXT,Loudness,音量
+#TEXT,MP4,MP4
+#TEXT,Machine,機種
+#TEXT,Make waveform,波形を作成
+#TEXT,"Mark the previous and next point on the bar, with their positions.",前後のポイントとその位置をバーに表示します。
+#TEXT,"Mark which way the front of the case faces, so twist can be read at a glance.",ケースの正面の向きを示し、ツイストをひと目で確認できるようにします。
+#TEXT,"Marked as having no music. Click to measure it anyway, which clears the mark.",音楽なしに設定されています。クリックすると測定し、この設定を解除します。
+#TEXT,"Marks along the bottom of the track where a hit lands, found from the same audio as the waveform.",ヒットのある位置を示すトラック下部のマーク。波形と同じ音声から検出します。
+#TEXT,Measure all chapters leaves a kept tempo alone. Measuring this chapter on its own still replaces it.,「すべてのチャプターを測定」では維持されたテンポは変更されません。このチャプターだけを測定すると置き換えられます。
+#TEXT,Measure this chapter,このチャプターを測定
+#TEXT,Measure this chapter's tempo from the audio waveform.,音声波形からこのチャプターのテンポを測定します。
+#TEXT,Measured playback speed. It falls below the set speed when the video cannot be decoded fast enough to keep up.,実測の再生速度です。動画のデコードが追いつかない場合、設定速度より低くなります。
+#TEXT,"Measures every chapter that is not marked as having no music, over the bounds you set. A chapter whose tempo cannot be read is left as it was.",音楽なしでないすべてのチャプターを、設定した範囲で測定します。テンポが読み取れないチャプターはそのままです。
+#TEXT,Measures this chapter's tempo from the audio. The Chapters window can measure all of them at once.,音声からこのチャプターのテンポを測定します。チャプターウィンドウでは全チャプターを一度に測定できます。
+#TEXT,Middle,中間
+#TEXT,Mode,モード
+#TEXT,Model scale,モデルのスケール
+#TEXT,Motion,動き
+#TEXT,"Moves the device as you scrub, instead of only while playing.",再生中だけでなく、シーク操作中もデバイスを動かします。
+#TEXT,"Moves the motion along the stroke. 180 is half a stroke, so a peak at the bottom moves to the top.",ストローク上で動きをずらします。180 はストロークの半分なので、下にあるピークが上に移ります。
+#TEXT,Moves the other way.,逆方向に動きます。
+#TEXT,"Moves this chapter's end to the playhead, carrying the start of the chapter after it along when the two meet.",このチャプターの終了を再生ヘッドに移動します。次のチャプターの開始と重なる場合は一緒に移動します。
+#TEXT,"Moves this chapter's start to the playhead, carrying the end of the chapter before it along when the two meet.",このチャプターの開始を再生ヘッドに移動します。前のチャプターの終了と重なる場合は一緒に移動します。
+#TEXT,Multi-axis,多軸
+#TEXT,Mute.,ミュート。
+#TEXT,Muted,ミュート
+#TEXT,Name,名前
+#TEXT,"Names every chapter from where it falls and its tempo: Track 1 - 120 BPM, Intro, Outro or Break. Shows what will change before anything does.",位置とテンポから全チャプターに名前を付けます (Track 1 - 120 BPM、Intro、Outro、Break)。変更前に内容を表示します。
+#TEXT,Names typed by hand are replaced too. This cannot be undone.,手入力した名前も置き換えられます。元に戻せません。
+#TEXT,Nearest 10,10 単位
+#TEXT,Nearest 25,25 単位
+#TEXT,Nearest 5,5 単位
+#TEXT,New file...,新規ファイル...
+#TEXT,New script without video...,動画なしの新規スクリプト...
+#TEXT,Next frame. Only while paused.,次のフレーム。一時停止中のみ。
+#TEXT,"No chapters yet, so there is no tempo to follow.",チャプターがまだないため、追従するテンポがありません。
+#TEXT,"No chapters yet. Detect tracks and chapters, above, splits the media where the music starts, stops or changes tempo, and measures each part. A chapter can also be started by hand at the playhead with the Create chapter binding, found in Options > Keys.",チャプターはまだありません。上の「トラックとチャプターを検出」で、音楽の開始・停止・テンポ変化の位置でメディアを分割し、各部分を測定します。「オプション > キー」にある「チャプターを作成」の割り当てで、再生ヘッドから手動でチャプターを開始することもできます。
+#TEXT,No saved layouts yet,保存されたレイアウトはまだありません
+#TEXT,No serial ports found.,シリアルポートが見つかりません。
+#TEXT,Note,音符
+#TEXT,Note length between points. A point every quarter note is a stroke every two beats.,ポイント間の音符の長さです。4 分音符ごとにポイントを置くと、2 ビートごとに 1 ストロークになります。
+#TEXT,Note spacing,音符の間隔
+#TEXT,Nothing found. The audio may have no steady beat.,見つかりませんでした。音声に一定のビートがない可能性があります。
+#TEXT,Nothing selected in %s,%s では何も選択されていません
+#TEXT,Nothing selected in the %d edited lanes,編集中の %d レーンでは何も選択されていません
+#TEXT,"Nothing to report in ""%s"".","""%s"" に報告する問題はありません。"
+#TEXT,"Nothing to undo yet. Each edit is listed here as it is made, newest first, with repeats of the same edit counted together.",元に戻す操作はまだありません。編集のたびに新しい順でここに表示され、同じ編集の繰り返しはまとめて数えられます。
+#TEXT,"Of each pair too close together, keeps the one that leaves the shape closer to what it was.",近すぎる 2 点のうち、形が元に近くなる方を残します。
+#TEXT,Off,オフ
+#TEXT,Offset (s),オフセット (s)
+#TEXT,One,単色
+#TEXT,"One light grey, whatever the speed.",速度に関係なく薄いグレー 1 色。
+#TEXT,"One point, at %.3f s and %d.",ポイント 1 個 (%.3f s、%d)。
+#TEXT,One way at the bottom of each stroke and the other way at the top.,各ストロークの下で一方向、上で逆方向。
+#TEXT,One way at the bottom of one stroke and the other way at the bottom of the next.,あるストロークの下で一方向、次のストロークの下で逆方向。
+#TEXT,"Only the stroke axis is loaded, so the model only moves up and down. Add .surge, .sway, .twist, .roll or .pitch scripts to the project, from Project > Add, to drive the rest.",ストローク軸のみ読み込まれているため、モデルは上下にしか動きません。残りを動かすには「プロジェクト > 追加」から .surge、.sway、.twist、.roll、.pitch スクリプトを追加してください。
+#TEXT,Opacity,不透明度
+#TEXT,Open a video or a script to see its tracks.,トラックを表示するには動画またはスクリプトを開いてください。
+#TEXT,Open a video or audio file to generate its waveform.,波形を生成するには動画または音声ファイルを開いてください。
+#TEXT,Open the Chapters window,チャプターウィンドウを開く
+#TEXT,Open the folder translations are loaded from.,翻訳ファイルを読み込むフォルダーを開きます。
+#TEXT,OpenFunscripter - Sashimi Edition,OpenFunscripter - Sashimi Edition
+#TEXT,"Opens the Chapters window, where the tempo of each chapter is detected, checked and corrected.",チャプターウィンドウを開きます。ここで各チャプターのテンポを検出、確認、修正できます。
+#TEXT,"Or type it: COM3, or a device path on Linux.",または入力: COM3、Linux ではデバイスのパス。
+#TEXT,"Outline the opening of the vulva where it comes round, inside the lips.",陰唇の内側で、外陰部の開口部の縁を輪郭で示します。
+#TEXT,Over (s),期間 (s)
+#TEXT,"Over the network, to a machine on wifi. Which of UDP and TCP, and which port, is whatever its firmware was set up for.",ネットワーク経由で Wi-Fi 上の機器に接続します。UDP か TCP か、どのポートかは機器のファームウェアの設定によります。
+#TEXT,Pause to place a point at any position with a slider.,一時停止すると、スライダーで任意の位置にポイントを置けます。
+#TEXT,Pause to pose,一時停止してポーズ
+#TEXT,Pause.,一時停止。
+#TEXT,Peak offset,ピークのオフセット
+#TEXT,Performance,パフォーマンス
+#TEXT,Pitch,ピッチ
+#TEXT,"Places a point at the playhead with this position, through the current scripting mode.",現在のスクリプト作成モードで、この位置のポイントを再生ヘッドに置きます。
+#TEXT,Plain,プレーン
+#TEXT,Play.,再生。
+#TEXT,Playback speed. Type one and press Enter.,再生速度。入力して Enter を押してください。
+#TEXT,Plays the script on a real device through Intiface Central.,Intiface Central を通じて実際のデバイスでスクリプトを再生します。
+#TEXT,Port,ポート
+#TEXT,Pose with handles (experimental),ハンドルで操作 (試験的)
+#TEXT,"Positive pushes every stroke's top up and bottom down by this much, negative pulls them in towards the middle.",正の値は各ストロークの上端をこの分だけ上げ、下端を下げます。負の値は中央へ寄せます。
+#TEXT,Presets,プリセット
+#TEXT,Preview,プレビュー
+#TEXT,Preview video,プレビュー動画
+#TEXT,"Preview writes %s from %.2f s to %.2f s, replacing what is there and adding a script for any axis the project does not have. Nothing is kept until you apply it.",プレビューは %s を %.2f s〜%.2f s に書き込み、既存の内容を置き換え、プロジェクトにない軸のスクリプトを追加します。適用するまで何も保持されません。
+#TEXT,"Previewing, not applied yet.",プレビュー中。まだ適用されていません。
+#TEXT,Previous frame. Only while paused.,前のフレーム。一時停止中のみ。
+#TEXT,"Pulls each point that arrives too soon back towards the one before it, which shortens the stroke and leaves its timing alone.",早すぎるポイントを前のポイント側へ引き寄せます。タイミングは変えずにストロークを短くします。
+#TEXT,Puppet recording,パペット記録
+#TEXT,"Puppet recording: hold a handle on the 3D simulator while the video plays, and every axis it moves is recorded until you let go.",パペット記録: 動画の再生中に 3D シミュレーターのハンドルを押さえると、離すまで動かした全軸が記録されます。
+#TEXT,"Pushes the top of every stroke in a selection up and its bottom down by the same amount, keeping the timing. Negative values pull them in towards the middle.",選択範囲内の各ストロークの上端を上げ、下端を同じだけ下げます。タイミングは保持されます。負の値は中央へ寄せます。
+#TEXT,Pushes the top of every stroke in a selection up and its bottom down.,選択範囲内の各ストロークの上端を上げ、下端を下げます。
+#TEXT,"Put every panel back where a fresh install has it, and show the panels it shows.",すべてのパネルを初期インストール時の位置と表示状態に戻します。
+#TEXT,"Put every panel back where it was when this layout was saved, and show the same panels.",すべてのパネルをこのレイアウトの保存時の位置と表示状態に戻します。
+#TEXT,Put the simulator back in the middle of the window.,シミュレーターをウィンドウの中央に戻します。
+#TEXT,"Puts a bar line exactly on the playhead. Park it on a beat you can hear and the whole grid lines up from there, which is quicker than arguing with the offset when detection has the wrong beat.",小節線を再生ヘッドの位置に合わせます。聞き取れるビートに合わせればグリッド全体がそこから揃います。検出が誤ったビートを拾ったときは、オフセットを調整するより早く済みます。
+#TEXT,Quietest keeps (%),最も静かな部分の保持率 (%)
+#TEXT,"Raise it to remove more points. A point goes when the line between its neighbours passes within this distance of it, scaled to how far apart the selected points are.",上げるほど多くのポイントを削除します。隣り合うポイントを結ぶ線がこの距離以内を通るポイントが削除されます (選択ポイントの間隔に応じて調整)。
+#TEXT,"Raises the viewpoint. 0 looks straight on. Raise it to tip the underside into view, which is where the orifice is.",視点を上げます。0 は正面からの視点です。上げると、開口部のある下側が見えるようになります。
+#TEXT,Range,範囲
+#TEXT,Range extend,範囲を拡張
+#TEXT,Reaction offset (ms),反応オフセット (ms)
+#TEXT,Reading the audio...,音声を読み込み中...
+#TEXT,"Reads the audio once, which is what the loudness is taken from.",音量を取得するため、音声を一度読み込みます。
+#TEXT,Record,録画
+#TEXT,Record armed,録画待機中
+#TEXT,Record motion with the model's handles while the video plays. Click to arm.,動画の再生中にモデルのハンドルで動きを録画します。クリックで待機。
+#TEXT,Recording,録画中
+#TEXT,"Recording is armed. While the video plays, hold a handle on the model and move it: every axis it moves is recorded until you let go, over the points already there. Escape throws a take away. Click to disarm.",録画は待機中です。動画の再生中にモデルのハンドルを押さえて動かすと、動かした軸がすべて離すまで録画され、既存のポイントを上書きします。Escape でテイクを破棄。クリックで待機を解除。
+#TEXT,Records the position from a game controller's stick while the video plays.,動画の再生中に、ゲームコントローラーのスティックで位置を記録します。
+#TEXT,"Records the position from the mouse, moved up and down over the simulator.",シミュレーター上でマウスを上下に動かして位置を記録します。
+#TEXT,Remove,削除
+#TEXT,Remove %s from the project?,%s をプロジェクトから削除しますか?
+#TEXT,Remove the near half of the case so the sleeve inside is visible.,ケースの手前半分を取り除き、内部のスリーブを表示します。
+#TEXT,Remove track?,トラックを削除しますか?
+#TEXT,Removes the points in a selection that add least to its shape (Ramer-Douglas-Peucker).,選択範囲内で形への影響が最も少ないポイントを削除します (Ramer-Douglas-Peucker)。
+#TEXT,"Removes the points in a selection that add least to its shape. The higher epsilon goes, the more are removed.",選択範囲内で形への影響が最も少ないポイントを削除します。イプシロンが大きいほど多く削除されます。
+#TEXT,Rename,名前を変更
+#TEXT,Rename %d chapter?,%d 個のチャプターの名前を変更しますか?
+#TEXT,Rename %d chapters?,%d 個のチャプターの名前を変更しますか?
+#TEXT,Rename chapters,チャプター名を変更
+#TEXT,Rename chapters...,チャプター名を変更...
+#TEXT,Replace what is there,既存の内容を置き換える
+#TEXT,Replaces the layout saved with this name.,この名前で保存されたレイアウトを置き換えます。
+#TEXT,Reset to default layout,既定のレイアウトに戻す
+#TEXT,Reverse,反転
+#TEXT,Right,右
+#TEXT,Rod stiffness (%),ロッドの硬さ (%)
+#TEXT,Roll,ロール
+#TEXT,"Rotates the grid back by one beat, for when the bar lines are landing on the wrong beat of the bar.",小節線が小節内の誤ったビートに来ている場合に、グリッドを 1 ビート戻します。
+#TEXT,"Rotates the grid on by one beat, for when the bar lines are landing on the wrong beat of the bar.",小節線が小節内の誤ったビートに来ている場合に、グリッドを 1 ビート進めます。
+#TEXT,Round position,位置を丸める
+#TEXT,"Round the corners of windows, buttons, tabs and timeline lanes, in any theme. Off gives the square look of the original OFS.",ウィンドウ、ボタン、タブ、タイムラインのレーンの角を丸くします (全テーマ共通)。オフにすると元の OFS の四角い見た目になります。
+#TEXT,Rounded corners,角を丸くする
+#TEXT,"Rounds the position, up and down, of points placed or dragged with the mouse.",マウスで配置・ドラッグしたポイントの上下位置を丸めます。
+#TEXT,"Rounds the position, up and down, of points placed or dragged with the mouse: off, or to the nearest 5, 10 or 25.",マウスで配置・ドラッグしたポイントの上下位置を丸めます: オフ、または 5、10、25 単位。
+#TEXT,Sashimi,Sashimi
+#TEXT,Save,保存
+#TEXT,Save current layout...,現在のレイアウトを保存...
+#TEXT,Save layout,レイアウトを保存
+#TEXT,Save selection as a pattern,選択範囲をパターンとして保存
+#TEXT,Save text to translate,翻訳用テキストを保存
+#TEXT,Saved %s,%s を保存しました
+#TEXT,Scale with stroke length,ストロークの長さに比例
+#TEXT,Scales the selected strokes by how loud the audio is under them.,選択したストロークを、その部分の音声の大きさに応じてスケーリングします。
+#TEXT,"Scales the selected strokes by how loud the audio is under them. Quiet passages end up shallower, loud ones keep their full depth.",選択したストロークを、その部分の音声の大きさに応じてスケーリングします。静かな部分は浅く、大きな部分は深さをそのまま保ちます。
+#TEXT,"Scans the audio, lays a chapter over each track and measures its tempo. The grid then follows whichever chapter the playhead is in.",音声をスキャンし、各曲にチャプターを置いてテンポを測定します。グリッドは再生ヘッドのあるチャプターに追従します。
+#TEXT,"Scans the whole audio, splits it where the tempo changes -- usually one track ending and the next starting -- and lays a chapter over each stretch.",音声全体をスキャンし、テンポが変わる所（たいてい曲の切り替わり）で分割して、各区間にチャプターを置きます。
+#TEXT,Script,スクリプト
+#TEXT,Script check,スクリプトチェック
+#TEXT,"Script to a length you pick, with no media to open.",メディアを開かずに、指定した長さのスクリプトを作成します。
+#TEXT,Sections,セクション
+#TEXT,Select at least 5 points to use it. %u selected.,使用するには 5 個以上のポイントを選択してください。%u 個選択中。
+#TEXT,"Select the stroke points to follow, at least 3. %u selected.",追従するストロークのポイントを 3 個以上選択してください。%u 個選択中。
+#TEXT,Selection,選択範囲
+#TEXT,Send ahead by (ms),先行送信 (ms)
+#TEXT,Send every (ms),送信間隔 (ms)
+#TEXT,Sends the playhead here and selects the points.,再生ヘッドをここに移動し、ポイントを選択します。
+#TEXT,Sends this axis upside down.,この軸を上下反転して送信します。
+#TEXT,Serial,シリアル
+#TEXT,Set tempo (BPM),テンポを設定 (BPM)
+#TEXT,"Sets the tempo grid from this chapter's BPM, for when the grid is not set to follow chapters on its own.",このチャプターの BPM からテンポグリッドを設定します。グリッドがチャプターへの追従に設定されていない場合に使います。
+#TEXT,Shallowest (%),最も浅い部分 (%)
+#TEXT,Shift (degrees),シフト (度)
+#TEXT,"Shorter strokes move less, in proportion to the longest stroke selected.",短いストロークほど動きが小さくなります (選択内で最長のストロークに比例)。
+#TEXT,Show,表示
+#TEXT,Show in folder,フォルダーで表示
+#TEXT,Show rod,ロッドを表示
+#TEXT,Shown in the timeline.,タイムラインに表示されます。
+#TEXT,"Shows the toolbar's tab. Drag the tab to dock the toolbar somewhere else, such as the right side, or out on its own.",ツールバーのタブを表示します。タブをドラッグすると、右側など別の場所にドッキングしたり、独立させたりできます。
+#TEXT,Shrink towards,縮める方向
+#TEXT,Side,側面
+#TEXT,Simplify,簡略化
+#TEXT,Simplify...,簡略化...
+#TEXT,Simulator,シミュレーター
+#TEXT,Size of the model relative to the simulator's length.,シミュレーターの長さに対するモデルの大きさです。
+#TEXT,Slow the fast ones down,速いものを遅くする
+#TEXT,"Slow to fast in soft grey, teal, amber and red, for long sessions.",長時間の作業向けに、遅い〜速いを薄いグレー、ティール、アンバー、赤で表示します。
+#TEXT,Slower by a tenth.,1 割遅くします。
+#TEXT,Small and quick.,小さく速く。
+#TEXT,Snap,スナップ
+#TEXT,Snap to beats,ビートにスナップ
+#TEXT,Snapping,スナップ
+#TEXT,"Snaps points placed or dragged with the mouse onto a beat tick when one is close, ahead of the grid. Needs the waveform and its beat ticks.",マウスで配置・ドラッグしたポイントを、近くにあるビート目盛りにスナップします (グリッドより優先)。波形とビート目盛りが必要です。
+#TEXT,"Snaps points placed or dragged with the mouse onto a beat tick, a hit found in the waveform, when one is close. Ahead of the grid. Needs the waveform and its beat ticks showing.",マウスで配置・ドラッグしたポイントを、近くにあるビート目盛り (波形から検出したヒット) にスナップします。グリッドより優先されます。波形とビート目盛りの表示が必要です。
+#TEXT,Snaps points placed or dragged with the mouse onto the grid of the current mode. Hold Alt to place one point off the grid.,マウスで配置・ドラッグしたポイントを現在のモードのグリッドにスナップします。Alt を押しながら置くとグリッド外に 1 点置けます。
+#TEXT,"Snaps points placed or dragged with the mouse onto the grid of the current mode: frames, or the tempo grid's division. Hold Alt to place one point off the grid.",マウスで配置・ドラッグしたポイントを現在のモードのグリッド (フレーム、またはテンポグリッドの分割) にスナップします。Alt を押しながら置くとグリッド外に 1 点置けます。
+#TEXT,"Spacing of the tempo grid's lines, as a note length.",テンポグリッドの線の間隔（音符の長さ）。
+#TEXT,"Spacing of the tempo grid's lines: 1/4 is a line every quarter note, 1/8 every eighth note, and so on. At this tempo, a line every %.0f ms.",テンポグリッドの線の間隔です。1/4 は 4 分音符ごと、1/8 は 8 分音符ごとに線を引きます。このテンポでは %.0f ms ごとに線が引かれます。
+#TEXT,Speed,速度
+#TEXT,Start at the bottom,下から始める
+#TEXT,Start with a low speed limit and narrow travel limits.,低い速度制限と狭い移動範囲の制限から始めてください。
+#TEXT,"Starting points, not a promise about any particular device. Check what yours does and set the numbers to match.",あくまで目安で、特定のデバイスでの動作を保証するものではありません。お使いのデバイスの動きを確認し、数値を合わせてください。
+#TEXT,"Stepping through video, and what happens when a project is created.",動画のコマ送りと、プロジェクト作成時の動作。
+#TEXT,Stop the devices,デバイスを停止
+#TEXT,"Straight down a serial port. A machine on USB is one of these, and so is one paired over Bluetooth, which Windows gives a port of its own.",シリアルポートに直接接続します。USB 接続の機器や、Bluetooth でペアリングした機器 (Windows が専用ポートを割り当てます) が該当します。
+#TEXT,Stroke,ストローク
+#TEXT,Stroke hard and fast for long enough and the rod finishes inside the sleeve. Best seen with the cutaway on.,激しく速いストロークを十分に続けると、ロッドがスリーブ内でフィニッシュします。カットアウェイをオンにすると見やすくなります。
+#TEXT,Stroke lower limit (%),ストロークの下限 (%)
+#TEXT,Stroke upper limit (%),ストロークの上限 (%)
+#TEXT,Strokes shrink towards the middle of the selection.,ストロークを選択範囲の中央へ縮めます。
+#TEXT,Surge,サージ
+#TEXT,"Swap the two ends, so 100 is drawn where 0 was.",両端を入れ替え、0 の位置に 100 を描画します。
+#TEXT,Sway,スウェイ
+#TEXT,"Swings twice per stroke, crossing over at the bottom and the top, so against the stroke it traces a figure eight. Raise bottom focus for a grind at the bottom.",1ストロークで2回振れ、下と上で交差するため、ストロークと合わせて 8 の字を描きます。下で擦るには下側の重点を上げます。
+#TEXT,Switch the simulator to 3D to see the model's handles.,モデルのハンドルを表示するには、シミュレーターを 3D に切り替えてください。
+#TEXT,TCP,TCP
+#TEXT,"TCode %s, driven by the %s script. %s",TCode %s (%s スクリプトで駆動)。%s
+#TEXT,"TCode down a serial port: a machine on USB, or one paired over Bluetooth.",シリアルポート経由の TCode: USB 接続の機器、または Bluetooth でペアリングした機器。
+#TEXT,"TCode over the network, to a machine on wifi.",ネットワーク経由の TCode、wifi 上の機器へ。
+#TEXT,"Take the preview back out, leaving the scripts as they were.",プレビューを取り消し、スクリプトを元の状態に戻します。
+#TEXT,Target speed (units/s),目標速度 (units/s)
+#TEXT,Tempo (BPM),テンポ (BPM)
+#TEXT,Text,テキスト
+#TEXT,"The BPM is this chapter's. Typing one above sets it on the chapter by hand, which measuring all chapters leaves alone; or count it half or double time below.",BPM はこのチャプターのものです。上に入力するとチャプターに手動で設定され、「すべてのチャプターを測定」でも変更されません。下で半分または倍の速さに数え直すこともできます。
+#TEXT,"The added point goes to the bottom, so each click draws a stroke down and back up.",追加するポイントは下に置かれるため、クリックごとに下がって戻るストロークになります。
+#TEXT,"The added point goes to the top, so each click draws a stroke up and back down.",追加するポイントは上に置かれるため、クリックごとに上がって戻るストロークになります。
+#TEXT,"The chapter under the playhead, at the tempo measured for it.",再生ヘッドのあるチャプター、測定済みのテンポで。
+#TEXT,The chapter under the playhead.,再生ヘッド位置のチャプター。
+#TEXT,The colour of the rod in the 3D model.,3D モデルのロッドの色です。
+#TEXT,"The colours of the heatmap here and on EroScripts, from cyan through red to violet.",ここと EroScripts でのヒートマップの色 (シアンから赤、紫へ)。
+#TEXT,The current position as a number in the middle of the bar.,バーの中央に現在位置を数値で表示します。
+#TEXT,"The fastest this axis may move, in percent of its travel a second. Off lets the script ask for whatever it likes.",この軸の最高速度 (1 秒あたりの移動範囲に対する %)。オフにするとスクリプトの指示どおりに動きます。
+#TEXT,"The file stays on disk, but changes that weren't saved
+to it or exported are lost. This can't be undone.","ファイルはディスクに残りますが、保存または書き出し
+していない変更は失われます。元に戻せません。"
+#TEXT,The left channel alone. For binaural audio with the stroking sounds on one side and voices on the other. Reads the audio again.,左チャンネルのみ。片側にストローク音、もう片側に声があるバイノーラル音声向けです。音声を再読み込みします。
+#TEXT,"The model from the camera, as set above.",上で設定したカメラから見たモデル。
+#TEXT,"The only track showing, so it stays.",表示中の唯一のトラックなので残ります。
+#TEXT,"The original OpenFunscripter's: white, green, yellow, red.",元の OpenFunscripter の配色: 白、緑、黄、赤。
+#TEXT,The part of the device's travel the script is mapped into.,スクリプトを割り当てるデバイスの移動範囲です。
+#TEXT,The playhead is before the first point. Move past it to measure the stroke it is in.,再生ヘッドが最初のポイントより前にあります。ストロークを測定するには、その先へ移動してください。
+#TEXT,"The playhead is between chapters, so the grid keeps the last tempo it had.",再生ヘッドがチャプターの間にあるため、グリッドは直前のテンポを維持します。
+#TEXT,The project's first script is the stroke.,プロジェクトの最初のスクリプトがストロークです。
+#TEXT,The right channel alone. Reads the audio again.,右チャンネルのみ。音声を再読み込みします。
+#TEXT,"The row of mode, grid, snap and simulator choices under the menu bar. Hidden, the Mode panel and the Simulator window show the same choices.",メニューバーの下にある、モード、グリッド、スナップ、シミュレーターの選択欄です。非表示の場合は、モードパネルとシミュレーターウィンドウで同じ選択ができます。
+#TEXT,"The same as WebP for places that only take GIF. Larger, and fewer colours.",GIF のみに対応した場所向けで、WebP と同じ内容です。サイズが大きく、色数が少なくなります。
+#TEXT,The selected points are not on the stroke script.,選択したポイントはストロークのスクリプト上にありません。
+#TEXT,"The simulator as you have it set up: the 3D model, or the bar in 2D.",現在の設定のシミュレーター: 3D モデル、または 2D のバー。
+#TEXT,"The simulator is fixed in place. Click to unlock it, then drag its ends to resize it or its middle to move it.",シミュレーターは固定されています。クリックで解除し、端をドラッグでサイズ変更、中央で移動します。
+#TEXT,The usual size for a post.,投稿に一般的なサイズです。
+#TEXT,The whole mix.,ミックス全体。
+#TEXT,"The whole script's heatmap along the bottom, with a mark at the moment shown.",下部にスクリプト全体のヒートマップを表示し、表示中の位置にマークを付けます。
+#TEXT,Theme,テーマ
+#TEXT,Thin out the close ones,近すぎるものを間引く
+#TEXT,This action has no binding yet.,この操作にはまだ割り当てがありません。
+#TEXT,This script has no picture to show; the preview has a plain background.,このスクリプトには表示する映像がありません。プレビューは無地の背景になります。
+#TEXT,"This script has no points yet. Once it does, the stroke under the playhead is measured here.",このスクリプトにはまだポイントがありません。ポイントを追加すると、再生ヘッド位置のストロークをここで測定します。
+#TEXT,"Through Intiface Central, which holds the bluetooth connection.",Bluetooth 接続を保持する Intiface Central 経由。
+#TEXT,"Through Intiface Central, which holds the bluetooth connection. Start its server, then connect here.",Bluetooth 接続を管理する Intiface Central を経由します。サーバーを起動してから、ここで接続してください。
+#TEXT,Tilt and slide range (%),傾き・スライドの範囲 (%)
+#TEXT,Tilting forwards and back.,前後の傾き。
+#TEXT,Timeline,タイムライン
+#TEXT,Timeline settings...,タイムラインの設定...
+#TEXT,Tolerance,許容値
+#TEXT,Toolbar,ツールバー
+#TEXT,Top,上
+#TEXT,Top + front,上 + 正面
+#TEXT,Top + side,上 + 横
+#TEXT,Tops stay put and bottoms come up.,上側は固定し、下側を上げます。
+#TEXT,Tracks,トラック
+#TEXT,Try it first with nobody attached.,まずは誰も装着していない状態で試してください。
+#TEXT,Try reloading,再読み込みしてみてください
+#TEXT,Turning around the length of the sleeve.,スリーブの長さ方向を軸とした回転。
+#TEXT,Turns on the axes this machine has and turns off the rest. Limits stay as you set them. Turning axes on or off by hand makes it Custom.,この機種にある軸をオンにし、それ以外をオフにします。制限は設定したままです。手動で軸をオン/オフするとカスタムになります。
+#TEXT,Turns the viewpoint around the model. Hold Alt and drag over the model to turn it by hand.,モデルの周りで視点を回転させます。Alt を押しながらモデル上をドラッグすると手動で回転できます。
+#TEXT,Twist,ツイスト
+#TEXT,Twist direction,ツイストの方向
+#TEXT,"Two views in its place: from straight above, where surge, sway and twist read and are posed, and from the side, where pitch reads and the stroke is posed.",2 つの視点で表示: 真上から (サージ、スウェイ、ツイストを確認・操作) と横から (ピッチを確認・ストロークを操作)。
+#TEXT,Type this chapter's tempo. Measure all chapters then leaves it alone.,このチャプターのテンポを入力します。「すべてのチャプターを測定」でも変更されなくなります。
+#TEXT,Typical,標準
+#TEXT,UDP,UDP
+#TEXT,Unmute.,ミュート解除。
+#TEXT,Up and down,上下
+#TEXT,Video,動画
+#TEXT,View,表示
+#TEXT,"View > Toolbar brings it back. With it hidden,
+the Mode panel shows the mode and grid choices.","「表示 > ツールバー」で再表示できます。非表示の間は
+モードパネルにモードとグリッドの選択が表示されます。"
+#TEXT,Views,ビュー
+#TEXT,Volume  %.2f,音量  %.2f
+#TEXT,Waveform height,波形の高さ
+#TEXT,Waveform of,波形の対象
+#TEXT,WebP,WebP
+#TEXT,What the lines between points are coloured by their speed. The heatmap keeps EroScripts' colours whichever is picked.,ポイント間の線を速度に応じて色分けする方法です。ヒートマップはどれを選んでも EroScripts の配色のままです。
+#TEXT,"What the lines on the timeline mark, and what points snap to.",タイムラインの線が示すものと、ポイントのスナップ先。
+#TEXT,"What the simulator draws. Its size, placement and colours are set in the Simulator panel itself, where the result can be seen as it changes.",シミュレーターに描くもの。サイズ・配置・色はシミュレーターパネルで設定し、変化をその場で確認できます。
+#TEXT,"What the simulator shows: a 2D bar, or a 3D model driven by every loaded axis.",シミュレーターの表示: 2D バー、または読み込んだ全軸で動く 3D モデル。
+#TEXT,Where it eases back to when nothing is driving it.,何も動かしていないときに戻る位置です。
+#TEXT,Where pitch rests. Move it off 50 to tilt the whole motion forwards or back.,ピッチの休止位置です。50 からずらすと動き全体が前後に傾きます。
+#TEXT,Where points placed or dragged with the mouse land.,マウスで置いたりドラッグしたポイントの位置。
+#TEXT,Where roll rests. Keep it at 50 to lean as far left as right.,ロールの休止位置です。50 にすると左右に同じだけ傾きます。
+#TEXT,"Where the model is at stroke 0, as a share of its full travel. Like the L0 lower limit of a machine.",ストローク 0 でのモデルの位置 (全移動範囲に対する割合)。機器の L0 下限に相当します。
+#TEXT,"Where the model is at stroke 100, as a share of its full travel. Like the L0 upper limit of a machine.",ストローク 100 でのモデルの位置 (全移動範囲に対する割合)。機器の L0 上限に相当します。
+#TEXT,Where twist rests. 50 turns as far each way.,ツイストの休止位置です。50 で両方向に同じだけ回ります。
+#TEXT,"While the video plays, hold a handle on the model and move it: every axis it moves is recorded until you let go, replacing the points already there. The Record button under the model does the same.",動画の再生中にモデルのハンドルを押さえて動かすと、離すまで動かした全軸が記録され、既存のポイントを置き換えます。モデル下の記録ボタンも同じ動作です。
+#TEXT,"While the video plays, hold a handle on the model and move it: the case for stroke, the ring for twist, the tip for roll and pitch, the floor square for surge and sway. Letting go writes what you did over the points already there.",動画の再生中にモデルのハンドルを押さえて動かします: ケースでストローク、リングでツイスト、先端でロールとピッチ、床の四角でサージとスウェイ。離すと、操作した内容が既存のポイントに上書きされます。
+#TEXT,Width (px),幅 (px)
+#TEXT,Wifi,Wifi
+#TEXT,With,対象
+#TEXT,Write the motion into the axis scripts to see and feel it. Nothing is kept until you apply it.,動きを軸のスクリプトに書き込み、見て感じて確認します。適用するまで何も保持されません。
+#TEXT,Writes a copy with nothing in it faster or closer together than the script check's limits. The project keeps the script as written.,スクリプトチェックの制限より速いものや近すぎるものを除いたコピーを書き出します。プロジェクト内のスクリプトはそのまま残ります。
+#TEXT,"Writes every piece of text shown so far that has no key in the translation file, with the loaded language's translation where it has one, to text-to-translate.csv in the translations folder. Open the panels and menus to translate first. Its rows, filled in, go at the end of a translation file.",これまでに表示されたテキストのうち翻訳ファイルにキーがないものを、読み込み中の言語の翻訳があれば付けて、翻訳フォルダーの text-to-translate.csv に書き出します。先に翻訳したいパネルやメニューを開いてください。記入した行は翻訳ファイルの末尾に追加します。
+#TEXT,"Writes recorded takes this much earlier than your hand moved, to make up for reacting a little after what you see.",記録したテイクを手の動きよりこの分だけ早く書き込み、見てから反応するまでの遅れを補います。
+#TEXT,"Writes strokes along the beat, across a chapter or the whole mix.",チャプターまたはミックス全体にわたって、ビートに沿ってストロークを書き込みます。
+#TEXT,"Writes twist, roll and pitch that move with the selected stroke points.",選択したストロークのポイントに合わせて動くツイスト、ロール、ピッチを書き込みます。
+#TEXT,You use it at your own risk. This is only shown once.,ご利用は自己責任でお願いします。この表示は一度だけです。
+#TEXT,everyNth: %d,everyNth: %d
+#TEXT,flip,反転
+#TEXT,hold a handle,ハンドルを押さえる
+#TEXT,pitch,ピッチ
+#TEXT,"play, then hold a handle",再生してからハンドルを押さえる
+#TEXT,px,px
+#TEXT,roll,ロール
+#TEXT,sample range: %.2f .. %.2f (%.2f visible),サンプル範囲: %.2f .. %.2f (表示 %.2f)
+#TEXT,scale: %.6f  offset: %.6f,スケール: %.6f  オフセット: %.6f
+#TEXT,snap  %s,スナップ  %s
+#TEXT,snap  %s  +  %d,スナップ  %s  +  %d
+#TEXT,snap  beats%s%s,スナップ  ビート%s%s
+#TEXT,snap  off,スナップ  オフ
+#TEXT,snap  pos %d,スナップ  位置 %d
+#TEXT,tar.exe has been part of Windows 10 since build 17063,tar.exe は Windows 10 のビルド 17063 以降に含まれています
+#TEXT,"texels: %d (first %d, last %d)",テクセル: %d (最初 %d、最後 %d)
+#TEXT,twist,ツイスト
+#TEXT,u at left edge:  %.6f,左端の u:  %.6f
+#TEXT,u at right edge: %.6f,右端の u: %.6f

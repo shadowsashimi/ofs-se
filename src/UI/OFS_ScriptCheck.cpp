@@ -181,7 +181,7 @@ void OFS_ScriptCheck::ShowWindow(bool* open) noexcept
         ImGui::SetNextWindowSize(ImVec2(em * 30.f, em * 34.f), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowPos(viewport->GetWorkCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
     }
-    ImGui::Begin("Script check###SCRIPT_CHECK", open, ImGuiWindowFlags_None);
+    ImGui::Begin(TRS("Script check###SCRIPT_CHECK"), open, ImGuiWindowFlags_None);
 
     // The numbers are what a device can follow, which varies by device, so
     // they are named by how hard they are rather than by a make and model.

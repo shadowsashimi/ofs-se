@@ -591,7 +591,7 @@ void OFS_DeviceLink::DrawWindow(bool* open) noexcept
         ImGui::SetNextWindowSize(ImVec2(em * 42.f, em * 30.f), ImGuiCond_FirstUseEver);
         ImGui::SetNextWindowPos(viewport->GetWorkCenter(), ImGuiCond_FirstUseEver, ImVec2(0.5f, 0.5f));
     }
-    ImGui::Begin("Devices###DEVICES", open, ImGuiWindowFlags_None);
+    ImGui::Begin(TRS("Devices###DEVICES"), open, ImGuiWindowFlags_None);
 
     Status currentStatus;
     std::string currentMessage;

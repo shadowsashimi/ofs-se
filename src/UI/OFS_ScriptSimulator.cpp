@@ -5353,7 +5353,7 @@ void ScriptSimulator::drawInsetViews(ImDrawList* drawList, const SimulatorState&
             poseViewDrawing = 0;
             for (int32_t h = 0; h < (int32_t)PoseHandle::Count; h += 1) InsetHandleScreen[v][h] = PoseHandleScreen[h];
         }
-        drawList->AddText(min + ImVec2(7.f, 4.f), role.TextFaint, insetView(v, state).name);
+        drawList->AddText(min + ImVec2(7.f, 4.f), role.TextFaint, TRS(insetView(v, state).name));
         viewsMin = ImMin(viewsMin, min);
         viewsMax = ImMax(viewsMax, max);
     }
@@ -5611,9 +5611,9 @@ void ScriptSimulator::commitTake(const bool* hasTrack) noexcept
 void ScriptSimulator::drawPuppetButton(ImDrawList* drawList, ImGuiID simId, bool playing) noexcept
 {
     const auto& role = OFS_Sashimi::Role();
-    const char* label = takeActive ? "Recording" : PuppetArmed ? "Record armed" : "Record";
+    const char* label = TRS(takeActive ? "Recording" : PuppetArmed ? "Record armed" : "Record");
     const char* note = takeActive ? nullptr
-        : PuppetArmed ? (playing ? "hold a handle" : "play, then hold a handle")
+        : PuppetArmed ? TRS(playing ? "hold a handle" : "play, then hold a handle")
         : nullptr;
     const ImVec2 labelSize = ImGui::CalcTextSize(label);
     const ImVec2 noteSize = note ? ImGui::CalcTextSize(note) : ImVec2(0.f, 0.f);
@@ -5944,7 +5944,7 @@ void ScriptSimulator::drawPoseHandles(ImDrawList* drawList, const SimulatorState
             const int32_t axis = handleAxes[k];
             if (axis < 0 || !hasTrack[axis]) continue;
             if (!text.empty()) text += "  \xC2\xB7  ";
-            text += PoseAxisLabels[axis];
+            text += TRS(PoseAxisLabels[axis]);
             text += " ";
             text += std::to_string((int32_t)std::round(value[axis]));
         }
@@ -6066,7 +6066,7 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
     // Placement. Lock is a toggle, so it takes the selected look while on.
     // Short, because the row splits a narrow panel three ways and "Unlocked"
     // did not fit; the lit look already says whether it is on.
-    if (rowButton(state.LockedPosition ? ICON_LINK " Lock###simLock" : ICON_UNLINK " Lock###simLock", 0, 3, state.LockedPosition)) {
+    if (rowButton(FMT("%s %s###simLock", state.LockedPosition ? ICON_LINK : ICON_UNLINK, TRS("Lock")), 0, 3, state.LockedPosition)) {
         state.LockedPosition = !state.LockedPosition;
     }
     OFS::Tooltip(state.LockedPosition
@@ -6540,7 +6540,7 @@ void ScriptSimulator::ShowSimulator(bool* open, std::shared_ptr<Funscript>& acti
             hintY += ImGui::GetTextLineHeight() + 16.f;
         }
         if (PoseHintShown) {
-            const char* hint = "Pause to pose";
+            const char* hint = TRS("Pause to pose");
             const float width = ImGui::CalcTextSize(hint).x + 22.f;
             posePill(frontDraw, ImVec2(((ModelDrawnMin.x + ModelDrawnMax.x) - width) * 0.5f, hintY),
                 hint, nullptr, false);

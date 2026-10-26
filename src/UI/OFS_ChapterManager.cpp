@@ -658,7 +658,7 @@ void OFS_ChapterManager::showRenameControls(ChapterState& chapterState) noexcept
         return;
     }
 
-    ImGui::Text(TRS("Rename %d chapter%s?"), (int)changed, changed == 1 ? "" : "s");
+    ImGui::Text(changed == 1 ? TRS("Rename %d chapter?") : TRS("Rename %d chapters?"), (int)changed);
     ImGui::TextDisabled(TRS("Names typed by hand are replaced too. This cannot be undone."));
     ImGui::Spacing();
 
