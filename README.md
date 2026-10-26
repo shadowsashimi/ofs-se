@@ -24,8 +24,9 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 
 - **Script to audio** - open an mp3, m4a, aac, ogg, opus, flac, wav, wma or
   aiff and script it against its waveform, which is drawn as soon as the file
-  opens. The waveform also stays in sync when zooming and panning, and short
-  sound effects, like the ones in SFX packs, open fine.
+  opens. The waveform also stays in sync when zooming and panning, short
+  sound effects, like the ones in SFX packs, open fine, and so do files named
+  in Japanese or other non-English characters.
 - **Tempo detection** - measures BPM per chapter, splits a mix into tracks
   where the music changes, finds the downbeat, and treats dotted or triplet
   readings as the same tempo. A chapter's tempo can be counted double or half
@@ -38,7 +39,10 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
 - **Depth from loudness** - scales the selected strokes by how loud the audio
   is under them, so a quiet verse is scripted shallower than the drop.
 - **Beat ticks and a bass waveform** - marks where each hit lands, with the
-  option to see only the low end, where the beat usually is.
+  option to see only the low end, where the beat usually is. The *Beats*
+  toggle next to *Grid* snaps points onto the ticks.
+- **One channel** - show the waveform of the left or right channel alone,
+  for binaural audio with the sounds on one side and voices on the other.
 - **Chapters** - mark a song's structure by hand or have it found, move a
   boundary from either side, and rename every chapter from where it falls and
   its tempo.
@@ -75,12 +79,12 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
   animated WebP or GIF. It renders in the background while you keep working.
 - **Funscript 2.0 and 1.1** - full read and write support for the latest
   funscript formats.
+- Fixes for points silently lost while dragging, and for Simplify carrying
+  one selection's spacing into the next.
 
 ![The multi-axis generator previewing roll and pitch from a stroke](docs/screenshots/multi-axis.png)
 
 ![Script check listing strokes too fast for a device](docs/screenshots/script-check.png)
-- Fixes for points silently lost while dragging, and for Simplify carrying
-  one selection's spacing into the next.
 
 ### Devices
 
@@ -103,6 +107,11 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
   2D bars.
 - One simulator setup for every project, kept with your settings, instead of
   a separate one saved in each project.
+- **Top and side views** - *Views* swaps the single view for two, from above
+  and from the side or front, each with the handles that read best in it.
+- Roll, pitch, surge and sway move about as far as a real machine does, and
+  the rod is firm, with the sleeve shading darker where it's pressed. Both
+  can be set in the simulator settings.
 - Pose the model with handles (experimental): drag the case, twist ring, tip
   or floor square and a point lands on each axis you moved. A guide on the
   floor shows which way the tip leans and which way the front faces.
@@ -123,7 +132,9 @@ MIT licensed. Its licence is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
   [`OFS-lib/UI/OFS_SashimiTheme.h`](OFS-lib/UI/OFS_SashimiTheme.h). The
   heatmap and tempo subdivision colours are left alone, since they carry
   meaning.
-- **Heatmap** coloured to match EroScripts.
+- **Heatmap** coloured to match EroScripts. The timeline's lines can use
+  those colours, the original OFS ones, a muted set, one plain colour, or
+  your own, in *Preferences → Timeline*.
 - A toolbar for the choices made most while scripting, segmented bars for
   modes, playback controls on the time bar's row, and a Preferences window
   with a sidebar.
